@@ -1,0 +1,16 @@
+# global
+.DS_Store
+
+# dependencies
+/node_modules
+.pnpm
+
+# raycast
+raycast-env.d.ts
+
+# typescript
+*.tsbuildinfo
+.eslintcache
+
+# nix
+/.direnv
