@@ -18,14 +18,13 @@
       default = pkgs.mkShell {
         packages = with pkgs; [
           nodejs_24
-          pnpm
           typescript
           typescript-language-server
         ];
 
         shellHook = ''
           echo "Node.js $(node --version)"
-          echo "pnpm $(pnpm --version)"
+          echo "npm $(npm --version)"
         '';
       };
     });

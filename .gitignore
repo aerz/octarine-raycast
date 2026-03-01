@@ -3,7 +3,6 @@
 
 # dependencies
 /node_modules
-.pnpm
 
 # raycast
 raycast-env.d.ts
