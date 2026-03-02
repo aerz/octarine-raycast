@@ -12,12 +12,22 @@
   "categories": [
     "Productivity"
   ],
+  "preferences": [
+    {
+      "name": "workspaceRoots",
+      "type": "textfield",
+      "required": true,
+      "title": "Workspace Root Paths",
+      "description": "Comma-separated root folders to scan for Octarine workspaces",
+      "placeholder": "~/Documents/Octarine, ~/Work/Notes"
+    }
+  ],
   "license": "MIT",
   "commands": [
     {
-      "name": "hello-world",
-      "title": "Hello World",
-      "description": "",
+      "name": "open-workspace",
+      "title": "Open Workspace",
+      "description": "Open a workspace in Octarine",
       "mode": "view"
     }
   ],
