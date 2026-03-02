@@ -54,6 +54,21 @@
           "required": false
         }
       ]
+    },
+    {
+      "name": "open-today-note",
+      "title": "Open Today's Note",
+      "description": "Opens today's note in Daily Desk.",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "workspaceName",
+          "type": "textfield",
+          "title": "Workspace Name",
+          "required": false,
+          "description": "Default workspace. If empty, a selector will be shown."
+        }
+      ]
     }
   ],
   "dependencies": {
