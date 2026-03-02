@@ -69,6 +69,26 @@
           "description": "Default workspace. If empty, a selector will be shown."
         }
       ]
+    },
+    {
+      "name": "open-daily-desk-note",
+      "title": "Open Daily Desk Note",
+      "description": "Open a daily or weekly note in Daily Desk by date.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "date",
+          "type": "text",
+          "required": true,
+          "placeholder": "feb 3"
+        },
+        {
+          "name": "workspace",
+          "type": "text",
+          "required": false,
+          "placeholder": "Workspace name"
+        }
+      ]
     }
   ],
   "dependencies": {
