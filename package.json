@@ -20,6 +20,14 @@
       "title": "Workspace Root Paths",
       "description": "Comma-separated root folders to scan for Octarine workspaces",
       "placeholder": "~/Documents/Octarine, ~/Work/Notes"
+    },
+    {
+      "name": "excludedFolders",
+      "type": "textfield",
+      "placeholder": "folder1, folder2, ...",
+      "title": "Exclude following folders",
+      "required": false,
+      "description": "Specify which folders to exclude (comma separated)"
     }
   ],
   "license": "MIT",

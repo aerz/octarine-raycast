@@ -5,7 +5,7 @@ import path from "node:path";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
 const WORKSPACE_MARKER = ".octarine";
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 export type Workspace = {
   name: string;
@@ -14,7 +14,7 @@ export type Workspace = {
 
 type WorkspaceCache = {
   version: number;
-  rootsSignature: string;
+  rootsDiscoverySignature: string;
   scannedAt: string;
   workspaces: Workspace[];
 };
@@ -54,8 +54,29 @@ export function parseWorkspaceRoots(rawValue: string): string[] {
   return Array.from(dedupedRoots);
 }
 
-function computeRootsSignature(roots: string[]): string {
-  return [...roots].sort().join("|");
+function parseExcludedFolders(rawValue?: string): Set<string> {
+  const dedupedFolders = new Set<string>();
+
+  if (!rawValue) {
+    return dedupedFolders;
+  }
+
+  for (const part of rawValue.split(",")) {
+    const trimmed = part.trim().toLowerCase();
+    if (!trimmed) {
+      continue;
+    }
+
+    dedupedFolders.add(trimmed);
+  }
+
+  return dedupedFolders;
+}
+
+function computeRootsDiscoverySignature(roots: string[], excludedFolders: Set<string>): string {
+  const rootsSignature = [...roots].sort().join("|");
+  const excludedFoldersSignature = [...excludedFolders].sort().join("|");
+  return `${rootsSignature}::${excludedFoldersSignature}`;
 }
 
 function isWorkspaceCache(value: unknown): value is WorkspaceCache {
@@ -66,7 +87,7 @@ function isWorkspaceCache(value: unknown): value is WorkspaceCache {
   const maybeCache = value as Partial<WorkspaceCache>;
   return (
     maybeCache.version === CACHE_VERSION &&
-    typeof maybeCache.rootsSignature === "string" &&
+    typeof maybeCache.rootsDiscoverySignature === "string" &&
     typeof maybeCache.scannedAt === "string" &&
     Array.isArray(maybeCache.workspaces) &&
     maybeCache.workspaces.every(
@@ -97,13 +118,21 @@ async function saveCache(cache: WorkspaceCache): Promise<void> {
   await LocalStorage.setItem(WORKSPACES_CACHE_KEY, JSON.stringify(cache));
 }
 
-async function discoverWorkspacesInRoot(rootPath: string, dedupedPaths: Set<string>): Promise<Workspace[]> {
+async function discoverWorkspacesInRoot(
+  rootPath: string,
+  dedupedPaths: Set<string>,
+  excludedFolders: Set<string>,
+): Promise<Workspace[]> {
   const discovered: Workspace[] = [];
   const pendingDirectories: string[] = [rootPath];
 
   while (pendingDirectories.length > 0) {
     const currentDirectory = pendingDirectories.pop();
     if (!currentDirectory) {
+      continue;
+    }
+
+    if (excludedFolders.has(path.basename(currentDirectory).toLowerCase())) {
       continue;
     }
 
@@ -136,6 +165,10 @@ async function discoverWorkspacesInRoot(rootPath: string, dedupedPaths: Set<stri
         continue;
       }
 
+      if (excludedFolders.has(entry.name.toLowerCase())) {
+        continue;
+      }
+
       pendingDirectories.push(path.join(currentDirectory, entry.name));
     }
   }
@@ -143,7 +176,10 @@ async function discoverWorkspacesInRoot(rootPath: string, dedupedPaths: Set<stri
   return discovered;
 }
 
-async function discoverWorkspaces(roots: string[]): Promise<{ workspaces: Workspace[]; invalidRoots: string[] }> {
+async function discoverWorkspaces(
+  roots: string[],
+  excludedFolders: Set<string>,
+): Promise<{ workspaces: Workspace[]; invalidRoots: string[] }> {
   const invalidRoots: string[] = [];
   const dedupedPaths = new Set<string>();
   const workspaces: Workspace[] = [];
@@ -160,7 +196,7 @@ async function discoverWorkspaces(roots: string[]): Promise<{ workspaces: Worksp
       continue;
     }
 
-    const discoveredInRoot = await discoverWorkspacesInRoot(rootPath, dedupedPaths);
+    const discoveredInRoot = await discoverWorkspacesInRoot(rootPath, dedupedPaths, excludedFolders);
     workspaces.push(...discoveredInRoot);
   }
 
@@ -173,14 +209,15 @@ async function discoverWorkspaces(roots: string[]): Promise<{ workspaces: Worksp
 }
 
 export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Promise<WorkspaceLoadResult> {
-  const preferences = getPreferenceValues<Preferences.OpenWorkspace>();
+  const preferences = getPreferenceValues<{ workspaceRoots: string; excludedFolders?: string }>();
   const roots = parseWorkspaceRoots(preferences.workspaceRoots);
-  const rootsSignature = computeRootsSignature(roots);
+  const excludedFolders = parseExcludedFolders(preferences.excludedFolders);
+  const rootsDiscoverySignature = computeRootsDiscoverySignature(roots, excludedFolders);
   const forceRefresh = options?.forceRefresh ?? false;
 
   if (!forceRefresh) {
     const cached = await loadCache();
-    if (cached && cached.rootsSignature === rootsSignature) {
+    if (cached && cached.rootsDiscoverySignature === rootsDiscoverySignature) {
       return {
         workspaces: cached.workspaces,
         invalidRoots: [],
@@ -189,10 +226,10 @@ export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Prom
     }
   }
 
-  const discoveryResult = await discoverWorkspaces(roots);
+  const discoveryResult = await discoverWorkspaces(roots, excludedFolders);
   await saveCache({
     version: CACHE_VERSION,
-    rootsSignature,
+    rootsDiscoverySignature,
     scannedAt: new Date().toISOString(),
     workspaces: discoveryResult.workspaces,
   });
