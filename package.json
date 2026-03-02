@@ -29,6 +29,23 @@
       "title": "Open Workspace",
       "description": "Open a workspace in Octarine",
       "mode": "view"
+    },
+    {
+      "name": "search-notes",
+      "title": "Search Notes",
+      "description": "Search notes across Octarine workspaces",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "showWorkspaceNoteCount",
+          "type": "checkbox",
+          "title": "Show Workspace Note Count",
+          "description": "Show or hide note counts in workspace section titles",
+          "label": "Show note count in workspace section titles",
+          "default": false,
+          "required": false
+        }
+      ]
     }
   ],
   "dependencies": {
