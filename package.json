@@ -56,6 +56,40 @@
       ]
     },
     {
+      "name": "search-attachments",
+      "title": "Search Attachments",
+      "description": "Search attached files across Octarine workspaces",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "showWorkspaceAttachmentCount",
+          "type": "checkbox",
+          "title": "Show Workspace Attachment Count",
+          "description": "Show or hide attachment counts in workspace section titles",
+          "label": "Show attachment count in workspace section titles",
+          "default": false,
+          "required": false
+        },
+        {
+          "name": "hideWorkspaceSections",
+          "type": "checkbox",
+          "title": "Hide Workspace Sections",
+          "description": "Show attachments in one flat list without workspace grouping",
+          "label": "Hide workspace sections in Search Attachments",
+          "default": false,
+          "required": false
+        },
+        {
+          "name": "excludeFileExtensions",
+          "type": "textfield",
+          "title": "Exclude File Extensions",
+          "description": "Comma-separated extensions to hide from Search Attachments",
+          "placeholder": "mp4, png, pdf",
+          "required": false
+        }
+      ]
+    },
+    {
       "name": "open-today-note",
       "title": "Open Today's Note",
       "description": "Opens today's note in Daily Desk.",
