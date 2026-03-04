@@ -1,6 +1,7 @@
 import {
   Action,
   ActionPanel,
+  LaunchProps,
   List,
   Toast,
   closeMainWindow,
@@ -18,16 +19,23 @@ type CommandPreferences = {
   workspaceName?: string;
 };
 
+type OpenTodayNoteArguments = {
+  workspace?: string;
+};
+
 function buildDailyUri(workspaceName: string): string {
   return `octarine://daily?date=today&workspace=${encodeURIComponent(workspaceName)}`;
 }
 
-export default function OpenTodayNoteCommand() {
+export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: OpenTodayNoteArguments }>) {
+  const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
+  const hasRequestedWorkspace = requestedWorkspace.length > 0;
   const preferences = getPreferenceValues<CommandPreferences>();
   const defaultWorkspaceName = preferences.workspaceName?.trim() ?? "";
-  const hasDefaultWorkspace = defaultWorkspaceName.length > 0;
+  const targetWorkspaceName = hasRequestedWorkspace ? requestedWorkspace : defaultWorkspaceName;
+  const hasTargetWorkspace = targetWorkspaceName.length > 0;
   const hasHandledDefaultWorkspace = useRef(false);
-  const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(!hasDefaultWorkspace);
+  const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(!hasTargetWorkspace);
 
   const openTodayNote = useCallback(async (workspaceName: string) => {
     try {
@@ -68,24 +76,24 @@ export default function OpenTodayNoteCommand() {
   );
 
   useEffect(() => {
-    if (!hasDefaultWorkspace || hasHandledDefaultWorkspace.current || !workspaceResult) {
+    if (!hasTargetWorkspace || hasHandledDefaultWorkspace.current || !workspaceResult) {
       return;
     }
 
     hasHandledDefaultWorkspace.current = true;
-    const workspaceExists = workspaceResult.workspaces.some((workspace) => workspace.name === defaultWorkspaceName);
+    const workspaceExists = workspaceResult.workspaces.some((workspace) => workspace.name === targetWorkspaceName);
 
     if (!workspaceExists) {
       void showToast({
         style: Toast.Style.Failure,
-        title: `Workspace "${defaultWorkspaceName}" not found`,
+        title: `Workspace ${targetWorkspaceName} not found`,
       });
       setShowWorkspaceSelector(true);
       return;
     }
 
-    void openTodayNote(defaultWorkspaceName);
-  }, [defaultWorkspaceName, hasDefaultWorkspace, openTodayNote, workspaceResult]);
+    void openTodayNote(targetWorkspaceName);
+  }, [hasTargetWorkspace, openTodayNote, targetWorkspaceName, workspaceResult]);
 
   if (!showWorkspaceSelector) {
     return <List isLoading={isLoading} />;

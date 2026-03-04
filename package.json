@@ -103,6 +103,14 @@
       "title": "Open Today's Note",
       "description": "Opens today's note in Daily Desk.",
       "mode": "view",
+      "arguments": [
+        {
+          "name": "workspace",
+          "type": "text",
+          "required": false,
+          "placeholder": "Workspace name"
+        }
+      ],
       "preferences": [
         {
           "name": "workspaceName",
