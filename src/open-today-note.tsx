@@ -12,7 +12,7 @@ import {
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
-import { loadWorkspaces } from "./workspaces";
+import { loadWorkspaces } from "./lib/workspaces";
 
 type CommandPreferences = {
   workspaceName?: string;

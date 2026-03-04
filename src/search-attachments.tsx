@@ -10,8 +10,8 @@ import {
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AttachmentFile } from "./types";
-import { scanAttachmentsFromPreferences } from "./utils/attachments";
+import { AttachmentFile } from "./types/attachment";
+import { scanAttachmentsFromPreferences } from "./lib/attachments";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
 

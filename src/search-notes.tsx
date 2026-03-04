@@ -12,7 +12,7 @@ import {
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Workspace, loadWorkspaces, parseWorkspaceRoots } from "./workspaces";
+import { Workspace, loadWorkspaces, parseWorkspaceRoots } from "./lib/workspaces";
 
 interface OctarineNote {
   id: string;

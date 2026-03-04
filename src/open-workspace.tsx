@@ -15,7 +15,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
-import { Workspace, loadWorkspaces } from "./workspaces";
+import { Workspace, loadWorkspaces } from "./lib/workspaces";
 
 type OpenWorkspaceArguments = {
   workspace?: string;

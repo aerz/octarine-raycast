@@ -1,7 +1,7 @@
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
-import { AttachmentFile } from "../types";
-import { loadWorkspaces } from "../workspaces";
+import { AttachmentFile } from "../types/attachment";
+import { loadWorkspaces } from "../lib/workspaces";
 
 const ATTACHMENT_DIRECTORIES = [".attachments", ".files"] as const;
 const SYSTEM_GENERATED_FILE_NAMES = new Set([
