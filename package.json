@@ -36,7 +36,16 @@
       "name": "open-workspace",
       "title": "Open Workspace",
       "description": "Open a workspace in Octarine",
-      "mode": "view"
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "workspace",
+          "type": "text",
+          "required": false,
+          "placeholder": "Workspace name",
+          "description": "Specify the workspace name to open it directly"
+        }
+      ]
     },
     {
       "name": "search-notes",
