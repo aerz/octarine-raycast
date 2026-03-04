@@ -11,7 +11,8 @@ import {
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Workspace, loadWorkspaces } from "./workspaces";
+import { WorkspaceMenu } from "./components/WorkspaceMenu";
+import { loadWorkspaces } from "./workspaces";
 
 type CommandPreferences = {
   workspaceName?: string;
@@ -93,23 +94,15 @@ export default function OpenTodayNoteCommand() {
   const workspaces = workspaceResult?.workspaces ?? [];
 
   return (
-    <List isLoading={isLoading} searchBarPlaceholder="Select an Octarine workspace...">
-      {workspaces.length === 0 && !isLoading ? (
-        <List.EmptyView title="No Octarine workspaces found" />
-      ) : (
-        workspaces.map((workspace: Workspace) => (
-          <List.Item
-            key={workspace.path}
-            title={workspace.name}
-            subtitle={workspace.path}
-            actions={
-              <ActionPanel>
-                <Action title="Open Today's Note" onAction={() => void openTodayNote(workspace.name)} />
-              </ActionPanel>
-            }
-          />
-        ))
+    <WorkspaceMenu
+      isLoading={isLoading}
+      workspaces={workspaces}
+      searchBarPlaceholder="Select an Octarine workspace..."
+      renderActions={(workspace) => (
+        <ActionPanel>
+          <Action title="Open Today's Note" onAction={() => void openTodayNote(workspace.name)} />
+        </ActionPanel>
       )}
-    </List>
+    />
   );
 }

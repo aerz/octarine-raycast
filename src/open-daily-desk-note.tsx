@@ -1,6 +1,7 @@
-import { Action, ActionPanel, Detail, LaunchProps, List, Toast, open, popToRoot, showToast } from "@raycast/api";
-import { usePromise } from "@raycast/utils";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { Action, ActionPanel, Detail, LaunchProps, Toast, open, popToRoot, showToast } from "@raycast/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { WorkspaceMenu } from "./components/WorkspaceMenu";
+import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
 import { Workspace, loadWorkspaces } from "./workspaces";
 
 type OpenDailyDeskNoteArguments = {
@@ -45,8 +46,11 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   const hasRequestedWorkspace = requestedWorkspace.length > 0;
   const isDateValid = useMemo(() => isSupportedDailyDeskDate(requestedDate), [requestedDate]);
 
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasWorkspaceLoadFailed, setHasWorkspaceLoadFailed] = useState(false);
+  const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
   const hasShownDateErrorToast = useRef(false);
-  const hasShownWorkspaceErrorToast = useRef(false);
   const hasAttemptedAutoOpen = useRef(false);
 
   const openDailyDeskNote = useCallback(
@@ -54,19 +58,25 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
       try {
         await open(buildDailyDeskUri(requestedDate, workspaceName));
         await popToRoot({ clearSearchBar: true });
+        return true;
       } catch {
         await showToast({
           style: Toast.Style.Failure,
           title: "Failed to Open Daily Desk Note",
         });
+        return false;
       }
     },
     [requestedDate],
   );
 
-  const { data: workspaceResult, isLoading } = usePromise(
-    async () => {
+  const refreshWorkspaces = useCallback(async () => {
+    setIsLoading(true);
+    setHasWorkspaceLoadFailed(false);
+
+    try {
       const result = await loadWorkspaces();
+      setWorkspaces(result.workspaces);
 
       if (!result.fromCache && result.invalidRoots.length > 0) {
         const noun = result.invalidRoots.length === 1 ? "root path" : "root paths";
@@ -76,28 +86,38 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
           message: `${result.invalidRoots.length} ${noun} could not be read.`,
         });
       }
+    } catch {
+      setWorkspaces([]);
+      setHasWorkspaceLoadFailed(true);
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to Load Workspaces",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-      return result;
-    },
-    [],
-    {
-      onError: async () => {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to Load Workspaces",
-        });
-      },
-    },
-  );
+  useEffect(() => {
+    void refreshWorkspaces();
+  }, [refreshWorkspaces]);
 
   const matchedWorkspace = useMemo(() => {
-    if (!workspaceResult || !hasRequestedWorkspace) {
+    if (!hasRequestedWorkspace) {
       return undefined;
     }
 
-    return workspaceResult.workspaces.find((workspace) => workspace.name === requestedWorkspace);
-  }, [workspaceResult, hasRequestedWorkspace, requestedWorkspace]);
-  const isWorkspaceNotFound = Boolean(hasRequestedWorkspace && workspaceResult && !matchedWorkspace);
+    return workspaces.find((workspace) => workspace.name === requestedWorkspace);
+  }, [hasRequestedWorkspace, requestedWorkspace, workspaces]);
+
+  const isWorkspaceNotFound = useWorkspaceNotFound({
+    requestedWorkspace,
+    hasRequestedWorkspace,
+    isLoading,
+    hasWorkspaceLoadFailed,
+    matchedWorkspace,
+    enabled: isDateValid,
+  });
 
   useEffect(() => {
     if (isDateValid || hasShownDateErrorToast.current) {
@@ -113,26 +133,24 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   }, [isDateValid]);
 
   useEffect(() => {
-    if (!isWorkspaceNotFound || hasShownWorkspaceErrorToast.current || !isDateValid) {
-      return;
-    }
-
-    hasShownWorkspaceErrorToast.current = true;
-    void showToast({
-      style: Toast.Style.Failure,
-      title: "Workspace not found",
-      message: "Provided workspace was not found.",
-    });
-  }, [isWorkspaceNotFound, isDateValid]);
-
-  useEffect(() => {
     if (!isDateValid || !matchedWorkspace || hasAttemptedAutoOpen.current) {
       return;
     }
 
     hasAttemptedAutoOpen.current = true;
-    void openDailyDeskNote(matchedWorkspace.name);
+    void (async () => {
+      const didOpen = await openDailyDeskNote(matchedWorkspace.name);
+
+      if (!didOpen) {
+        setHasDirectOpenFailed(true);
+      }
+    })();
   }, [isDateValid, matchedWorkspace, openDailyDeskNote]);
+
+  useEffect(() => {
+    hasAttemptedAutoOpen.current = false;
+    setHasDirectOpenFailed(false);
+  }, [requestedWorkspace, requestedDate]);
 
   if (!isDateValid) {
     const markdown = [
@@ -152,40 +170,22 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
     return <Detail markdown={markdown} />;
   }
 
-  if (isWorkspaceNotFound) {
-    const markdown = [
-      "# Workspace Not Found",
-      "",
-      `"${requestedWorkspace}" is not configured or is an invalid name.`,
-    ].join("\n");
-
-    return <Detail markdown={markdown} />;
-  }
-
-  if (hasRequestedWorkspace && (isLoading || matchedWorkspace)) {
+  if (hasRequestedWorkspace && matchedWorkspace && !hasDirectOpenFailed && !isWorkspaceNotFound) {
     return null;
   }
 
-  const workspaces = workspaceResult?.workspaces ?? [];
-
-  return (
-    <List isLoading={isLoading} searchBarPlaceholder="Select an Octarine workspace...">
-      {workspaces.length === 0 && !isLoading ? (
-        <List.EmptyView title="No Octarine workspaces found" />
-      ) : (
-        workspaces.map((workspace: Workspace) => (
-          <List.Item
-            key={workspace.path}
-            title={workspace.name}
-            subtitle={workspace.path}
-            actions={
-              <ActionPanel>
-                <Action title="Open Daily Desk Note" onAction={() => void openDailyDeskNote(workspace.name)} />
-              </ActionPanel>
-            }
-          />
-        ))
+  const workspaceMenu = (
+    <WorkspaceMenu
+      isLoading={isLoading}
+      workspaces={workspaces}
+      searchBarPlaceholder="Select an Octarine workspace..."
+      renderActions={(workspace: Workspace) => (
+        <ActionPanel>
+          <Action title="Open Daily Desk Note" onAction={() => void openDailyDeskNote(workspace.name)} />
+        </ActionPanel>
       )}
-    </List>
+    />
   );
+
+  return workspaceMenu;
 }
