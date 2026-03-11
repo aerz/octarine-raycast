@@ -9,167 +9,22 @@ import {
   openCommandPreferences,
   showToast,
 } from "@raycast/api";
-import { Dirent, promises as fs } from "node:fs";
-import path from "node:path";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import {
+  OctarineNote,
+  buildOctarineUrl,
+  loadCachedNotes,
+  matchesSearchQuery,
+  saveCachedNotes,
+  scanNotesFromWorkspaces,
+} from "./lib/notes";
 import { Workspace, loadWorkspaces, parseWorkspaceRoots } from "./lib/workspaces";
 
-interface OctarineNote {
-  id: string;
-  title: string;
-  subtitle: string;
-  workspace: string;
-}
-
-const EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
-
-function normalizeSearchPart(searchPart: string): string {
-  return searchPart.trim().toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/");
-}
-
-function toPathSegments(pathValue: string): string[] {
-  return pathValue
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-}
-
-function matchesDirectoryScopeAtAnyDepth(noteDirectory: string, directoryQuery: string): boolean {
-  const querySegments = toPathSegments(directoryQuery);
-  if (querySegments.length === 0) {
-    return true;
-  }
-
-  const directorySegments = toPathSegments(noteDirectory);
-  if (directorySegments.length < querySegments.length) {
-    return false;
-  }
-
-  for (let start = 0; start <= directorySegments.length - querySegments.length; start += 1) {
-    let matchesAllSegments = true;
-
-    for (let index = 0; index < querySegments.length; index += 1) {
-      if (directorySegments[start + index] !== querySegments[index]) {
-        matchesAllSegments = false;
-        break;
-      }
-    }
-
-    if (matchesAllSegments) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function matchesSearchQuery(note: OctarineNote, searchText: string): boolean {
-  const normalizedQuery = normalizeSearchPart(searchText);
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  const noteTitle = note.title.toLowerCase();
-  const noteSubtitle = note.subtitle.toLowerCase();
-  const noteWorkspace = note.workspace.toLowerCase();
-  const noteDirectory = path.posix.dirname(noteSubtitle);
-  const normalizedDirectory = noteDirectory === "." ? "" : noteDirectory;
-  const hasSlash = normalizedQuery.includes("/");
-
-  if (!hasSlash) {
-    const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) {
-      return true;
-    }
-
-    const combinedHaystack = `${noteTitle} ${noteSubtitle} ${noteWorkspace}`;
-    return tokens.every((token) => combinedHaystack.includes(token));
-  }
-
-  const hasTrailingSlash = normalizedQuery.endsWith("/");
-  const queryWithoutOuterSlashes = normalizedQuery.replace(/^\/+|\/+$/g, "");
-
-  if (hasTrailingSlash) {
-    return matchesDirectoryScopeAtAnyDepth(normalizedDirectory, queryWithoutOuterSlashes);
-  }
-
-  const fuzzyPathMatch =
-    normalizedDirectory.includes(queryWithoutOuterSlashes) || noteSubtitle.includes(queryWithoutOuterSlashes);
-
-  const lastSlashIndex = queryWithoutOuterSlashes.lastIndexOf("/");
-  const directoryPrefix = lastSlashIndex === -1 ? "" : queryWithoutOuterSlashes.slice(0, lastSlashIndex).trim();
-  const titleQuery =
-    lastSlashIndex === -1 ? queryWithoutOuterSlashes : queryWithoutOuterSlashes.slice(lastSlashIndex + 1).trim();
-  const titleTokens = titleQuery.split(/\s+/).filter(Boolean);
-
-  const scopedTitleMatch =
-    matchesDirectoryScopeAtAnyDepth(normalizedDirectory, directoryPrefix) &&
-    (titleTokens.length === 0 || titleTokens.every((token) => noteTitle.includes(token)));
-
-  return fuzzyPathMatch || scopedTitleMatch;
-}
-
-function toPosixPath(inputPath: string): string {
-  return inputPath.split(path.sep).join(path.posix.sep);
-}
-
-function buildOctarineUrl(note: OctarineNote): string {
-  return `octarine://open?path=${encodeURIComponent(note.subtitle)}&workspace=${encodeURIComponent(note.workspace)}`;
-}
-
-async function scanWorkspaceForNotes(
-  workspace: Workspace,
-  onDiscoveredNote: (note: OctarineNote) => void,
-  onError: (error: unknown) => Promise<void>,
-): Promise<void> {
-  const pendingDirectories: string[] = [workspace.path];
-
-  while (pendingDirectories.length > 0) {
-    const currentDirectory = pendingDirectories.pop();
-    if (!currentDirectory) {
-      continue;
-    }
-
-    let entries: Dirent[];
-    try {
-      entries = await fs.readdir(currentDirectory, { withFileTypes: true });
-    } catch (error) {
-      console.error("Failed to read directory during note scan", {
-        workspace: workspace.path,
-        directory: currentDirectory,
-        error,
-      });
-      await onError(error);
-      continue;
-    }
-
-    for (const entry of entries) {
-      if (EXCLUDED_DIRECTORY_NAMES.has(entry.name) && entry.isDirectory()) {
-        continue;
-      }
-
-      const absolutePath = path.join(currentDirectory, entry.name);
-      if (entry.isDirectory() && !entry.isSymbolicLink()) {
-        pendingDirectories.push(absolutePath);
-        continue;
-      }
-
-      if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== ".md") {
-        continue;
-      }
-
-      const relativePath = toPosixPath(path.relative(workspace.path, absolutePath));
-      const noteTitle = path.basename(entry.name, ".md");
-
-      onDiscoveredNote({
-        id: `${workspace.name}::${relativePath}`,
-        title: noteTitle,
-        subtitle: relativePath,
-        workspace: workspace.name,
-      });
-    }
-  }
-}
+type SearchNotesPreferences = {
+  workspaceRoots: string;
+  excludedFolders?: string;
+  showWorkspaceNoteCount?: boolean;
+};
 
 function renderNoteItem(note: OctarineNote) {
   const octarineUrl = buildOctarineUrl(note);
@@ -204,7 +59,7 @@ function renderNoteItem(note: OctarineNote) {
 }
 
 export default function SearchNotesCommand() {
-  const preferences = getPreferenceValues<{ showWorkspaceNoteCount?: boolean }>();
+  const preferences = getPreferenceValues<SearchNotesPreferences>();
   const showWorkspaceNoteCount = preferences.showWorkspaceNoteCount ?? false;
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [notes, setNotes] = useState<OctarineNote[]>([]);
@@ -216,7 +71,6 @@ export default function SearchNotesCommand() {
 
   useEffect(() => {
     let canceled = false;
-    const discoveredNoteIds = new Set<string>();
 
     const showScanFailureToast = async () => {
       if (hasShownScanErrorToast.current) {
@@ -232,12 +86,10 @@ export default function SearchNotesCommand() {
 
     const scan = async () => {
       setIsLoading(true);
-      setNotes([]);
-      setWorkspaces([]);
       hasShownScanErrorToast.current = false;
 
       try {
-        const preferences = getPreferenceValues<Preferences>();
+        const preferences = getPreferenceValues<SearchNotesPreferences>();
         const roots = parseWorkspaceRoots(preferences.workspaceRoots);
         const rootsConfigured = roots.length > 0;
 
@@ -252,38 +104,43 @@ export default function SearchNotesCommand() {
           setHasConfiguredRoots(true);
         }
 
-        const workspaceResult = await loadWorkspaces();
+        const cachedResult = await loadCachedNotes();
+        const hasCachedResult = Boolean(cachedResult);
+
+        if (cachedResult && !canceled) {
+          startTransition(() => {
+            setWorkspaces(cachedResult.workspaces);
+            setNotes(cachedResult.notes);
+          });
+        } else {
+          startTransition(() => {
+            setNotes([]);
+            setWorkspaces([]);
+          });
+        }
+
+        const workspaceResult = await loadWorkspaces({ forceRefresh: true });
         if (canceled) {
           return;
         }
 
-        setWorkspaces(workspaceResult.workspaces);
-
-        for (const workspace of workspaceResult.workspaces) {
-          await scanWorkspaceForNotes(
-            workspace,
-            (note) => {
-              if (canceled || discoveredNoteIds.has(note.id)) {
-                return;
-              }
-
-              discoveredNoteIds.add(note.id);
-              setNotes((previousNotes) => {
-                const nextNotes = [...previousNotes, note];
-                nextNotes.sort((left, right) => {
-                  const byWorkspace = left.workspace.localeCompare(right.workspace);
-                  if (byWorkspace !== 0) {
-                    return byWorkspace;
-                  }
-
-                  return left.subtitle.localeCompare(right.subtitle);
-                });
-                return nextNotes;
-              });
-            },
-            showScanFailureToast,
-          );
+        if (!hasCachedResult) {
+          startTransition(() => {
+            setWorkspaces(workspaceResult.workspaces);
+          });
         }
+
+        const discoveredNotes = await scanNotesFromWorkspaces(workspaceResult.workspaces, showScanFailureToast);
+        if (canceled) {
+          return;
+        }
+
+        await saveCachedNotes(workspaceResult.workspaces, discoveredNotes);
+
+        startTransition(() => {
+          setWorkspaces(workspaceResult.workspaces);
+          setNotes(discoveredNotes);
+        });
       } catch (error) {
         console.error("Failed to scan Octarine notes", error);
         await showToast({
