@@ -15,6 +15,7 @@ import { parseWorkspaceRoots } from "./lib/workspaces";
 
 type SearchViewsPreferences = {
   workspaceRoots: string;
+  showWorkspaceViewCount?: boolean;
 };
 
 function matchesSearchQuery(view: OctarineView, searchText: string): boolean {
@@ -49,6 +50,8 @@ function renderViewItem(view: OctarineView, onOpenView: (viewToOpen: OctarineVie
 }
 
 export default function SearchViewsCommand() {
+  const preferences = getPreferenceValues<SearchViewsPreferences>();
+  const showWorkspaceViewCount = preferences.showWorkspaceViewCount ?? false;
   const [workspaceNames, setWorkspaceNames] = useState<string[]>([]);
   const [views, setViews] = useState<OctarineView[]>([]);
   const [searchText, setSearchText] = useState("");
@@ -69,7 +72,6 @@ export default function SearchViewsCommand() {
       hasShownInvalidRootsToast.current = false;
 
       try {
-        const preferences = getPreferenceValues<SearchViewsPreferences>();
         const roots = parseWorkspaceRoots(preferences.workspaceRoots);
 
         if (roots.length === 0) {
@@ -223,7 +225,10 @@ export default function SearchViewsCommand() {
               }
 
               return (
-                <List.Section key={workspaceName} title={workspaceName}>
+                <List.Section
+                  key={workspaceName}
+                  title={showWorkspaceViewCount ? `${workspaceName} (${viewsInWorkspace.length})` : workspaceName}
+                >
                   {viewsInWorkspace.map((view) => renderViewItem(view, handleOpenView))}
                 </List.Section>
               );
