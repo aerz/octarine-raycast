@@ -99,9 +99,15 @@
       ]
     },
     {
+      "name": "search-views",
+      "title": "Search Views",
+      "description": "Browse views across Octarine workspaces",
+      "mode": "view"
+    },
+    {
       "name": "open-today-note",
       "title": "Open Today's Note",
-      "description": "Opens today's note in Daily Desk.",
+      "description": "Opens today's note in Daily Desk",
       "mode": "view",
       "arguments": [
         {
@@ -124,7 +130,7 @@
     {
       "name": "open-daily-desk-note",
       "title": "Open Daily Desk Note",
-      "description": "Open a daily or weekly note in Daily Desk by date.",
+      "description": "Open a daily or weekly note in Daily Desk by date",
       "mode": "view",
       "arguments": [
         {
