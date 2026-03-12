@@ -1,14 +1,10 @@
-export type AttachmentFile = {
-  // Filename with extension, for example "diagram.png".
-  name: string;
-  // Absolute resolved path.
-  path: string;
-  // Lowercase extension without dot, for example "png".
-  extension: string;
-  // Basename of the workspace root directory.
-  workspaceName: string;
-  // Absolute resolved path to workspace root.
-  workspacePath: string;
+import { isAttachment, type Attachment } from "./octarine";
+
+export type IndexedAttachment = Attachment & {
   // Lowercased searchable text built during scan.
   searchText: string;
 };
+
+export function isIndexedAttachment(value: unknown): value is IndexedAttachment {
+  return isAttachment(value) && typeof (value as IndexedAttachment).searchText === "string";
+}

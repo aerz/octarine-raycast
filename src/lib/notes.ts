@@ -1,11 +1,12 @@
 import { LocalStorage, getPreferenceValues } from "@raycast/api";
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
+import { isNote, isWorkspace, type Note, type Workspace } from "../types/octarine";
 import { buildSearchIndexText, tokenizeSearchQuery } from "./search";
-import { Workspace, parseWorkspaceRoots } from "./workspaces";
+import { parseWorkspaceRoots } from "./workspaces";
 
 const NOTES_CACHE_KEY = "octarine.notes.v1";
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
 
 type NotesCachePreferences = {
@@ -18,16 +19,16 @@ type NotesCache = {
   rootsDiscoverySignature: string;
   scannedAt: string;
   workspaces: Workspace[];
-  notes: OctarineNote[];
+  notes: IndexedNote[];
 };
 
-export type OctarineNote = {
+export type ScannedNote = Note & {
   id: string;
-  title: string;
-  subtitle: string;
-  workspace: string;
+};
+
+export type IndexedNote = ScannedNote & {
   normalizedTitle: string;
-  normalizedSubtitle: string;
+  normalizedPath: string;
   normalizedWorkspace: string;
   normalizedDirectory: string;
   directorySegments: string[];
@@ -36,7 +37,7 @@ export type OctarineNote = {
 
 export type NotesCacheResult = {
   workspaces: Workspace[];
-  notes: OctarineNote[];
+  notes: IndexedNote[];
 };
 
 function normalizeSearchPart(searchPart: string): string {
@@ -107,48 +108,35 @@ function computeRootsDiscoverySignature(roots: string[], excludedFolders: Set<st
   return `${rootsSignature}::${excludedFoldersSignature}`;
 }
 
-function isWorkspace(value: unknown): value is Workspace {
+function isIndexedNote(value: unknown): value is IndexedNote {
   return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    typeof (value as Workspace).name === "string" &&
-    typeof (value as Workspace).path === "string"
+    isNote(value) &&
+    typeof (value as IndexedNote).id === "string" &&
+    typeof (value as IndexedNote).normalizedTitle === "string" &&
+    typeof (value as IndexedNote).normalizedPath === "string" &&
+    typeof (value as IndexedNote).normalizedWorkspace === "string" &&
+    typeof (value as IndexedNote).normalizedDirectory === "string" &&
+    Array.isArray((value as IndexedNote).directorySegments) &&
+    (value as IndexedNote).directorySegments.every((segment) => typeof segment === "string") &&
+    typeof (value as IndexedNote).searchText === "string"
   );
 }
 
-function isOctarineNote(value: unknown): value is OctarineNote {
-  return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    typeof (value as OctarineNote).id === "string" &&
-    typeof (value as OctarineNote).title === "string" &&
-    typeof (value as OctarineNote).subtitle === "string" &&
-    typeof (value as OctarineNote).workspace === "string" &&
-    typeof (value as OctarineNote).normalizedTitle === "string" &&
-    typeof (value as OctarineNote).normalizedSubtitle === "string" &&
-    typeof (value as OctarineNote).normalizedWorkspace === "string" &&
-    typeof (value as OctarineNote).normalizedDirectory === "string" &&
-    Array.isArray((value as OctarineNote).directorySegments) &&
-    (value as OctarineNote).directorySegments.every((segment) => typeof segment === "string") &&
-    typeof (value as OctarineNote).searchText === "string"
-  );
-}
-
-function buildNoteSearchFields(title: string, subtitle: string, workspace: string) {
+function buildNoteSearchFields(title: string, notePath: string, workspaceName: string) {
   const normalizedTitle = title.toLowerCase();
-  const normalizedSubtitle = subtitle.toLowerCase();
-  const normalizedWorkspace = workspace.toLowerCase();
-  const noteDirectory = path.posix.dirname(normalizedSubtitle);
+  const normalizedPath = notePath.toLowerCase();
+  const normalizedWorkspace = workspaceName.toLowerCase();
+  const noteDirectory = path.posix.dirname(normalizedPath);
   const normalizedDirectory = noteDirectory === "." ? "" : noteDirectory;
   const directorySegments = toPathSegments(normalizedDirectory);
 
   return {
     normalizedTitle,
-    normalizedSubtitle,
+    normalizedPath,
     normalizedWorkspace,
     normalizedDirectory,
     directorySegments,
-    searchText: buildSearchIndexText(title, subtitle, workspace),
+    searchText: buildSearchIndexText(title, notePath, workspaceName),
   };
 }
 
@@ -165,7 +153,7 @@ function isNotesCache(value: unknown): value is NotesCache {
     Array.isArray(cache.workspaces) &&
     cache.workspaces.every(isWorkspace) &&
     Array.isArray(cache.notes) &&
-    cache.notes.every(isOctarineNote)
+    cache.notes.every(isIndexedNote)
   );
 }
 
@@ -204,7 +192,7 @@ export async function loadCachedNotes(): Promise<NotesCacheResult | undefined> {
   };
 }
 
-export async function saveCachedNotes(workspaces: Workspace[], notes: OctarineNote[]): Promise<void> {
+export async function saveCachedNotes(workspaces: Workspace[], notes: IndexedNote[]): Promise<void> {
   const preferences = getPreferenceValues<NotesCachePreferences>();
   const roots = parseWorkspaceRoots(preferences.workspaceRoots);
   const excludedFolders = parseExcludedFolders(preferences.excludedFolders);
@@ -219,7 +207,7 @@ export async function saveCachedNotes(workspaces: Workspace[], notes: OctarineNo
   });
 }
 
-export function matchesSearchQuery(note: OctarineNote, searchText: string): boolean {
+export function matchesSearchQuery(note: IndexedNote, searchText: string): boolean {
   const normalizedQuery = normalizeSearchPart(searchText);
   if (!normalizedQuery) {
     return true;
@@ -245,7 +233,7 @@ export function matchesSearchQuery(note: OctarineNote, searchText: string): bool
 
   const fuzzyPathMatch =
     note.normalizedDirectory.includes(queryWithoutOuterSlashes) ||
-    note.normalizedSubtitle.includes(queryWithoutOuterSlashes);
+    note.normalizedPath.includes(queryWithoutOuterSlashes);
 
   const lastSlashIndex = queryWithoutOuterSlashes.lastIndexOf("/");
   const directoryPrefix = lastSlashIndex === -1 ? "" : queryWithoutOuterSlashes.slice(0, lastSlashIndex).trim();
@@ -260,27 +248,27 @@ export function matchesSearchQuery(note: OctarineNote, searchText: string): bool
   return fuzzyPathMatch || scopedTitleMatch;
 }
 
-export function buildOctarineUrl(note: OctarineNote): string {
-  return `octarine://open?path=${encodeURIComponent(note.subtitle)}&workspace=${encodeURIComponent(note.workspace)}`;
+export function buildOctarineUrl(note: ScannedNote): string {
+  return `octarine://open?path=${encodeURIComponent(note.path)}&workspace=${encodeURIComponent(note.workspace.name)}`;
 }
 
-export function sortNotes(notes: OctarineNote[]): void {
+export function sortNotes(notes: ScannedNote[]): void {
   notes.sort((left, right) => {
-    const byWorkspace = left.workspace.localeCompare(right.workspace);
+    const byWorkspace = left.workspace.name.localeCompare(right.workspace.name);
     if (byWorkspace !== 0) {
       return byWorkspace;
     }
 
-    return left.subtitle.localeCompare(right.subtitle);
+    return left.path.localeCompare(right.path);
   });
 }
 
 export async function scanWorkspaceForNotes(
   workspace: Workspace,
   onError: (error: unknown) => Promise<void>,
-): Promise<OctarineNote[]> {
+): Promise<IndexedNote[]> {
   const pendingDirectories: string[] = [workspace.path];
-  const discoveredNotes: OctarineNote[] = [];
+  const discoveredNotes: IndexedNote[] = [];
 
   while (pendingDirectories.length > 0) {
     const currentDirectory = pendingDirectories.pop();
@@ -322,8 +310,8 @@ export async function scanWorkspaceForNotes(
       discoveredNotes.push({
         id: `${workspace.name}::${relativePath}`,
         title: noteTitle,
-        subtitle: relativePath,
-        workspace: workspace.name,
+        path: relativePath,
+        workspace,
         ...buildNoteSearchFields(noteTitle, relativePath, workspace.name),
       });
     }
@@ -335,9 +323,9 @@ export async function scanWorkspaceForNotes(
 export async function scanNotesFromWorkspaces(
   workspaces: Workspace[],
   onError: (error: unknown) => Promise<void>,
-): Promise<OctarineNote[]> {
+): Promise<IndexedNote[]> {
   const discoveredNoteIds = new Set<string>();
-  const discoveredNotes: OctarineNote[] = [];
+  const discoveredNotes: IndexedNote[] = [];
   const notesByWorkspace = await Promise.all(workspaces.map((workspace) => scanWorkspaceForNotes(workspace, onError)));
 
   for (const workspaceNotes of notesByWorkspace) {

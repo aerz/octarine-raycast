@@ -11,12 +11,13 @@ import {
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { matchesSearchIndex } from "./lib/search";
-import { AttachmentFile } from "./types/attachment";
+import { isIndexedAttachment, type IndexedAttachment } from "./types/attachment";
 import { scanAttachmentsFromPreferences } from "./lib/attachments";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
+const loadAttachmentFiles = (excludeFileExtensions?: string) => scanAttachmentsFromPreferences(excludeFileExtensions);
 
-function getGridItemContent(file: AttachmentFile): Grid.Item.Props["content"] {
+function getGridItemContent(file: IndexedAttachment): Grid.Item.Props["content"] {
   if (IMAGE_EXTENSIONS.has(file.extension)) {
     return file.path;
   }
@@ -40,24 +41,25 @@ export default function SearchAttachmentsCommand() {
   const hasShownSectionWarningRef = useRef(false);
   const isTypeFilterActive = selectedExtension !== "all";
 
-  const { data: attachments = [], isLoading } = useCachedPromise(
-    scanAttachmentsFromPreferences,
-    [excludeFileExtensions],
-    {
-      initialData: [],
-      onError: async (error) => {
-        if (loadingToastRef.current) {
-          await loadingToastRef.current.hide();
-          loadingToastRef.current = undefined;
-        }
+  const { data: cachedAttachments = [], isLoading } = useCachedPromise(loadAttachmentFiles, [excludeFileExtensions], {
+    initialData: [],
+    onError: async (error) => {
+      if (loadingToastRef.current) {
+        await loadingToastRef.current.hide();
+        loadingToastRef.current = undefined;
+      }
 
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to scan attachments",
-          message: error.message,
-        });
-      },
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to scan attachments",
+        message: error.message,
+      });
     },
+  });
+
+  const attachments = useMemo(
+    () => cachedAttachments.filter((file): file is IndexedAttachment => isIndexedAttachment(file)),
+    [cachedAttachments],
   );
 
   useEffect(() => {
@@ -139,14 +141,14 @@ export default function SearchAttachmentsCommand() {
   }, [extensionFilteredAttachments, isTypeFilterActive, searchText]);
 
   const sections = useMemo(() => {
-    const grouped = new Map<string, { workspaceName: string; files: AttachmentFile[] }>();
+    const grouped = new Map<string, { workspaceName: string; files: IndexedAttachment[] }>();
     for (const file of visibleAttachments) {
-      const existing = grouped.get(file.workspacePath);
+      const existing = grouped.get(file.workspace.path);
       if (existing) {
         existing.files.push(file);
       } else {
-        grouped.set(file.workspacePath, {
-          workspaceName: file.workspaceName,
+        grouped.set(file.workspace.path, {
+          workspaceName: file.workspace.name,
           files: [file],
         });
       }
@@ -218,12 +220,12 @@ export default function SearchAttachmentsCommand() {
               subtitle={file.extension.toUpperCase()}
               content={getGridItemContent(file)}
               quickLook={{ name: file.name, path: file.path }}
-              keywords={[file.workspaceName, file.extension]}
+              keywords={[file.workspace.name, file.extension]}
               actions={
                 <ActionPanel>
                   <Action.Open
                     title="Search in Octarine"
-                    target={`octarine://search?query=${encodeURIComponent(file.name)}&workspace=${encodeURIComponent(file.workspaceName)}`}
+                    target={`octarine://search?query=${encodeURIComponent(file.name)}&workspace=${encodeURIComponent(file.workspace.name)}`}
                     icon={Icon.Globe}
                   />
                   <Action.Open title="Open File" target={file.path} shortcut={{ modifiers: ["cmd"], key: "return" }} />
@@ -253,12 +255,12 @@ export default function SearchAttachmentsCommand() {
                   subtitle={file.extension.toUpperCase()}
                   content={getGridItemContent(file)}
                   quickLook={{ name: file.name, path: file.path }}
-                  keywords={[file.workspaceName, file.extension]}
+                  keywords={[file.workspace.name, file.extension]}
                   actions={
                     <ActionPanel>
                       <Action.Open
                         title="Search in Octarine"
-                        target={`octarine://search?query=${encodeURIComponent(file.name)}&workspace=${encodeURIComponent(file.workspaceName)}`}
+                        target={`octarine://search?query=${encodeURIComponent(file.name)}&workspace=${encodeURIComponent(file.workspace.name)}`}
                         icon={Icon.Globe}
                       />
                       <Action.Open

@@ -1,8 +1,9 @@
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
+import type { Workspace } from "../types/octarine";
 import { buildSearchIndexText } from "./search";
-import { AttachmentFile } from "../types/attachment";
-import { Workspace, loadWorkspaces } from "../lib/workspaces";
+import { IndexedAttachment } from "../types/attachment";
+import { loadWorkspaces } from "../lib/workspaces";
 
 const ATTACHMENT_DIRECTORIES = [".attachments", ".files"] as const;
 const SYSTEM_GENERATED_FILE_NAMES = new Set([
@@ -40,14 +41,13 @@ function parseExcludedExtensions(rawValue?: string): Set<string> {
   return excludedExtensions;
 }
 
-async function collectAttachmentFiles(
+async function collectIndexedAttachments(
   attachmentsPath: string,
-  workspaceName: string,
-  workspacePath: string,
+  workspace: Workspace,
   initialEntries: Dirent[],
   excludedExtensions: Set<string>,
-): Promise<AttachmentFile[]> {
-  const files: AttachmentFile[] = [];
+): Promise<IndexedAttachment[]> {
+  const attachments: IndexedAttachment[] = [];
   const pendingDirectories: Array<{ directory: string; entries?: Dirent[] }> = [
     { directory: attachmentsPath, entries: initialEntries },
   ];
@@ -67,7 +67,7 @@ async function collectAttachmentFiles(
       } catch (error) {
         console.warn("Skipping unreadable attachments directory", {
           directory: next.directory,
-          workspacePath,
+          workspacePath: workspace.path,
           error,
         });
         continue;
@@ -95,27 +95,25 @@ async function collectAttachmentFiles(
         continue;
       }
 
-      files.push({
+      attachments.push({
         name: entry.name,
         path: absoluteEntryPath,
         extension,
-        workspaceName,
-        workspacePath,
-        searchText: buildSearchIndexText(entry.name, workspaceName, extension),
+        workspace,
+        searchText: buildSearchIndexText(entry.name, workspace.name, extension),
       });
     }
   }
 
-  return files;
+  return attachments;
 }
 
 async function scanAttachmentDirectory(
   workspace: Workspace,
-  normalizedWorkspacePath: string,
   directoryName: (typeof ATTACHMENT_DIRECTORIES)[number],
   excludedExtensions: Set<string>,
-): Promise<AttachmentFile[]> {
-  const attachmentsPath = path.join(normalizedWorkspacePath, directoryName);
+): Promise<IndexedAttachment[]> {
+  const attachmentsPath = path.join(workspace.path, directoryName);
   let attachmentsStats;
   try {
     attachmentsStats = await fs.stat(attachmentsPath);
@@ -132,7 +130,7 @@ async function scanAttachmentDirectory(
     rootEntries = await fs.readdir(attachmentsPath, { withFileTypes: true });
   } catch (error) {
     console.warn("Skipping unreadable attachment directory", {
-      workspacePath: normalizedWorkspacePath,
+      workspacePath: workspace.path,
       attachmentsPath,
       directoryName,
       error,
@@ -144,20 +142,15 @@ async function scanAttachmentDirectory(
     return [];
   }
 
-  return collectAttachmentFiles(
-    attachmentsPath,
-    workspace.name,
-    normalizedWorkspacePath,
-    rootEntries,
-    excludedExtensions,
-  );
+  return collectIndexedAttachments(attachmentsPath, workspace, rootEntries, excludedExtensions);
 }
 
 async function scanWorkspaceAttachments(
   workspace: Workspace,
   excludedExtensions: Set<string>,
-): Promise<AttachmentFile[]> {
+): Promise<IndexedAttachment[]> {
   const normalizedWorkspacePath = path.normalize(path.resolve(workspace.path));
+  const normalizedWorkspace = { ...workspace, path: normalizedWorkspacePath };
   let workspaceStats;
   try {
     workspaceStats = await fs.stat(normalizedWorkspacePath);
@@ -178,14 +171,14 @@ async function scanWorkspaceAttachments(
 
   const attachmentsByDirectory = await Promise.all(
     ATTACHMENT_DIRECTORIES.map((directoryName) =>
-      scanAttachmentDirectory(workspace, normalizedWorkspacePath, directoryName, excludedExtensions),
+      scanAttachmentDirectory(normalizedWorkspace, directoryName, excludedExtensions),
     ),
   );
 
   return attachmentsByDirectory.flat();
 }
 
-export async function scanAttachmentsFromPreferences(excludeFileExtensions?: string): Promise<AttachmentFile[]> {
+export async function scanAttachmentsFromPreferences(excludeFileExtensions?: string): Promise<IndexedAttachment[]> {
   const workspaceResult = await loadWorkspaces();
   const excludedExtensions = parseExcludedExtensions(excludeFileExtensions);
 

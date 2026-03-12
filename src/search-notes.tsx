@@ -10,15 +10,16 @@ import {
   showToast,
 } from "@raycast/api";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import type { Workspace } from "./types/octarine";
 import {
-  OctarineNote,
+  IndexedNote,
   buildOctarineUrl,
   loadCachedNotes,
   matchesSearchQuery,
   saveCachedNotes,
   scanNotesFromWorkspaces,
 } from "./lib/notes";
-import { Workspace, loadWorkspaces, parseWorkspaceRoots } from "./lib/workspaces";
+import { loadWorkspaces, parseWorkspaceRoots } from "./lib/workspaces";
 
 type SearchNotesPreferences = {
   workspaceRoots: string;
@@ -26,15 +27,15 @@ type SearchNotesPreferences = {
   showWorkspaceNoteCount?: boolean;
 };
 
-function renderNoteItem(note: OctarineNote) {
+function renderNoteItem(note: IndexedNote) {
   const octarineUrl = buildOctarineUrl(note);
 
   return (
     <List.Item
       key={note.id}
       title={note.title}
-      subtitle={note.subtitle}
-      keywords={[note.subtitle, note.workspace]}
+      subtitle={note.path}
+      keywords={[note.path, note.workspace.name]}
       actions={
         <ActionPanel>
           <Action
@@ -62,7 +63,7 @@ export default function SearchNotesCommand() {
   const preferences = getPreferenceValues<SearchNotesPreferences>();
   const showWorkspaceNoteCount = preferences.showWorkspaceNoteCount ?? false;
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [notes, setNotes] = useState<OctarineNote[]>([]);
+  const [notes, setNotes] = useState<IndexedNote[]>([]);
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -170,7 +171,7 @@ export default function SearchNotesCommand() {
   );
 
   const filteredNotes = useMemo(
-    () => notes.filter((note) => selectedWorkspace === "all" || note.workspace === selectedWorkspace),
+    () => notes.filter((note) => selectedWorkspace === "all" || note.workspace.name === selectedWorkspace),
     [notes, selectedWorkspace],
   );
 
@@ -180,13 +181,14 @@ export default function SearchNotesCommand() {
   );
 
   const notesByWorkspace = useMemo(() => {
-    const groupedNotes = new Map<string, OctarineNote[]>();
+    const groupedNotes = new Map<string, IndexedNote[]>();
     for (const note of searchFilteredNotes) {
-      const notesInWorkspace = groupedNotes.get(note.workspace);
+      const workspaceName = note.workspace.name;
+      const notesInWorkspace = groupedNotes.get(workspaceName);
       if (notesInWorkspace) {
         notesInWorkspace.push(note);
       } else {
-        groupedNotes.set(note.workspace, [note]);
+        groupedNotes.set(workspaceName, [note]);
       }
     }
 

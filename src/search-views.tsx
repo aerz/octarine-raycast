@@ -11,7 +11,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { openOctarineView } from "./lib/octarine";
 import { matchesSearchIndex } from "./lib/search";
-import { OctarineView, scanViewsFromWorkspaces } from "./lib/views";
+import { IndexedView, scanViewsFromWorkspaces } from "./lib/views";
 import { parseWorkspaceRoots } from "./lib/workspaces";
 
 type SearchViewsPreferences = {
@@ -19,13 +19,13 @@ type SearchViewsPreferences = {
   showWorkspaceViewCount?: boolean;
 };
 
-function renderViewItem(view: OctarineView, onOpenView: (viewToOpen: OctarineView) => Promise<void>) {
+function renderViewItem(view: IndexedView, onOpenView: (viewToOpen: IndexedView) => Promise<void>) {
   return (
     <List.Item
       key={view.id}
       title={view.name}
       subtitle={view.description}
-      keywords={[view.workspaceName, view.description ?? ""]}
+      keywords={[view.workspace.name, view.description]}
       actions={
         <ActionPanel>
           <Action title="Open View in Octarine" icon={Icon.AppWindow} onAction={() => void onOpenView(view)} />
@@ -39,7 +39,7 @@ export default function SearchViewsCommand() {
   const preferences = getPreferenceValues<SearchViewsPreferences>();
   const showWorkspaceViewCount = preferences.showWorkspaceViewCount ?? false;
   const [workspaceNames, setWorkspaceNames] = useState<string[]>([]);
-  const [views, setViews] = useState<OctarineView[]>([]);
+  const [views, setViews] = useState<IndexedView[]>([]);
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -110,9 +110,9 @@ export default function SearchViewsCommand() {
     };
   }, []);
 
-  const handleOpenView = async (view: OctarineView) => {
+  const handleOpenView = async (view: IndexedView) => {
     try {
-      await openOctarineView(view.workspaceName, view.name);
+      await openOctarineView(view.workspace.name, view.name);
     } catch (error) {
       console.error("Failed to open Octarine view", { view, error });
       await showToast({
@@ -124,7 +124,7 @@ export default function SearchViewsCommand() {
   };
 
   const filteredViews = useMemo(
-    () => views.filter((view) => selectedWorkspace === "all" || view.workspaceName === selectedWorkspace),
+    () => views.filter((view) => selectedWorkspace === "all" || view.workspace.name === selectedWorkspace),
     [views, selectedWorkspace],
   );
 
@@ -134,14 +134,15 @@ export default function SearchViewsCommand() {
   );
 
   const viewsByWorkspace = useMemo(() => {
-    const groupedViews = new Map<string, OctarineView[]>();
+    const groupedViews = new Map<string, IndexedView[]>();
 
     for (const view of searchFilteredViews) {
-      const viewsInWorkspace = groupedViews.get(view.workspaceName);
+      const workspaceName = view.workspace.name;
+      const viewsInWorkspace = groupedViews.get(workspaceName);
       if (viewsInWorkspace) {
         viewsInWorkspace.push(view);
       } else {
-        groupedViews.set(view.workspaceName, [view]);
+        groupedViews.set(workspaceName, [view]);
       }
     }
 

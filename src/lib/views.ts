@@ -1,7 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import type { View, Workspace } from "../types/octarine";
 import { buildSearchIndexText } from "./search";
-import { Workspace, WorkspaceLoadResult, loadWorkspaces } from "./workspaces";
+import { type WorkspaceLoadResult, loadWorkspaces } from "./workspaces";
 
 const VIEWS_FILE_NAME = "views.json";
 const OCTARINE_DIRECTORY_NAME = ".octarine";
@@ -10,30 +11,19 @@ type RawView = {
   id?: unknown;
   name?: unknown;
   desc?: unknown;
-  icon?: unknown;
-  color?: unknown;
-  order?: unknown;
 };
 
 type ValidRawView = RawView & {
   name: string;
 };
 
-export type OctarineView = {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-  order?: number;
-  workspaceName: string;
-  workspacePath: string;
+export type IndexedView = View & {
   searchText: string;
 };
 
 export type WorkspaceViews = {
   workspace: Workspace;
-  views: OctarineView[];
+  views: IndexedView[];
 };
 
 export type ViewsScanResult = Pick<WorkspaceLoadResult, "invalidRoots" | "fromCache"> & {
@@ -50,7 +40,7 @@ function isValidRawView(value: unknown): value is ValidRawView {
   return typeof rawView.name === "string" && rawView.name.trim().length > 0;
 }
 
-function parseViews(rawValue: unknown, workspace: Workspace): OctarineView[] | undefined {
+function parseViews(rawValue: unknown, workspace: Workspace): IndexedView[] | undefined {
   if (!Array.isArray(rawValue)) {
     return undefined;
   }
@@ -71,30 +61,17 @@ function parseViews(rawValue: unknown, workspace: Workspace): OctarineView[] | u
   return validViews
     .map((rawView, index) => {
       const viewName = rawView.name.trim();
-      const description =
-        typeof rawView.desc === "string" && rawView.desc.trim().length > 0 ? rawView.desc.trim() : undefined;
+      const description = typeof rawView.desc === "string" ? rawView.desc.trim() : "";
 
       return {
         id: typeof rawView.id === "string" && rawView.id.trim().length > 0 ? rawView.id : `${workspace.path}::${index}`,
         name: viewName,
         description,
-        icon: typeof rawView.icon === "string" && rawView.icon.trim().length > 0 ? rawView.icon : undefined,
-        color: typeof rawView.color === "string" && rawView.color.trim().length > 0 ? rawView.color : undefined,
-        order: typeof rawView.order === "number" ? rawView.order : undefined,
-        workspaceName: workspace.name,
-        workspacePath: workspace.path,
+        workspace,
         searchText: buildSearchIndexText(viewName, description, workspace.name),
       };
     })
-    .sort((left, right) => {
-      const leftOrder = left.order ?? Number.MAX_SAFE_INTEGER;
-      const rightOrder = right.order ?? Number.MAX_SAFE_INTEGER;
-      if (leftOrder !== rightOrder) {
-        return leftOrder - rightOrder;
-      }
-
-      return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
-    });
+    .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
 }
 
 async function scanWorkspaceViews(workspace: Workspace): Promise<WorkspaceViews | undefined> {

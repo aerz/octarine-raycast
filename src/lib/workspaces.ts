@@ -2,15 +2,11 @@ import { LocalStorage, getPreferenceValues } from "@raycast/api";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { isWorkspace, type Workspace } from "../types/octarine";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
 const WORKSPACE_MARKER = ".octarine";
 const CACHE_VERSION = 2;
-
-export type Workspace = {
-  name: string;
-  path: string;
-};
 
 type WorkspaceCache = {
   version: number;
@@ -90,13 +86,7 @@ function isWorkspaceCache(value: unknown): value is WorkspaceCache {
     typeof maybeCache.rootsDiscoverySignature === "string" &&
     typeof maybeCache.scannedAt === "string" &&
     Array.isArray(maybeCache.workspaces) &&
-    maybeCache.workspaces.every(
-      (workspace) =>
-        workspace &&
-        typeof workspace === "object" &&
-        typeof workspace.name === "string" &&
-        typeof workspace.path === "string",
-    )
+    maybeCache.workspaces.every(isWorkspace)
   );
 }
 
