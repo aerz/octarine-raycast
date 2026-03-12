@@ -8,7 +8,8 @@ import {
   openCommandPreferences,
   showToast,
 } from "@raycast/api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCachedPromise } from "@raycast/utils";
+import { useMemo, useState } from "react";
 import { openOctarineView } from "./lib/octarine";
 import { matchesSearchIndex } from "./lib/search";
 import { IndexedView, scanViewsFromWorkspaces } from "./lib/views";
@@ -16,6 +17,7 @@ import { parseWorkspaceRoots } from "./lib/workspaces";
 
 type SearchViewsPreferences = {
   workspaceRoots: string;
+  excludedFolders?: string;
   showWorkspaceViewCount?: boolean;
 };
 
@@ -38,48 +40,32 @@ function renderViewItem(view: IndexedView, onOpenView: (viewToOpen: IndexedView)
 export default function SearchViewsCommand() {
   const preferences = getPreferenceValues<SearchViewsPreferences>();
   const showWorkspaceViewCount = preferences.showWorkspaceViewCount ?? false;
-  const [workspaceNames, setWorkspaceNames] = useState<string[]>([]);
-  const [views, setViews] = useState<IndexedView[]>([]);
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasConfiguredRoots, setHasConfiguredRoots] = useState(true);
-  const [hasValidWorkspaces, setHasValidWorkspaces] = useState(true);
-  const hasShownInvalidRootsToast = useRef(false);
+  const cacheKey = [preferences.workspaceRoots, preferences.excludedFolders ?? ""].filter(Boolean).join("::");
+  const hasConfiguredRoots = parseWorkspaceRoots(preferences.workspaceRoots).length > 0;
+  const {
+    data: scanResult,
+    error: scanError,
+    isLoading,
+  } = useCachedPromise(
+    async (preferenceCacheKey: string) => {
+      if (!preferenceCacheKey) {
+        return {
+          workspaceCount: 0,
+          workspaceViews: [],
+          invalidRoots: [],
+          fromCache: true,
+        };
+      }
 
-  useEffect(() => {
-    let canceled = false;
-
-    const scan = async () => {
-      setIsLoading(true);
-      setViews([]);
-      setWorkspaceNames([]);
-      setHasValidWorkspaces(true);
-      hasShownInvalidRootsToast.current = false;
-
-      try {
-        const roots = parseWorkspaceRoots(preferences.workspaceRoots);
-
-        if (roots.length === 0) {
-          if (!canceled) {
-            setHasConfiguredRoots(false);
-          }
-          return;
-        }
-
-        if (!canceled) {
-          setHasConfiguredRoots(true);
-        }
-
-        const result = await scanViewsFromWorkspaces();
-        if (canceled) {
-          return;
-        }
-
-        setHasValidWorkspaces(result.workspaceCount > 0);
-
-        if (!result.fromCache && result.invalidRoots.length > 0 && !hasShownInvalidRootsToast.current) {
-          hasShownInvalidRootsToast.current = true;
+      return scanViewsFromWorkspaces();
+    },
+    [cacheKey],
+    {
+      execute: hasConfiguredRoots,
+      onData: async (result) => {
+        if (!result.fromCache && result.invalidRoots.length > 0) {
           const noun = result.invalidRoots.length === 1 ? "root path" : "root paths";
           await showToast({
             style: Toast.Style.Failure,
@@ -87,28 +73,23 @@ export default function SearchViewsCommand() {
             message: `${result.invalidRoots.length} ${noun} could not be read.`,
           });
         }
-
-        setWorkspaceNames(result.workspaceViews.map((entry) => entry.workspace.name));
-        setViews(result.workspaceViews.flatMap((entry) => entry.views));
-      } catch (error) {
+      },
+      onError: async (error) => {
         console.error("Failed to scan Octarine views", error);
         await showToast({
           style: Toast.Style.Failure,
           title: "Failed to Scan Views",
         });
-      } finally {
-        if (!canceled) {
-          setIsLoading(false);
-        }
-      }
-    };
+      },
+    },
+  );
 
-    void scan();
-
-    return () => {
-      canceled = true;
-    };
-  }, []);
+  const workspaceNames = useMemo(
+    () => scanResult?.workspaceViews.map((entry) => entry.workspace.name) ?? [],
+    [scanResult],
+  );
+  const views = useMemo(() => scanResult?.workspaceViews.flatMap((entry) => entry.views) ?? [], [scanResult]);
+  const hasValidWorkspaces = (scanResult?.workspaceCount ?? 0) > 0;
 
   const handleOpenView = async (view: IndexedView) => {
     try {
@@ -150,10 +131,11 @@ export default function SearchViewsCommand() {
   }, [searchFilteredViews]);
 
   const showNoWorkspacesConfigured = !isLoading && !hasConfiguredRoots;
-  const showNoValidWorkspaces = !isLoading && hasConfiguredRoots && !hasValidWorkspaces;
-  const showNoViewsFound = !isLoading && hasConfiguredRoots && hasValidWorkspaces && views.length === 0;
+  const showNoValidWorkspaces = !isLoading && !scanError && hasConfiguredRoots && !hasValidWorkspaces;
+  const showNoViewsFound = !isLoading && !scanError && hasConfiguredRoots && hasValidWorkspaces && views.length === 0;
   const showNoMatchingViews =
     !isLoading &&
+    !scanError &&
     !showNoWorkspacesConfigured &&
     !showNoValidWorkspaces &&
     views.length > 0 &&

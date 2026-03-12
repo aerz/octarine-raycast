@@ -1,4 +1,5 @@
 import { Action, ActionPanel, Detail, LaunchProps, Toast, open, popToRoot, showToast } from "@raycast/api";
+import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
@@ -47,9 +48,6 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   const hasRequestedWorkspace = requestedWorkspace.length > 0;
   const isDateValid = useMemo(() => isSupportedDailyDeskDate(requestedDate), [requestedDate]);
 
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasWorkspaceLoadFailed, setHasWorkspaceLoadFailed] = useState(false);
   const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
   const hasShownDateErrorToast = useRef(false);
   const hasAttemptedAutoOpen = useRef(false);
@@ -71,13 +69,13 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
     [requestedDate],
   );
 
-  const refreshWorkspaces = useCallback(async () => {
-    setIsLoading(true);
-    setHasWorkspaceLoadFailed(false);
-
-    try {
+  const {
+    data: workspaceResult,
+    error: workspaceLoadError,
+    isLoading,
+  } = usePromise(
+    async () => {
       const result = await loadWorkspaces();
-      setWorkspaces(result.workspaces);
 
       if (!result.fromCache && result.invalidRoots.length > 0) {
         const noun = result.invalidRoots.length === 1 ? "root path" : "root paths";
@@ -87,21 +85,22 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
           message: `${result.invalidRoots.length} ${noun} could not be read.`,
         });
       }
-    } catch {
-      setWorkspaces([]);
-      setHasWorkspaceLoadFailed(true);
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to Load Workspaces",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    void refreshWorkspaces();
-  }, [refreshWorkspaces]);
+      return result;
+    },
+    [],
+    {
+      execute: isDateValid,
+      onError: async () => {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Failed to Load Workspaces",
+        });
+      },
+    },
+  );
+  const workspaces = workspaceResult?.workspaces ?? [];
+  const hasWorkspaceLoadFailed = Boolean(workspaceLoadError);
 
   const matchedWorkspace = useMemo(() => {
     if (!hasRequestedWorkspace) {

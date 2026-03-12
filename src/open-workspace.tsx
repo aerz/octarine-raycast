@@ -12,11 +12,11 @@ import {
   openCommandPreferences,
   showToast,
 } from "@raycast/api";
+import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
 import { loadWorkspaces } from "./lib/workspaces";
-import type { Workspace } from "./types/octarine";
 
 type OpenWorkspaceArguments = {
   workspace?: string;
@@ -26,10 +26,8 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const hasRequestedWorkspace = requestedWorkspace.length > 0;
 
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasWorkspaceLoadFailed, setHasWorkspaceLoadFailed] = useState(false);
   const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
+  const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState(0);
   const hasAttemptedAutoOpen = useRef(false);
 
   const exitCommand = useCallback(async () => {
@@ -61,13 +59,13 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
     [exitCommand],
   );
 
-  const refreshWorkspaces = useCallback(async (options?: { forceRefresh?: boolean }) => {
-    setIsLoading(true);
-    setHasWorkspaceLoadFailed(false);
-
-    try {
-      const result = await loadWorkspaces(options);
-      setWorkspaces(result.workspaces);
+  const {
+    data: workspaceResult,
+    error: workspaceLoadError,
+    isLoading,
+  } = usePromise(
+    async (refreshToken: number) => {
+      const result = await loadWorkspaces({ forceRefresh: refreshToken > 0 });
 
       if (!result.fromCache && result.invalidRoots.length > 0) {
         const noun = result.invalidRoots.length === 1 ? "root path" : "root paths";
@@ -77,21 +75,21 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
           message: `${result.invalidRoots.length} ${noun} could not be read.`,
         });
       }
-    } catch {
-      setWorkspaces([]);
-      setHasWorkspaceLoadFailed(true);
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to load workspaces",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    void refreshWorkspaces();
-  }, [refreshWorkspaces]);
+      return result;
+    },
+    [workspaceRefreshToken],
+    {
+      onError: async () => {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Failed to load workspaces",
+        });
+      },
+    },
+  );
+  const workspaces = workspaceResult?.workspaces ?? [];
+  const hasWorkspaceLoadFailed = Boolean(workspaceLoadError);
 
   const matchedWorkspace = useMemo(() => {
     if (!hasRequestedWorkspace) {
@@ -147,7 +145,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
               <Action
                 title="Rescan Workspaces"
                 icon={Icon.ArrowClockwise}
-                onAction={() => void refreshWorkspaces({ forceRefresh: true })}
+                onAction={() => setWorkspaceRefreshToken((currentValue) => currentValue + 1)}
               />
               <Action
                 title="Open Command Preferences"
@@ -168,7 +166,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
           <Action
             title="Rescan Workspaces"
             icon={Icon.ArrowClockwise}
-            onAction={() => void refreshWorkspaces({ forceRefresh: true })}
+            onAction={() => setWorkspaceRefreshToken((currentValue) => currentValue + 1)}
           />
           <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => void Clipboard.copy(workspace.path)} />
           <Action title="Open Command Preferences" icon={Icon.Gear} onAction={() => void openCommandPreferences()} />
