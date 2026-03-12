@@ -118,11 +118,7 @@ async function saveCache(cache: WorkspaceCache): Promise<void> {
   await LocalStorage.setItem(WORKSPACES_CACHE_KEY, JSON.stringify(cache));
 }
 
-async function discoverWorkspacesInRoot(
-  rootPath: string,
-  dedupedPaths: Set<string>,
-  excludedFolders: Set<string>,
-): Promise<Workspace[]> {
+async function discoverWorkspacesInRoot(rootPath: string, excludedFolders: Set<string>): Promise<Workspace[]> {
   const discovered: Workspace[] = [];
   const pendingDirectories: string[] = [rootPath];
 
@@ -146,13 +142,10 @@ async function discoverWorkspacesInRoot(
     const hasWorkspaceMarker = entries.some((entry) => entry.isDirectory() && entry.name === WORKSPACE_MARKER);
     if (hasWorkspaceMarker) {
       const absoluteWorkspacePath = path.normalize(path.resolve(currentDirectory));
-      if (!dedupedPaths.has(absoluteWorkspacePath)) {
-        dedupedPaths.add(absoluteWorkspacePath);
-        discovered.push({
-          name: path.basename(absoluteWorkspacePath),
-          path: absoluteWorkspacePath,
-        });
-      }
+      discovered.push({
+        name: path.basename(absoluteWorkspacePath),
+        path: absoluteWorkspacePath,
+      });
       continue;
     }
 
@@ -180,24 +173,40 @@ async function discoverWorkspaces(
   roots: string[],
   excludedFolders: Set<string>,
 ): Promise<{ workspaces: Workspace[]; invalidRoots: string[] }> {
+  const rootResults = await Promise.all(
+    roots.map(async (rootPath) => {
+      try {
+        const rootStats = await fs.stat(rootPath);
+        if (!rootStats.isDirectory()) {
+          return { rootPath, invalid: true, workspaces: [] as Workspace[] };
+        }
+      } catch {
+        return { rootPath, invalid: true, workspaces: [] as Workspace[] };
+      }
+
+      const workspaces = await discoverWorkspacesInRoot(rootPath, excludedFolders);
+      return { rootPath, invalid: false, workspaces };
+    }),
+  );
+
   const invalidRoots: string[] = [];
   const dedupedPaths = new Set<string>();
   const workspaces: Workspace[] = [];
 
-  for (const rootPath of roots) {
-    try {
-      const rootStats = await fs.stat(rootPath);
-      if (!rootStats.isDirectory()) {
-        invalidRoots.push(rootPath);
-        continue;
-      }
-    } catch {
-      invalidRoots.push(rootPath);
+  for (const result of rootResults) {
+    if (result.invalid) {
+      invalidRoots.push(result.rootPath);
       continue;
     }
 
-    const discoveredInRoot = await discoverWorkspacesInRoot(rootPath, dedupedPaths, excludedFolders);
-    workspaces.push(...discoveredInRoot);
+    for (const workspace of result.workspaces) {
+      if (dedupedPaths.has(workspace.path)) {
+        continue;
+      }
+
+      dedupedPaths.add(workspace.path);
+      workspaces.push(workspace);
+    }
   }
 
   workspaces.sort((a, b) => {

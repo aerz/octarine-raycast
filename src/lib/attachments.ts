@@ -1,7 +1,7 @@
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { AttachmentFile } from "../types/attachment";
-import { loadWorkspaces } from "../lib/workspaces";
+import { Workspace, loadWorkspaces } from "../lib/workspaces";
 
 const ATTACHMENT_DIRECTORIES = [".attachments", ".files"] as const;
 const SYSTEM_GENERATED_FILE_NAMES = new Set([
@@ -107,75 +107,94 @@ async function collectAttachmentFiles(
   return files;
 }
 
+async function scanAttachmentDirectory(
+  workspace: Workspace,
+  normalizedWorkspacePath: string,
+  directoryName: (typeof ATTACHMENT_DIRECTORIES)[number],
+  excludedExtensions: Set<string>,
+): Promise<AttachmentFile[]> {
+  const attachmentsPath = path.join(normalizedWorkspacePath, directoryName);
+  let attachmentsStats;
+  try {
+    attachmentsStats = await fs.stat(attachmentsPath);
+  } catch {
+    return [];
+  }
+
+  if (!attachmentsStats.isDirectory()) {
+    return [];
+  }
+
+  let rootEntries: Dirent[];
+  try {
+    rootEntries = await fs.readdir(attachmentsPath, { withFileTypes: true });
+  } catch (error) {
+    console.warn("Skipping unreadable attachment directory", {
+      workspacePath: normalizedWorkspacePath,
+      attachmentsPath,
+      directoryName,
+      error,
+    });
+    return [];
+  }
+
+  if (rootEntries.length === 0) {
+    return [];
+  }
+
+  return collectAttachmentFiles(
+    attachmentsPath,
+    workspace.name,
+    normalizedWorkspacePath,
+    rootEntries,
+    excludedExtensions,
+  );
+}
+
+async function scanWorkspaceAttachments(
+  workspace: Workspace,
+  excludedExtensions: Set<string>,
+): Promise<AttachmentFile[]> {
+  const normalizedWorkspacePath = path.normalize(path.resolve(workspace.path));
+  let workspaceStats;
+  try {
+    workspaceStats = await fs.stat(normalizedWorkspacePath);
+  } catch (error) {
+    console.warn("Skipping inaccessible workspace path", {
+      workspacePath: normalizedWorkspacePath,
+      error,
+    });
+    return [];
+  }
+
+  if (!workspaceStats.isDirectory()) {
+    console.warn("Skipping workspace path because it is not a directory", {
+      workspacePath: normalizedWorkspacePath,
+    });
+    return [];
+  }
+
+  const attachmentsByDirectory = await Promise.all(
+    ATTACHMENT_DIRECTORIES.map((directoryName) =>
+      scanAttachmentDirectory(workspace, normalizedWorkspacePath, directoryName, excludedExtensions),
+    ),
+  );
+
+  return attachmentsByDirectory.flat();
+}
+
 export async function scanAttachmentsFromPreferences(excludeFileExtensions?: string): Promise<AttachmentFile[]> {
   const workspaceResult = await loadWorkspaces();
   const excludedExtensions = parseExcludedExtensions(excludeFileExtensions);
-  const attachments: AttachmentFile[] = [];
 
   for (const invalidRoot of workspaceResult.invalidRoots) {
     console.warn("Skipping inaccessible workspace root", { root: invalidRoot });
   }
 
-  for (const workspace of workspaceResult.workspaces) {
-    const normalizedWorkspacePath = path.normalize(path.resolve(workspace.path));
-    let workspaceStats;
-    try {
-      workspaceStats = await fs.stat(normalizedWorkspacePath);
-    } catch (error) {
-      console.warn("Skipping inaccessible workspace path", {
-        workspacePath: normalizedWorkspacePath,
-        error,
-      });
-      continue;
-    }
-
-    if (!workspaceStats.isDirectory()) {
-      console.warn("Skipping workspace path because it is not a directory", {
-        workspacePath: normalizedWorkspacePath,
-      });
-      continue;
-    }
-
-    for (const directoryName of ATTACHMENT_DIRECTORIES) {
-      const attachmentsPath = path.join(normalizedWorkspacePath, directoryName);
-      let attachmentsStats;
-      try {
-        attachmentsStats = await fs.stat(attachmentsPath);
-      } catch {
-        continue;
-      }
-
-      if (!attachmentsStats.isDirectory()) {
-        continue;
-      }
-
-      let rootEntries: Dirent[];
-      try {
-        rootEntries = await fs.readdir(attachmentsPath, { withFileTypes: true });
-      } catch (error) {
-        console.warn("Skipping unreadable attachment directory", {
-          workspacePath: normalizedWorkspacePath,
-          attachmentsPath,
-          directoryName,
-          error,
-        });
-        continue;
-      }
-
-      if (rootEntries.length === 0) {
-        continue;
-      }
-
-      const discoveredFiles = await collectAttachmentFiles(
-        attachmentsPath,
-        workspace.name,
-        normalizedWorkspacePath,
-        rootEntries,
-        excludedExtensions,
-      );
-      attachments.push(...discoveredFiles);
-    }
-  }
+  const attachmentsByWorkspace = await Promise.all(
+    workspaceResult.workspaces.map((workspace) => scanWorkspaceAttachments(workspace, excludedExtensions)),
+  );
+  const attachments = attachmentsByWorkspace.flat();
 
   attachments.sort((left, right) => {
     const byName = left.name.localeCompare(right.name, undefined, { sensitivity: "base" });

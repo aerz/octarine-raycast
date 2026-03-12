@@ -93,60 +93,62 @@ function parseViews(rawValue: unknown, workspace: Workspace): OctarineView[] | u
     });
 }
 
+async function scanWorkspaceViews(workspace: Workspace): Promise<WorkspaceViews | undefined> {
+  const viewsPath = path.join(workspace.path, OCTARINE_DIRECTORY_NAME, VIEWS_FILE_NAME);
+
+  let fileContents: string;
+  try {
+    fileContents = await fs.readFile(viewsPath, "utf8");
+  } catch (error) {
+    const errorCode = error instanceof Error && "code" in error ? (error as NodeJS.ErrnoException).code : undefined;
+    if (errorCode === "ENOENT") {
+      return undefined;
+    }
+
+    console.warn("Skipping unreadable Octarine views file", {
+      workspacePath: workspace.path,
+      viewsPath,
+      error,
+    });
+    return undefined;
+  }
+
+  let parsedContents: unknown;
+  try {
+    parsedContents = JSON.parse(fileContents) as unknown;
+  } catch (error) {
+    console.warn("Skipping malformed Octarine views file", {
+      workspacePath: workspace.path,
+      viewsPath,
+      error,
+    });
+    return undefined;
+  }
+
+  const views = parseViews(parsedContents, workspace);
+  if (!views) {
+    console.warn("Skipping invalid Octarine views file contents", {
+      workspacePath: workspace.path,
+      viewsPath,
+    });
+    return undefined;
+  }
+
+  if (views.length === 0) {
+    return undefined;
+  }
+
+  return {
+    workspace,
+    views,
+  };
+}
+
 export async function scanViewsFromWorkspaces(options?: { forceRefresh?: boolean }): Promise<ViewsScanResult> {
   const workspaceResult = await loadWorkspaces(options);
-  const workspaceViews: WorkspaceViews[] = [];
-
-  for (const workspace of workspaceResult.workspaces) {
-    const viewsPath = path.join(workspace.path, OCTARINE_DIRECTORY_NAME, VIEWS_FILE_NAME);
-
-    let fileContents: string;
-    try {
-      fileContents = await fs.readFile(viewsPath, "utf8");
-    } catch (error) {
-      const errorCode = error instanceof Error && "code" in error ? (error as NodeJS.ErrnoException).code : undefined;
-      if (errorCode === "ENOENT") {
-        continue;
-      }
-
-      console.warn("Skipping unreadable Octarine views file", {
-        workspacePath: workspace.path,
-        viewsPath,
-        error,
-      });
-      continue;
-    }
-
-    let parsedContents: unknown;
-    try {
-      parsedContents = JSON.parse(fileContents) as unknown;
-    } catch (error) {
-      console.warn("Skipping malformed Octarine views file", {
-        workspacePath: workspace.path,
-        viewsPath,
-        error,
-      });
-      continue;
-    }
-
-    const views = parseViews(parsedContents, workspace);
-    if (!views) {
-      console.warn("Skipping invalid Octarine views file contents", {
-        workspacePath: workspace.path,
-        viewsPath,
-      });
-      continue;
-    }
-
-    if (views.length === 0) {
-      continue;
-    }
-
-    workspaceViews.push({
-      workspace,
-      views,
-    });
-  }
+  const workspaceViews = (
+    await Promise.all(workspaceResult.workspaces.map((workspace) => scanWorkspaceViews(workspace)))
+  ).filter((value): value is WorkspaceViews => value !== undefined);
 
   return {
     workspaceCount: workspaceResult.workspaces.length,

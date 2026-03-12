@@ -311,10 +311,9 @@ export async function scanNotesFromWorkspaces(
 ): Promise<OctarineNote[]> {
   const discoveredNoteIds = new Set<string>();
   const discoveredNotes: OctarineNote[] = [];
+  const notesByWorkspace = await Promise.all(workspaces.map((workspace) => scanWorkspaceForNotes(workspace, onError)));
 
-  for (const workspace of workspaces) {
-    const workspaceNotes = await scanWorkspaceForNotes(workspace, onError);
-
+  for (const workspaceNotes of notesByWorkspace) {
     for (const note of workspaceNotes) {
       if (discoveredNoteIds.has(note.id)) {
         continue;
