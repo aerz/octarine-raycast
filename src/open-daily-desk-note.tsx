@@ -160,7 +160,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
       "**Supported Date Formats**",
       "",
       "- ISO date: `2024-01-15`, `2024-12-25`",
-      "- ISO week: `2024-W03`, `2026-W1`",
+      "- ISO week: `2024-W03`, `2026-W01`",
       "- Natural language dates: `today`, `yesterday`, `tomorrow`",
       "- Relative dates: `2 days ago`, `next monday`, `last friday`",
       "- Partial dates: `jan 15`, `december 25`, `nov 3`",
