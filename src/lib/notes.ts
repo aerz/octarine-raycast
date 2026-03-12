@@ -4,7 +4,7 @@ import path from "node:path";
 import { Workspace, parseWorkspaceRoots } from "./workspaces";
 
 const NOTES_CACHE_KEY = "octarine.notes.v1";
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
 
 type NotesCachePreferences = {
@@ -25,6 +25,12 @@ export type OctarineNote = {
   title: string;
   subtitle: string;
   workspace: string;
+  normalizedTitle: string;
+  normalizedSubtitle: string;
+  normalizedWorkspace: string;
+  normalizedDirectory: string;
+  directorySegments: string[];
+  searchText: string;
 };
 
 export type NotesCacheResult = {
@@ -43,22 +49,21 @@ function toPathSegments(pathValue: string): string[] {
     .filter(Boolean);
 }
 
-function matchesDirectoryScopeAtAnyDepth(noteDirectory: string, directoryQuery: string): boolean {
+function matchesDirectoryScopeAtAnyDepth(noteDirectorySegments: string[], directoryQuery: string): boolean {
   const querySegments = toPathSegments(directoryQuery);
   if (querySegments.length === 0) {
     return true;
   }
 
-  const directorySegments = toPathSegments(noteDirectory);
-  if (directorySegments.length < querySegments.length) {
+  if (noteDirectorySegments.length < querySegments.length) {
     return false;
   }
 
-  for (let start = 0; start <= directorySegments.length - querySegments.length; start += 1) {
+  for (let start = 0; start <= noteDirectorySegments.length - querySegments.length; start += 1) {
     let matchesAllSegments = true;
 
     for (let index = 0; index < querySegments.length; index += 1) {
-      if (directorySegments[start + index] !== querySegments[index]) {
+      if (noteDirectorySegments[start + index] !== querySegments[index]) {
         matchesAllSegments = false;
         break;
       }
@@ -117,8 +122,33 @@ function isOctarineNote(value: unknown): value is OctarineNote {
     typeof (value as OctarineNote).id === "string" &&
     typeof (value as OctarineNote).title === "string" &&
     typeof (value as OctarineNote).subtitle === "string" &&
-    typeof (value as OctarineNote).workspace === "string"
+    typeof (value as OctarineNote).workspace === "string" &&
+    typeof (value as OctarineNote).normalizedTitle === "string" &&
+    typeof (value as OctarineNote).normalizedSubtitle === "string" &&
+    typeof (value as OctarineNote).normalizedWorkspace === "string" &&
+    typeof (value as OctarineNote).normalizedDirectory === "string" &&
+    Array.isArray((value as OctarineNote).directorySegments) &&
+    (value as OctarineNote).directorySegments.every((segment) => typeof segment === "string") &&
+    typeof (value as OctarineNote).searchText === "string"
   );
+}
+
+function buildNoteSearchFields(title: string, subtitle: string, workspace: string) {
+  const normalizedTitle = title.toLowerCase();
+  const normalizedSubtitle = subtitle.toLowerCase();
+  const normalizedWorkspace = workspace.toLowerCase();
+  const noteDirectory = path.posix.dirname(normalizedSubtitle);
+  const normalizedDirectory = noteDirectory === "." ? "" : noteDirectory;
+  const directorySegments = toPathSegments(normalizedDirectory);
+
+  return {
+    normalizedTitle,
+    normalizedSubtitle,
+    normalizedWorkspace,
+    normalizedDirectory,
+    directorySegments,
+    searchText: `${normalizedTitle} ${normalizedSubtitle} ${normalizedWorkspace}`,
+  };
 }
 
 function isNotesCache(value: unknown): value is NotesCache {
@@ -194,11 +224,6 @@ export function matchesSearchQuery(note: OctarineNote, searchText: string): bool
     return true;
   }
 
-  const noteTitle = note.title.toLowerCase();
-  const noteSubtitle = note.subtitle.toLowerCase();
-  const noteWorkspace = note.workspace.toLowerCase();
-  const noteDirectory = path.posix.dirname(noteSubtitle);
-  const normalizedDirectory = noteDirectory === "." ? "" : noteDirectory;
   const hasSlash = normalizedQuery.includes("/");
 
   if (!hasSlash) {
@@ -207,19 +232,19 @@ export function matchesSearchQuery(note: OctarineNote, searchText: string): bool
       return true;
     }
 
-    const combinedHaystack = `${noteTitle} ${noteSubtitle} ${noteWorkspace}`;
-    return tokens.every((token) => combinedHaystack.includes(token));
+    return tokens.every((token) => note.searchText.includes(token));
   }
 
   const hasTrailingSlash = normalizedQuery.endsWith("/");
   const queryWithoutOuterSlashes = normalizedQuery.replace(/^\/+|\/+$/g, "");
 
   if (hasTrailingSlash) {
-    return matchesDirectoryScopeAtAnyDepth(normalizedDirectory, queryWithoutOuterSlashes);
+    return matchesDirectoryScopeAtAnyDepth(note.directorySegments, queryWithoutOuterSlashes);
   }
 
   const fuzzyPathMatch =
-    normalizedDirectory.includes(queryWithoutOuterSlashes) || noteSubtitle.includes(queryWithoutOuterSlashes);
+    note.normalizedDirectory.includes(queryWithoutOuterSlashes) ||
+    note.normalizedSubtitle.includes(queryWithoutOuterSlashes);
 
   const lastSlashIndex = queryWithoutOuterSlashes.lastIndexOf("/");
   const directoryPrefix = lastSlashIndex === -1 ? "" : queryWithoutOuterSlashes.slice(0, lastSlashIndex).trim();
@@ -228,8 +253,8 @@ export function matchesSearchQuery(note: OctarineNote, searchText: string): bool
   const titleTokens = titleQuery.split(/\s+/).filter(Boolean);
 
   const scopedTitleMatch =
-    matchesDirectoryScopeAtAnyDepth(normalizedDirectory, directoryPrefix) &&
-    (titleTokens.length === 0 || titleTokens.every((token) => noteTitle.includes(token)));
+    matchesDirectoryScopeAtAnyDepth(note.directorySegments, directoryPrefix) &&
+    (titleTokens.length === 0 || titleTokens.every((token) => note.normalizedTitle.includes(token)));
 
   return fuzzyPathMatch || scopedTitleMatch;
 }
@@ -298,6 +323,7 @@ export async function scanWorkspaceForNotes(
         title: noteTitle,
         subtitle: relativePath,
         workspace: workspace.name,
+        ...buildNoteSearchFields(noteTitle, relativePath, workspace.name),
       });
     }
   }

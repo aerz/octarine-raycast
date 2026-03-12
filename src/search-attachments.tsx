@@ -26,8 +26,7 @@ function matchesSearchQuery(file: AttachmentFile, searchText: string): boolean {
     return true;
   }
 
-  const searchableText = `${file.name} ${file.workspaceName} ${file.extension}`.toLowerCase();
-  return tokens.every((token) => searchableText.includes(token));
+  return tokens.every((token) => file.searchText.includes(token));
 }
 
 function getGridItemContent(file: AttachmentFile): Grid.Item.Props["content"] {

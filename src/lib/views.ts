@@ -27,6 +27,7 @@ export type OctarineView = {
   order?: number;
   workspaceName: string;
   workspacePath: string;
+  searchText: string;
 };
 
 export type WorkspaceViews = {
@@ -46,6 +47,10 @@ function isValidRawView(value: unknown): value is ValidRawView {
 
   const rawView = value as RawView;
   return typeof rawView.name === "string" && rawView.name.trim().length > 0;
+}
+
+function buildViewSearchText(name: string, description: string | undefined, workspaceName: string): string {
+  return `${name} ${description ?? ""} ${workspaceName}`.toLowerCase();
 }
 
 function parseViews(rawValue: unknown, workspace: Workspace): OctarineView[] | undefined {
@@ -69,17 +74,19 @@ function parseViews(rawValue: unknown, workspace: Workspace): OctarineView[] | u
   return validViews
     .map((rawView, index) => {
       const viewName = rawView.name.trim();
+      const description =
+        typeof rawView.desc === "string" && rawView.desc.trim().length > 0 ? rawView.desc.trim() : undefined;
 
       return {
         id: typeof rawView.id === "string" && rawView.id.trim().length > 0 ? rawView.id : `${workspace.path}::${index}`,
         name: viewName,
-        description:
-          typeof rawView.desc === "string" && rawView.desc.trim().length > 0 ? rawView.desc.trim() : undefined,
+        description,
         icon: typeof rawView.icon === "string" && rawView.icon.trim().length > 0 ? rawView.icon : undefined,
         color: typeof rawView.color === "string" && rawView.color.trim().length > 0 ? rawView.color : undefined,
         order: typeof rawView.order === "number" ? rawView.order : undefined,
         workspaceName: workspace.name,
         workspacePath: workspace.path,
+        searchText: buildViewSearchText(viewName, description, workspace.name),
       };
     })
     .sort((left, right) => {

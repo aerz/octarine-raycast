@@ -9,4 +9,6 @@ export type AttachmentFile = {
   workspaceName: string;
   // Absolute resolved path to workspace root.
   workspacePath: string;
+  // Lowercased searchable text built during scan.
+  searchText: string;
 };

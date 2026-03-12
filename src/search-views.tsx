@@ -29,8 +29,7 @@ function matchesSearchQuery(view: OctarineView, searchText: string): boolean {
     return true;
   }
 
-  const haystack = `${view.name} ${view.description ?? ""} ${view.workspaceName}`.toLowerCase();
-  return tokens.every((token) => haystack.includes(token));
+  return tokens.every((token) => view.searchText.includes(token));
 }
 
 function renderViewItem(view: OctarineView, onOpenView: (viewToOpen: OctarineView) => Promise<void>) {

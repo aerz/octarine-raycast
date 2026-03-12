@@ -39,6 +39,10 @@ function parseExcludedExtensions(rawValue?: string): Set<string> {
   return excludedExtensions;
 }
 
+function buildAttachmentSearchText(name: string, workspaceName: string, extension: string): string {
+  return `${name} ${workspaceName} ${extension}`.toLowerCase();
+}
+
 async function collectAttachmentFiles(
   attachmentsPath: string,
   workspaceName: string,
@@ -100,6 +104,7 @@ async function collectAttachmentFiles(
         extension,
         workspaceName,
         workspacePath,
+        searchText: buildAttachmentSearchText(entry.name, workspaceName, extension),
       });
     }
   }
