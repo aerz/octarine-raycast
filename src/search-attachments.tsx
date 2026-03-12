@@ -10,24 +10,11 @@ import {
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { matchesSearchIndex } from "./lib/search";
 import { AttachmentFile } from "./types/attachment";
 import { scanAttachmentsFromPreferences } from "./lib/attachments";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
-
-function matchesSearchQuery(file: AttachmentFile, searchText: string): boolean {
-  const normalizedQuery = searchText.trim().toLowerCase();
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) {
-    return true;
-  }
-
-  return tokens.every((token) => file.searchText.includes(token));
-}
 
 function getGridItemContent(file: AttachmentFile): Grid.Item.Props["content"] {
   if (IMAGE_EXTENSIONS.has(file.extension)) {
@@ -148,7 +135,7 @@ export default function SearchAttachmentsCommand() {
       return extensionFilteredAttachments;
     }
 
-    return extensionFilteredAttachments.filter((file) => matchesSearchQuery(file, searchText));
+    return extensionFilteredAttachments.filter((file) => matchesSearchIndex(file.searchText, searchText));
   }, [extensionFilteredAttachments, isTypeFilterActive, searchText]);
 
   const sections = useMemo(() => {

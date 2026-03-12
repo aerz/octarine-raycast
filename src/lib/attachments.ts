@@ -1,5 +1,6 @@
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
+import { buildSearchIndexText } from "./search";
 import { AttachmentFile } from "../types/attachment";
 import { Workspace, loadWorkspaces } from "../lib/workspaces";
 
@@ -37,10 +38,6 @@ function parseExcludedExtensions(rawValue?: string): Set<string> {
   }
 
   return excludedExtensions;
-}
-
-function buildAttachmentSearchText(name: string, workspaceName: string, extension: string): string {
-  return `${name} ${workspaceName} ${extension}`.toLowerCase();
 }
 
 async function collectAttachmentFiles(
@@ -104,7 +101,7 @@ async function collectAttachmentFiles(
         extension,
         workspaceName,
         workspacePath,
-        searchText: buildAttachmentSearchText(entry.name, workspaceName, extension),
+        searchText: buildSearchIndexText(entry.name, workspaceName, extension),
       });
     }
   }

@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { buildSearchIndexText } from "./search";
 import { Workspace, WorkspaceLoadResult, loadWorkspaces } from "./workspaces";
 
 const VIEWS_FILE_NAME = "views.json";
@@ -49,10 +50,6 @@ function isValidRawView(value: unknown): value is ValidRawView {
   return typeof rawView.name === "string" && rawView.name.trim().length > 0;
 }
 
-function buildViewSearchText(name: string, description: string | undefined, workspaceName: string): string {
-  return `${name} ${description ?? ""} ${workspaceName}`.toLowerCase();
-}
-
 function parseViews(rawValue: unknown, workspace: Workspace): OctarineView[] | undefined {
   if (!Array.isArray(rawValue)) {
     return undefined;
@@ -86,7 +83,7 @@ function parseViews(rawValue: unknown, workspace: Workspace): OctarineView[] | u
         order: typeof rawView.order === "number" ? rawView.order : undefined,
         workspaceName: workspace.name,
         workspacePath: workspace.path,
-        searchText: buildViewSearchText(viewName, description, workspace.name),
+        searchText: buildSearchIndexText(viewName, description, workspace.name),
       };
     })
     .sort((left, right) => {

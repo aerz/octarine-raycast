@@ -1,6 +1,7 @@
 import { LocalStorage, getPreferenceValues } from "@raycast/api";
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
+import { buildSearchIndexText, tokenizeSearchQuery } from "./search";
 import { Workspace, parseWorkspaceRoots } from "./workspaces";
 
 const NOTES_CACHE_KEY = "octarine.notes.v1";
@@ -147,7 +148,7 @@ function buildNoteSearchFields(title: string, subtitle: string, workspace: strin
     normalizedWorkspace,
     normalizedDirectory,
     directorySegments,
-    searchText: `${normalizedTitle} ${normalizedSubtitle} ${normalizedWorkspace}`,
+    searchText: buildSearchIndexText(title, subtitle, workspace),
   };
 }
 
@@ -227,7 +228,7 @@ export function matchesSearchQuery(note: OctarineNote, searchText: string): bool
   const hasSlash = normalizedQuery.includes("/");
 
   if (!hasSlash) {
-    const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+    const tokens = tokenizeSearchQuery(normalizedQuery);
     if (tokens.length === 0) {
       return true;
     }
@@ -250,7 +251,7 @@ export function matchesSearchQuery(note: OctarineNote, searchText: string): bool
   const directoryPrefix = lastSlashIndex === -1 ? "" : queryWithoutOuterSlashes.slice(0, lastSlashIndex).trim();
   const titleQuery =
     lastSlashIndex === -1 ? queryWithoutOuterSlashes : queryWithoutOuterSlashes.slice(lastSlashIndex + 1).trim();
-  const titleTokens = titleQuery.split(/\s+/).filter(Boolean);
+  const titleTokens = tokenizeSearchQuery(titleQuery);
 
   const scopedTitleMatch =
     matchesDirectoryScopeAtAnyDepth(note.directorySegments, directoryPrefix) &&

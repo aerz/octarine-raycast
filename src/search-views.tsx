@@ -10,6 +10,7 @@ import {
 } from "@raycast/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { openOctarineView } from "./lib/octarine";
+import { matchesSearchIndex } from "./lib/search";
 import { OctarineView, scanViewsFromWorkspaces } from "./lib/views";
 import { parseWorkspaceRoots } from "./lib/workspaces";
 
@@ -17,20 +18,6 @@ type SearchViewsPreferences = {
   workspaceRoots: string;
   showWorkspaceViewCount?: boolean;
 };
-
-function matchesSearchQuery(view: OctarineView, searchText: string): boolean {
-  const normalizedQuery = searchText.trim().toLowerCase();
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) {
-    return true;
-  }
-
-  return tokens.every((token) => view.searchText.includes(token));
-}
 
 function renderViewItem(view: OctarineView, onOpenView: (viewToOpen: OctarineView) => Promise<void>) {
   return (
@@ -142,7 +129,7 @@ export default function SearchViewsCommand() {
   );
 
   const searchFilteredViews = useMemo(
-    () => filteredViews.filter((view) => matchesSearchQuery(view, searchText)),
+    () => filteredViews.filter((view) => matchesSearchIndex(view.searchText, searchText)),
     [filteredViews, searchText],
   );
 
