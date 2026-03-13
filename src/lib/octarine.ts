@@ -16,6 +16,14 @@ export enum OctarineParam {
   Query = "query",
   Date = "date",
   Workspace = "workspace",
+  Content = "content",
+  Template = "template",
+  Fresh = "fresh",
+  Position = "position",
+  Separator = "separator",
+  OpenAfter = "openAfter",
+  ContentReference = "contentReference",
+  CompressedContent = "compressedContent",
 }
 
 type OctarinePosition = "top" | "bottom";
@@ -84,10 +92,24 @@ function buildOctarineUri(request: OctarineUriRequest): string {
     case OctarineAction.Daily:
       appendParam(params, OctarineParam.Date, request.date);
       appendParam(params, OctarineParam.Workspace, request.workspace);
+      appendParam(params, OctarineParam.Content, request.content);
+      appendParam(params, OctarineParam.Template, request.template);
+      appendParam(params, OctarineParam.Fresh, request.fresh);
+      appendParam(params, OctarineParam.Position, request.position);
+      appendParam(params, OctarineParam.Separator, request.separator);
+      appendParam(params, OctarineParam.OpenAfter, request.openAfter);
       break;
     case OctarineAction.Create:
       appendParam(params, OctarineParam.Path, request.path);
       appendParam(params, OctarineParam.Workspace, request.workspace);
+      appendParam(params, OctarineParam.Content, request.content);
+      appendParam(params, OctarineParam.Template, request.template);
+      appendParam(params, OctarineParam.Fresh, request.fresh);
+      appendParam(params, OctarineParam.Position, request.position);
+      appendParam(params, OctarineParam.Separator, request.separator);
+      appendParam(params, OctarineParam.OpenAfter, request.openAfter);
+      appendParam(params, OctarineParam.ContentReference, request.contentReference);
+      appendParam(params, OctarineParam.CompressedContent, request.compressedContent);
       break;
   }
 
