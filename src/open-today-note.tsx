@@ -13,6 +13,7 @@ import {
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
+import { OctarineAction, buildOctarineUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 
 type CommandPreferences = {
@@ -22,10 +23,6 @@ type CommandPreferences = {
 type OpenTodayNoteArguments = {
   workspace?: string;
 };
-
-function buildDailyUri(workspaceName: string): string {
-  return `octarine://daily?date=today&workspace=${encodeURIComponent(workspaceName)}`;
-}
 
 export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: OpenTodayNoteArguments }>) {
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
@@ -39,7 +36,13 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Ope
 
   const openTodayNote = useCallback(async (workspaceName: string) => {
     try {
-      await open(buildDailyUri(workspaceName));
+      await open(
+        buildOctarineUri({
+          action: OctarineAction.Daily,
+          date: "today",
+          workspace: workspaceName,
+        }),
+      );
       await popToRoot({ clearSearchBar: true });
       await closeMainWindow({ clearRootSearch: true });
     } catch {

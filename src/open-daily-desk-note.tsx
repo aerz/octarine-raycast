@@ -3,6 +3,7 @@ import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
+import { OctarineAction, buildOctarineUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 import type { Workspace } from "./types/octarine";
 
@@ -38,10 +39,6 @@ export function isSupportedDailyDeskDate(value: string): boolean {
   );
 }
 
-function buildDailyDeskUri(dateValue: string, workspaceName: string): string {
-  return `octarine://daily?date=${encodeURIComponent(dateValue)}&workspace=${encodeURIComponent(workspaceName)}`;
-}
-
 export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments: OpenDailyDeskNoteArguments }>) {
   const requestedDate = props.arguments.date?.trim() ?? "";
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
@@ -55,7 +52,13 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   const openDailyDeskNote = useCallback(
     async (workspaceName: string) => {
       try {
-        await open(buildDailyDeskUri(requestedDate, workspaceName));
+        await open(
+          buildOctarineUri({
+            action: OctarineAction.Daily,
+            date: requestedDate,
+            workspace: workspaceName,
+          }),
+        );
         await popToRoot({ clearSearchBar: true });
         return true;
       } catch {

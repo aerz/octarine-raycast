@@ -16,6 +16,7 @@ import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
+import { buildOpenWorkspaceFallbackUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 
 type OpenWorkspaceArguments = {
@@ -37,7 +38,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
 
   const openWorkspace = useCallback(
     async (workspaceName: string, options?: { exitAfterOpen?: boolean }) => {
-      const uri = `octarine://daily?date=today&workspace=${encodeURIComponent(workspaceName)}`;
+      const uri = buildOpenWorkspaceFallbackUri(workspaceName);
 
       try {
         await open(uri);

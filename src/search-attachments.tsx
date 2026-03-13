@@ -10,6 +10,7 @@ import {
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { OctarineAction, buildOctarineUri } from "./lib/octarine";
 import { matchesSearchIndex } from "./lib/search";
 import { isIndexedAttachment, type IndexedAttachment } from "./types/attachment";
 import { scanAttachmentsFromPreferences } from "./lib/attachments";
@@ -23,6 +24,14 @@ function getGridItemContent(file: IndexedAttachment): Grid.Item.Props["content"]
   }
 
   return { fileIcon: file.path };
+}
+
+function buildAttachmentSearchUri(file: IndexedAttachment): string {
+  return buildOctarineUri({
+    action: OctarineAction.Search,
+    query: file.name,
+    workspace: file.workspace.name,
+  });
 }
 
 export default function SearchAttachmentsCommand() {
@@ -223,11 +232,7 @@ export default function SearchAttachmentsCommand() {
               keywords={[file.workspace.name, file.extension]}
               actions={
                 <ActionPanel>
-                  <Action.Open
-                    title="Search in Octarine"
-                    target={`octarine://search?query=${encodeURIComponent(file.name)}&workspace=${encodeURIComponent(file.workspace.name)}`}
-                    icon={Icon.Globe}
-                  />
+                  <Action.Open title="Search in Octarine" target={buildAttachmentSearchUri(file)} icon={Icon.Globe} />
                   <Action.Open title="Open File" target={file.path} shortcut={{ modifiers: ["cmd"], key: "return" }} />
                   <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />
                   <Action.CopyToClipboard
@@ -260,7 +265,7 @@ export default function SearchAttachmentsCommand() {
                     <ActionPanel>
                       <Action.Open
                         title="Search in Octarine"
-                        target={`octarine://search?query=${encodeURIComponent(file.name)}&workspace=${encodeURIComponent(file.workspace.name)}`}
+                        target={buildAttachmentSearchUri(file)}
                         icon={Icon.Globe}
                       />
                       <Action.Open
