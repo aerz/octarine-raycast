@@ -13,7 +13,7 @@ import {
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
-import { OctarineAction, buildOctarineUri } from "./lib/octarine";
+import { buildDailyNoteUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 
 type CommandPreferences = {
@@ -36,13 +36,8 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Ope
 
   const openTodayNote = useCallback(async (workspaceName: string) => {
     try {
-      await open(
-        buildOctarineUri({
-          action: OctarineAction.Daily,
-          date: "today",
-          workspace: workspaceName,
-        }),
-      );
+      const octarineUri = buildDailyNoteUri("today", workspaceName);
+      await open(octarineUri);
       await popToRoot({ clearSearchBar: true });
       await closeMainWindow({ clearRootSearch: true });
     } catch {

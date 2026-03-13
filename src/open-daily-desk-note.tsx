@@ -3,7 +3,7 @@ import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
-import { OctarineAction, buildOctarineUri } from "./lib/octarine";
+import { buildDailyNoteUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 import type { Workspace } from "./types/octarine";
 
@@ -52,13 +52,8 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   const openDailyDeskNote = useCallback(
     async (workspaceName: string) => {
       try {
-        await open(
-          buildOctarineUri({
-            action: OctarineAction.Daily,
-            date: requestedDate,
-            workspace: workspaceName,
-          }),
-        );
+        const octarineUri = buildDailyNoteUri(requestedDate, workspaceName);
+        await open(octarineUri);
         await popToRoot({ clearSearchBar: true });
         return true;
       } catch {

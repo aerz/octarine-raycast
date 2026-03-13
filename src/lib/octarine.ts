@@ -69,7 +69,7 @@ function appendParam(params: URLSearchParams, key: OctarineParam, value: string 
   params.append(key, typeof value === "boolean" ? String(value) : value);
 }
 
-export function buildOctarineUri(request: OctarineUriRequest): string {
+function buildOctarineUri(request: OctarineUriRequest): string {
   const params = new URLSearchParams();
 
   switch (request.action) {
@@ -94,10 +94,38 @@ export function buildOctarineUri(request: OctarineUriRequest): string {
   return `octarine://${request.action}?${params.toString()}`;
 }
 
-export function buildOpenWorkspaceFallbackUri(workspaceName: string): string {
+export function buildOpenNoteUri(path: string, workspaceName?: string): string {
+  return buildOctarineUri({
+    action: OctarineAction.Open,
+    path,
+    workspace: workspaceName,
+  });
+}
+
+export function buildSearchUri(query: string, workspaceName?: string): string {
+  return buildOctarineUri({
+    action: OctarineAction.Search,
+    query,
+    workspace: workspaceName,
+  });
+}
+
+export function buildDailyNoteUri(date: string, workspaceName?: string): string {
   return buildOctarineUri({
     action: OctarineAction.Daily,
-    date: "today",
+    date,
+    workspace: workspaceName,
+  });
+}
+
+export function buildOpenWorkspaceUri(workspaceName: string): string {
+  return buildDailyNoteUri("today", workspaceName);
+}
+
+export function buildCreateNoteUri(path: string, workspaceName?: string): string {
+  return buildOctarineUri({
+    action: OctarineAction.Create,
+    path,
     workspace: workspaceName,
   });
 }
@@ -133,7 +161,7 @@ export async function openOctarineView(workspaceName: string, viewName: string):
   end run
   `;
 
-  await open(buildOpenWorkspaceFallbackUri(workspaceName));
+  await open(buildOpenWorkspaceUri(workspaceName));
   await execFileAsync("osascript", ["-e", OPEN_VIEW_APPLE_SCRIPT, viewName]);
   await popToRoot({ clearSearchBar: true });
   await closeMainWindow({ clearRootSearch: true });

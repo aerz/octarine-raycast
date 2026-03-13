@@ -10,10 +10,10 @@ import {
   showToast,
 } from "@raycast/api";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { buildOpenNoteUri } from "./lib/octarine";
 import type { Workspace } from "./types/octarine";
 import {
   IndexedNote,
-  buildOctarineUrl,
   loadCachedNotes,
   matchesSearchQuery,
   saveCachedNotes,
@@ -28,7 +28,7 @@ type SearchNotesPreferences = {
 };
 
 function renderNoteItem(note: IndexedNote) {
-  const octarineUrl = buildOctarineUrl(note);
+  const octarineUri = buildOpenNoteUri(note.path, note.workspace.name);
 
   return (
     <List.Item
@@ -42,7 +42,7 @@ function renderNoteItem(note: IndexedNote) {
             title="Open Note in Octarine"
             onAction={async () => {
               try {
-                await open(octarineUrl);
+                await open(octarineUri);
               } catch (error) {
                 console.error("Failed to open Octarine note URL", { note, error });
                 await showToast({
@@ -52,7 +52,7 @@ function renderNoteItem(note: IndexedNote) {
               }
             }}
           />
-          <Action title="Copy Octarine URL" onAction={() => void Clipboard.copy(octarineUrl)} />
+          <Action title="Copy Octarine URL" onAction={() => void Clipboard.copy(octarineUri)} />
         </ActionPanel>
       }
     />

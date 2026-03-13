@@ -2,7 +2,6 @@ import { LocalStorage, getPreferenceValues } from "@raycast/api";
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { isNote, isWorkspace, type Note, type Workspace } from "../types/octarine";
-import { OctarineAction, buildOctarineUri } from "./octarine";
 import { buildSearchIndexText, tokenizeSearchQuery } from "./search";
 import { parseWorkspaceRoots } from "./workspaces";
 
@@ -247,14 +246,6 @@ export function matchesSearchQuery(note: IndexedNote, searchText: string): boole
     (titleTokens.length === 0 || titleTokens.every((token) => note.normalizedTitle.includes(token)));
 
   return fuzzyPathMatch || scopedTitleMatch;
-}
-
-export function buildOctarineUrl(note: ScannedNote): string {
-  return buildOctarineUri({
-    action: OctarineAction.Open,
-    path: note.path,
-    workspace: note.workspace.name,
-  });
 }
 
 export function sortNotes(notes: ScannedNote[]): void {
