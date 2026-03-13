@@ -2,12 +2,9 @@ import {
   Action,
   ActionPanel,
   Clipboard,
-  closeMainWindow,
   Icon,
   LaunchProps,
-  popToRoot,
   Toast,
-  open,
   openExtensionPreferences,
   showToast,
 } from "@raycast/api";
@@ -16,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
-import { buildOpenWorkspaceUri } from "./lib/octarine";
+import { buildOpenWorkspaceUri, openOctarineUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 
 type OpenWorkspaceArguments = {
@@ -31,34 +28,10 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
   const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState(0);
   const hasAttemptedAutoOpen = useRef(false);
 
-  const exitCommand = useCallback(async () => {
-    await popToRoot({ clearSearchBar: true });
-    await closeMainWindow();
+  const openWorkspace = useCallback(async (workspaceName: string) => {
+    const octarineUri = buildOpenWorkspaceUri(workspaceName);
+    return openOctarineUri(octarineUri);
   }, []);
-
-  const openWorkspace = useCallback(
-    async (workspaceName: string, options?: { exitAfterOpen?: boolean }) => {
-      const octarineUri = buildOpenWorkspaceUri(workspaceName);
-
-      try {
-        await open(octarineUri);
-
-        if (options?.exitAfterOpen) {
-          await exitCommand();
-        }
-
-        return true;
-      } catch {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: `Failed to open ${workspaceName}`,
-        });
-
-        return false;
-      }
-    },
-    [exitCommand],
-  );
 
   const {
     data: workspaceResult,
@@ -115,7 +88,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
 
     hasAttemptedAutoOpen.current = true;
     void (async () => {
-      const didOpen = await openWorkspace(matchedWorkspace.name, { exitAfterOpen: true });
+      const didOpen = await openWorkspace(matchedWorkspace.name);
 
       if (!didOpen) {
         setHasDirectOpenFailed(true);
@@ -151,7 +124,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
           <Action
             title="Open in Octarine"
             icon={Icon.AppWindow}
-            onAction={() => void openWorkspace(workspace.name, { exitAfterOpen: true })}
+            onAction={() => void openWorkspace(workspace.name)}
           />
           <Action
             title="Rescan Workspaces"

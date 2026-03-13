@@ -1,4 +1,4 @@
-import { closeMainWindow, open, popToRoot } from "@raycast/api";
+import { Toast, closeMainWindow, open, popToRoot, showToast } from "@raycast/api";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -152,9 +152,35 @@ export function buildCreateNoteUri(path: string, workspaceName?: string): string
   });
 }
 
-export async function openOctarineView(workspaceName: string, viewName: string): Promise<void> {
+export async function popToRootAndClose(): Promise<void> {
+  await popToRoot({ clearSearchBar: true });
+  await closeMainWindow({ clearRootSearch: true });
+}
+
+export async function showOpenOctarineFailureToast(message?: string): Promise<void> {
+  await showToast({
+    style: Toast.Style.Failure,
+    title: "Failed to Open in Octarine",
+    message,
+  });
+}
+
+export async function openOctarineUri(uri: string): Promise<boolean> {
+  try {
+    await open(uri);
+    await popToRootAndClose();
+    return true;
+  } catch (error) {
+    console.error("Failed to open Octarine URI", { uri, error });
+    await showOpenOctarineFailureToast();
+    return false;
+  }
+}
+
+export async function openOctarineView(workspaceName: string, viewName: string): Promise<boolean> {
   if (process.platform !== "darwin") {
-    throw new Error("Opening Octarine views is only supported on macOS.");
+    await showOpenOctarineFailureToast("Opening Octarine views is only supported on macOS.");
+    return false;
   }
 
   const OPEN_VIEW_APPLE_SCRIPT = `
@@ -183,8 +209,14 @@ export async function openOctarineView(workspaceName: string, viewName: string):
   end run
   `;
 
-  await open(buildOpenWorkspaceUri(workspaceName));
-  await execFileAsync("osascript", ["-e", OPEN_VIEW_APPLE_SCRIPT, viewName]);
-  await popToRoot({ clearSearchBar: true });
-  await closeMainWindow({ clearRootSearch: true });
+  try {
+    await open(buildOpenWorkspaceUri(workspaceName));
+    await execFileAsync("osascript", ["-e", OPEN_VIEW_APPLE_SCRIPT, viewName]);
+    await popToRootAndClose();
+    return true;
+  } catch (error) {
+    console.error("Failed to open Octarine view", { workspaceName, viewName, error });
+    await showOpenOctarineFailureToast(error instanceof Error ? error.message : undefined);
+    return false;
+  }
 }

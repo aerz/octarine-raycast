@@ -5,14 +5,13 @@ import {
   List,
   Toast,
   getPreferenceValues,
-  open,
   showToast,
 } from "@raycast/api";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
-import { buildOpenNoteUri } from "./lib/octarine";
+import { buildOpenNoteUri, openOctarineUri } from "./lib/octarine";
 import type { Workspace } from "./types/octarine";
 import {
   IndexedNote,
@@ -42,17 +41,7 @@ function renderNoteItem(note: IndexedNote) {
         <ActionPanel>
           <Action
             title="Open Note in Octarine"
-            onAction={async () => {
-              try {
-                await open(octarineUri);
-              } catch (error) {
-                console.error("Failed to open Octarine note URL", { note, error });
-                await showToast({
-                  style: Toast.Style.Failure,
-                  title: "Failed to Open Note",
-                });
-              }
-            }}
+            onAction={() => void openOctarineUri(octarineUri)}
           />
           <Action title="Copy Octarine URL" onAction={() => void Clipboard.copy(octarineUri)} />
         </ActionPanel>

@@ -23,7 +23,7 @@ type SearchViewsPreferences = {
   showWorkspaceViewCount?: boolean;
 };
 
-function renderViewItem(view: IndexedView, onOpenView: (viewToOpen: IndexedView) => Promise<void>) {
+function renderViewItem(view: IndexedView) {
   return (
     <List.Item
       key={view.id}
@@ -32,7 +32,11 @@ function renderViewItem(view: IndexedView, onOpenView: (viewToOpen: IndexedView)
       keywords={[view.workspace.name, view.description]}
       actions={
         <ActionPanel>
-          <Action title="Open View in Octarine" icon={Icon.AppWindow} onAction={() => void onOpenView(view)} />
+          <Action
+            title="Open View in Octarine"
+            icon={Icon.AppWindow}
+            onAction={() => void openOctarineView(view.workspace.name, view.name)}
+          />
         </ActionPanel>
       }
     />
@@ -92,19 +96,6 @@ export default function SearchViewsCommand() {
   );
   const views = useMemo(() => scanResult?.workspaceViews.flatMap((entry) => entry.views) ?? [], [scanResult]);
   const hasValidWorkspaces = (scanResult?.workspaceCount ?? 0) > 0;
-
-  const handleOpenView = async (view: IndexedView) => {
-    try {
-      await openOctarineView(view.workspace.name, view.name);
-    } catch (error) {
-      console.error("Failed to open Octarine view", { view, error });
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to Open View",
-        message: error instanceof Error ? error.message : undefined,
-      });
-    }
-  };
 
   const filteredViews = useMemo(
     () => views.filter((view) => selectedWorkspace === "all" || view.workspace.name === selectedWorkspace),
@@ -172,11 +163,11 @@ export default function SearchViewsCommand() {
                   key={workspaceName}
                   title={showWorkspaceViewCount ? `${workspaceName} (${viewsInWorkspace.length})` : workspaceName}
                 >
-                  {viewsInWorkspace.map((view) => renderViewItem(view, handleOpenView))}
+                  {viewsInWorkspace.map((view) => renderViewItem(view))}
                 </List.Section>
               );
             })
-          : searchFilteredViews.map((view) => renderViewItem(view, handleOpenView))
+          : searchFilteredViews.map((view) => renderViewItem(view))
         : null}
     </List>
   );

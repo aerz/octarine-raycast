@@ -1,9 +1,9 @@
-import { Action, ActionPanel, Detail, LaunchProps, Toast, open, popToRoot, showToast } from "@raycast/api";
+import { Action, ActionPanel, Detail, LaunchProps, Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
-import { buildDailyNoteUri } from "./lib/octarine";
+import { buildDailyNoteUri, openOctarineUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 import type { Workspace } from "./types/octarine";
 
@@ -51,18 +51,8 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
 
   const openDailyDeskNote = useCallback(
     async (workspaceName: string) => {
-      try {
-        const octarineUri = buildDailyNoteUri(requestedDate, workspaceName);
-        await open(octarineUri);
-        await popToRoot({ clearSearchBar: true });
-        return true;
-      } catch {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to Open Daily Desk Note",
-        });
-        return false;
-      }
+      const octarineUri = buildDailyNoteUri(requestedDate, workspaceName);
+      return openOctarineUri(octarineUri);
     },
     [requestedDate],
   );

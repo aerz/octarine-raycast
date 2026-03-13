@@ -13,7 +13,7 @@ import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEm
 import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
 import { parseWorkspaceRoots } from "./lib/workspaces";
-import { buildSearchUri } from "./lib/octarine";
+import { buildSearchUri, openOctarineUri } from "./lib/octarine";
 import { matchesSearchIndex } from "./lib/search";
 import { isIndexedAttachment, type IndexedAttachment } from "./types/attachment";
 import { type AttachmentScanResult, scanAttachmentsFromPreferences } from "./lib/attachments";
@@ -27,6 +27,21 @@ function getGridItemContent(file: IndexedAttachment): Grid.Item.Props["content"]
   }
 
   return { fileIcon: file.path };
+}
+
+function renderAttachmentActions(file: IndexedAttachment) {
+  return (
+    <ActionPanel>
+      <Action
+        title="Search in Octarine"
+        icon={Icon.Globe}
+        onAction={() => void openOctarineUri(buildSearchUri(file.name, file.workspace.name))}
+      />
+      <Action.Open title="Open File" target={file.path} shortcut={{ modifiers: ["cmd"], key: "return" }} />
+      <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />
+      <Action.CopyToClipboard title="Copy File Path" content={file.path} shortcut={{ modifiers: ["cmd"], key: "." }} />
+    </ActionPanel>
+  );
 }
 
 export default function SearchAttachmentsCommand() {
@@ -217,22 +232,7 @@ export default function SearchAttachmentsCommand() {
               content={getGridItemContent(file)}
               quickLook={{ name: file.name, path: file.path }}
               keywords={[file.workspace.name, file.extension]}
-              actions={
-                <ActionPanel>
-                  <Action.Open
-                    title="Search in Octarine"
-                    target={buildSearchUri(file.name, file.workspace.name)}
-                    icon={Icon.Globe}
-                  />
-                  <Action.Open title="Open File" target={file.path} shortcut={{ modifiers: ["cmd"], key: "return" }} />
-                  <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />
-                  <Action.CopyToClipboard
-                    title="Copy File Path"
-                    content={file.path}
-                    shortcut={{ modifiers: ["cmd"], key: "." }}
-                  />
-                </ActionPanel>
-              }
+              actions={renderAttachmentActions(file)}
             />
           ))
         : showAttachmentResults
@@ -253,26 +253,7 @@ export default function SearchAttachmentsCommand() {
                   content={getGridItemContent(file)}
                   quickLook={{ name: file.name, path: file.path }}
                   keywords={[file.workspace.name, file.extension]}
-                  actions={
-                    <ActionPanel>
-                      <Action.Open
-                        title="Search in Octarine"
-                        target={buildSearchUri(file.name, file.workspace.name)}
-                        icon={Icon.Globe}
-                      />
-                      <Action.Open
-                        title="Open File"
-                        target={file.path}
-                        shortcut={{ modifiers: ["cmd"], key: "return" }}
-                      />
-                      <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />
-                      <Action.CopyToClipboard
-                        title="Copy File Path"
-                        content={file.path}
-                        shortcut={{ modifiers: ["cmd"], key: "." }}
-                      />
-                    </ActionPanel>
-                  }
+                  actions={renderAttachmentActions(file)}
                 />
                 ))}
             </Grid.Section>

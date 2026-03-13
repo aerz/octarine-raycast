@@ -4,16 +4,13 @@ import {
   LaunchProps,
   List,
   Toast,
-  closeMainWindow,
   getPreferenceValues,
-  open,
-  popToRoot,
   showToast,
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
-import { buildDailyNoteUri } from "./lib/octarine";
+import { buildDailyNoteUri, openOctarineUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 
 type CommandPreferences = {
@@ -35,17 +32,8 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Ope
   const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(!hasTargetWorkspace);
 
   const openTodayNote = useCallback(async (workspaceName: string) => {
-    try {
-      const octarineUri = buildDailyNoteUri("today", workspaceName);
-      await open(octarineUri);
-      await popToRoot({ clearSearchBar: true });
-      await closeMainWindow({ clearRootSearch: true });
-    } catch {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to Open Today's Note",
-      });
-    }
+    const octarineUri = buildDailyNoteUri("today", workspaceName);
+    await openOctarineUri(octarineUri);
   }, []);
 
   const { data: workspaceResult, isLoading } = usePromise(
