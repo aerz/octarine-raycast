@@ -6,10 +6,12 @@ import {
   Toast,
   getPreferenceValues,
   open,
-  openCommandPreferences,
   showToast,
 } from "@raycast/api";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
+import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
+import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
 import { buildOpenNoteUri } from "./lib/octarine";
 import type { Workspace } from "./types/octarine";
 import {
@@ -195,15 +197,9 @@ export default function SearchNotesCommand() {
     return groupedNotes;
   }, [searchFilteredNotes]);
 
-  const showNoWorkspacesConfigured = !isLoading && !hasConfiguredRoots;
-  const showNoValidWorkspaces = !isLoading && hasConfiguredRoots && workspaces.length === 0;
-  const showNoNotesFound = !isLoading && workspaces.length > 0 && notes.length === 0;
-  const showNoMatchingNotes =
-    !isLoading &&
-    !showNoWorkspacesConfigured &&
-    !showNoValidWorkspaces &&
-    !showNoNotesFound &&
-    searchFilteredNotes.length === 0;
+  const showWorkspaceNotFound = !isLoading && (!hasConfiguredRoots || workspaces.length === 0);
+  const showNoNotesFound = !isLoading && !showWorkspaceNotFound && notes.length === 0;
+  const showNoMatchingNotes = !isLoading && !showWorkspaceNotFound && !showNoNotesFound && searchFilteredNotes.length === 0;
 
   return (
     <List
@@ -220,31 +216,10 @@ export default function SearchNotesCommand() {
         </List.Dropdown>
       }
     >
-      {showNoWorkspacesConfigured ? (
-        <List.EmptyView
-          title="No Workspaces Configured"
-          description="Open extension preferences and set Workspace Root Paths."
-          actions={
-            <ActionPanel>
-              <Action title="Open Extension Preferences" onAction={() => void openCommandPreferences()} />
-            </ActionPanel>
-          }
-        />
-      ) : null}
-      {showNoValidWorkspaces ? (
-        <List.EmptyView
-          title="No Valid Workspaces Discovered"
-          description="A valid workspace must contain a .octarine folder."
-          actions={
-            <ActionPanel>
-              <Action title="Open Extension Preferences" onAction={() => void openCommandPreferences()} />
-            </ActionPanel>
-          }
-        />
-      ) : null}
-      {showNoNotesFound ? <List.EmptyView title="No Notes Found" /> : null}
-      {showNoMatchingNotes ? <List.EmptyView title="No Matching Notes" /> : null}
-      {!showNoWorkspacesConfigured && !showNoValidWorkspaces && !showNoNotesFound && !showNoMatchingNotes
+      {showWorkspaceNotFound ? <WorkspaceNotFound /> : null}
+      {showNoNotesFound ? <WorkspaceContentEmptyView resource="notes" /> : null}
+      {showNoMatchingNotes ? <SearchResultsEmptyView resource="notes" /> : null}
+      {!showWorkspaceNotFound && !showNoNotesFound && !showNoMatchingNotes
         ? selectedWorkspace === "all"
           ? workspaceNames.map((workspaceName) => {
               const notesInWorkspace = notesByWorkspace.get(workspaceName) ?? [];

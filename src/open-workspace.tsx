@@ -5,15 +5,15 @@ import {
   closeMainWindow,
   Icon,
   LaunchProps,
-  List,
   popToRoot,
   Toast,
   open,
-  openCommandPreferences,
+  openExtensionPreferences,
   showToast,
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
 import { buildOpenWorkspaceUri } from "./lib/octarine";
@@ -138,24 +138,13 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
       workspaces={workspaces}
       searchBarPlaceholder="Search Octarine workspaces..."
       emptyView={
-        <List.EmptyView
-          title="No Octarine workspaces found"
-          description="Update Workspace Root Paths in command preferences, then run Rescan Workspaces."
-          actions={
-            <ActionPanel>
-              <Action
-                title="Rescan Workspaces"
-                icon={Icon.ArrowClockwise}
-                onAction={() => setWorkspaceRefreshToken((currentValue) => currentValue + 1)}
-              />
-              <Action
-                title="Open Command Preferences"
-                icon={Icon.Gear}
-                onAction={() => void openCommandPreferences()}
-              />
-            </ActionPanel>
-          }
-        />
+        <WorkspaceNotFound>
+          <Action
+            title="Rescan Workspaces"
+            icon={Icon.ArrowClockwise}
+            onAction={() => setWorkspaceRefreshToken((currentValue) => currentValue + 1)}
+          />
+        </WorkspaceNotFound>
       }
       renderActions={(workspace) => (
         <ActionPanel>
@@ -170,7 +159,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
             onAction={() => setWorkspaceRefreshToken((currentValue) => currentValue + 1)}
           />
           <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => void Clipboard.copy(workspace.path)} />
-          <Action title="Open Command Preferences" icon={Icon.Gear} onAction={() => void openCommandPreferences()} />
+          <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
         </ActionPanel>
       )}
     />

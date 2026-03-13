@@ -5,11 +5,13 @@ import {
   List,
   Toast,
   getPreferenceValues,
-  openCommandPreferences,
   showToast,
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo, useState } from "react";
+import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
+import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
+import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
 import { openOctarineView } from "./lib/octarine";
 import { matchesSearchIndex } from "./lib/search";
 import { IndexedView, scanViewsFromWorkspaces } from "./lib/views";
@@ -130,14 +132,12 @@ export default function SearchViewsCommand() {
     return groupedViews;
   }, [searchFilteredViews]);
 
-  const showNoWorkspacesConfigured = !isLoading && !hasConfiguredRoots;
-  const showNoValidWorkspaces = !isLoading && !scanError && hasConfiguredRoots && !hasValidWorkspaces;
-  const showNoViewsFound = !isLoading && !scanError && hasConfiguredRoots && hasValidWorkspaces && views.length === 0;
+  const showWorkspaceNotFound = !isLoading && !scanError && (!hasConfiguredRoots || !hasValidWorkspaces);
+  const showNoViewsFound = !isLoading && !scanError && !showWorkspaceNotFound && views.length === 0;
   const showNoMatchingViews =
     !isLoading &&
     !scanError &&
-    !showNoWorkspacesConfigured &&
-    !showNoValidWorkspaces &&
+    !showWorkspaceNotFound &&
     views.length > 0 &&
     searchFilteredViews.length === 0;
 
@@ -156,36 +156,10 @@ export default function SearchViewsCommand() {
         </List.Dropdown>
       }
     >
-      {showNoWorkspacesConfigured ? (
-        <List.EmptyView
-          title="No Workspaces Configured"
-          description="Open extension preferences and set Workspace Root Paths."
-          actions={
-            <ActionPanel>
-              <Action title="Open Extension Preferences" onAction={() => void openCommandPreferences()} />
-            </ActionPanel>
-          }
-        />
-      ) : null}
-      {showNoValidWorkspaces ? (
-        <List.EmptyView
-          title="No Valid Workspaces Discovered"
-          description="A valid workspace must contain a .octarine folder."
-          actions={
-            <ActionPanel>
-              <Action title="Open Extension Preferences" onAction={() => void openCommandPreferences()} />
-            </ActionPanel>
-          }
-        />
-      ) : null}
-      {showNoViewsFound ? (
-        <List.EmptyView
-          title="No Views Found"
-          description="No workspace contains a .octarine/views.json file with views."
-        />
-      ) : null}
-      {showNoMatchingViews ? <List.EmptyView title="No Matching Views" /> : null}
-      {!showNoWorkspacesConfigured && !showNoValidWorkspaces && !showNoViewsFound && !showNoMatchingViews
+      {showWorkspaceNotFound ? <WorkspaceNotFound /> : null}
+      {showNoViewsFound ? <WorkspaceContentEmptyView resource="views" /> : null}
+      {showNoMatchingViews ? <SearchResultsEmptyView resource="views" /> : null}
+      {!showWorkspaceNotFound && !showNoViewsFound && !showNoMatchingViews
         ? selectedWorkspace === "all"
           ? workspaceNames.map((workspaceName) => {
               const viewsInWorkspace = viewsByWorkspace.get(workspaceName) ?? [];

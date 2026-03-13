@@ -5,15 +5,18 @@ import {
   Grid,
   Toast,
   getPreferenceValues,
-  openCommandPreferences,
   showToast,
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
+import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
+import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
+import { parseWorkspaceRoots } from "./lib/workspaces";
 import { buildSearchUri } from "./lib/octarine";
 import { matchesSearchIndex } from "./lib/search";
 import { isIndexedAttachment, type IndexedAttachment } from "./types/attachment";
-import { scanAttachmentsFromPreferences } from "./lib/attachments";
+import { type AttachmentScanResult, scanAttachmentsFromPreferences } from "./lib/attachments";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
 const loadAttachmentFiles = (excludeFileExtensions?: string) => scanAttachmentsFromPreferences(excludeFileExtensions);
@@ -28,6 +31,7 @@ function getGridItemContent(file: IndexedAttachment): Grid.Item.Props["content"]
 
 export default function SearchAttachmentsCommand() {
   const preferences = getPreferenceValues<{
+    workspaceRoots: string;
     showWorkspaceAttachmentCount?: boolean;
     hideWorkspaceSections?: boolean;
     excludeFileExtensions?: string;
@@ -41,9 +45,10 @@ export default function SearchAttachmentsCommand() {
   const loadingToastRef = useRef<Toast | undefined>(undefined);
   const hasShownSectionWarningRef = useRef(false);
   const isTypeFilterActive = selectedExtension !== "all";
+  const hasConfiguredRoots = parseWorkspaceRoots(preferences.workspaceRoots).length > 0;
 
-  const { data: cachedAttachments = [], isLoading } = useCachedPromise(loadAttachmentFiles, [excludeFileExtensions], {
-    initialData: [],
+  const { data: scanResult, isLoading } = useCachedPromise(loadAttachmentFiles, [excludeFileExtensions], {
+    initialData: { attachments: [], workspaceCount: 0 } satisfies AttachmentScanResult,
     onError: async (error) => {
       if (loadingToastRef.current) {
         await loadingToastRef.current.hide();
@@ -59,9 +64,10 @@ export default function SearchAttachmentsCommand() {
   });
 
   const attachments = useMemo(
-    () => cachedAttachments.filter((file): file is IndexedAttachment => isIndexedAttachment(file)),
-    [cachedAttachments],
+    () => (scanResult?.attachments ?? []).filter((file): file is IndexedAttachment => isIndexedAttachment(file)),
+    [scanResult],
   );
+  const hasValidWorkspaces = (scanResult?.workspaceCount ?? 0) > 0;
 
   useEffect(() => {
     let disposed = false;
@@ -163,6 +169,10 @@ export default function SearchAttachmentsCommand() {
       }))
       .sort((left, right) => left.workspaceName.localeCompare(right.workspaceName));
   }, [visibleAttachments]);
+  const showWorkspaceNotFound = !isLoading && (!hasConfiguredRoots || !hasValidWorkspaces);
+  const showNoAttachmentsFound = !isLoading && !showWorkspaceNotFound && attachments.length === 0;
+  const showNoMatchingAttachments = !isLoading && !showWorkspaceNotFound && attachments.length > 0 && sections.length === 0;
+  const showAttachmentResults = !showWorkspaceNotFound && !showNoAttachmentsFound && !showNoMatchingAttachments;
 
   const searchBarPlaceholder = attachments.length === 0 ? "No attachments found" : "Search attachments...";
 
@@ -183,37 +193,22 @@ export default function SearchAttachmentsCommand() {
         </Grid.Dropdown>
       }
     >
-      {attachments.length === 0 && !isLoading ? (
-        <Grid.EmptyView
-          title="No Attachments Found"
-          description="Add files to a workspace .attachments folder and try again."
-          actions={
-            <ActionPanel>
-              <Action title="Open Extension Preferences" onAction={() => void openCommandPreferences()} />
-            </ActionPanel>
-          }
-        />
+      {showWorkspaceNotFound ? <WorkspaceNotFound display="grid" /> : null}
+      {showNoAttachmentsFound ? <WorkspaceContentEmptyView resource="attachments" display="grid" /> : null}
+
+      {showNoMatchingAttachments ? (
+        <SearchResultsEmptyView resource="attachments" display="grid">
+          <Action
+            title="Clear Type Filter"
+            onAction={() => {
+              setSelectedExtension("all");
+              setSearchText("");
+            }}
+          />
+        </SearchResultsEmptyView>
       ) : null}
 
-      {attachments.length > 0 && sections.length === 0 && !isLoading ? (
-        <Grid.EmptyView
-          title="No Matching Attachments"
-          description="Try a different type filter or search text."
-          actions={
-            <ActionPanel>
-              <Action
-                title="Clear Type Filter"
-                onAction={() => {
-                  setSelectedExtension("all");
-                  setSearchText("");
-                }}
-              />
-            </ActionPanel>
-          }
-        />
-      ) : null}
-
-      {hideWorkspaceSections
+      {showAttachmentResults && hideWorkspaceSections
         ? visibleAttachments.map((file) => (
             <Grid.Item
               key={file.path}
@@ -240,7 +235,8 @@ export default function SearchAttachmentsCommand() {
               }
             />
           ))
-        : sections.map((section) => (
+        : showAttachmentResults
+          ? sections.map((section) => (
             <Grid.Section
               key={section.workspacePath}
               title={
@@ -278,9 +274,10 @@ export default function SearchAttachmentsCommand() {
                     </ActionPanel>
                   }
                 />
-              ))}
+                ))}
             </Grid.Section>
-          ))}
+          ))
+          : null}
     </Grid>
   );
 }

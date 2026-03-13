@@ -178,7 +178,12 @@ async function scanWorkspaceAttachments(
   return attachmentsByDirectory.flat();
 }
 
-export async function scanAttachmentsFromPreferences(excludeFileExtensions?: string): Promise<IndexedAttachment[]> {
+export type AttachmentScanResult = {
+  attachments: IndexedAttachment[];
+  workspaceCount: number;
+};
+
+export async function scanAttachmentsFromPreferences(excludeFileExtensions?: string): Promise<AttachmentScanResult> {
   const workspaceResult = await loadWorkspaces();
   const excludedExtensions = parseExcludedExtensions(excludeFileExtensions);
 
@@ -200,5 +205,8 @@ export async function scanAttachmentsFromPreferences(excludeFileExtensions?: str
     return left.path.localeCompare(right.path);
   });
 
-  return attachments;
+  return {
+    attachments,
+    workspaceCount: workspaceResult.workspaces.length,
+  };
 }

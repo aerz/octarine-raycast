@@ -1,6 +1,7 @@
 import { List } from "@raycast/api";
 import type { ReactNode } from "react";
 import type { Workspace } from "../types/octarine";
+import { WorkspaceNotFound } from "./empty-views/WorkspaceNotFound";
 
 type WorkspaceMenuProps = {
   isLoading: boolean;
@@ -20,7 +21,7 @@ export function WorkspaceMenu({
   return (
     <List isLoading={isLoading} searchBarPlaceholder={searchBarPlaceholder}>
       {workspaces.length === 0 && !isLoading
-        ? (emptyView ?? <List.EmptyView title="No Octarine workspaces found" />)
+        ? (emptyView ?? <WorkspaceNotFound />)
         : workspaces.map((workspace) => (
             <List.Item
               key={workspace.path}
