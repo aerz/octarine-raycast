@@ -1,5 +1,5 @@
 import { LocalStorage } from "@raycast/api";
-import { promises as fs } from "node:fs";
+import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { isWorkspace, type Workspace } from "../types/octarine";
 import { getExtensionPreferences } from "./preferences";
@@ -68,7 +68,7 @@ async function discoverWorkspacesInRoot(rootPath: string, excludedFolders: Set<s
       continue;
     }
 
-    let entries;
+    let entries: Dirent[];
     try {
       entries = await fs.readdir(currentDirectory, { withFileTypes: true });
     } catch {

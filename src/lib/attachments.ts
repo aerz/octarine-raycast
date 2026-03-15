@@ -1,4 +1,4 @@
-import { Dirent, promises as fs } from "node:fs";
+import { Dirent, Stats, promises as fs } from "node:fs";
 import path from "node:path";
 import type { Workspace } from "../types/octarine";
 import { buildSearchIndexText } from "./search";
@@ -96,7 +96,7 @@ async function scanAttachmentDirectory(
   excludedExtensions: Set<string>,
 ): Promise<IndexedAttachment[]> {
   const attachmentsPath = path.join(workspace.path, directoryName);
-  let attachmentsStats;
+  let attachmentsStats: Stats;
   try {
     attachmentsStats = await fs.stat(attachmentsPath);
   } catch {
@@ -133,7 +133,7 @@ async function scanWorkspaceAttachments(
 ): Promise<IndexedAttachment[]> {
   const normalizedWorkspacePath = path.normalize(path.resolve(workspace.path));
   const normalizedWorkspace = { ...workspace, path: normalizedWorkspacePath };
-  let workspaceStats;
+  let workspaceStats: Stats;
   try {
     workspaceStats = await fs.stat(normalizedWorkspacePath);
   } catch (error) {
