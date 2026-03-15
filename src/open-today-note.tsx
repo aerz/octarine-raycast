@@ -1,21 +1,10 @@
-import {
-  Action,
-  ActionPanel,
-  LaunchProps,
-  List,
-  Toast,
-  getPreferenceValues,
-  showToast,
-} from "@raycast/api";
+import { Action, ActionPanel, LaunchProps, List, Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { buildDailyNoteUri, openOctarineUri } from "./lib/octarine";
+import { getOpenTodayNotePreferences } from "./lib/preferences";
 import { loadWorkspaces } from "./lib/workspaces";
-
-type CommandPreferences = {
-  workspaceName?: string;
-};
 
 type OpenTodayNoteArguments = {
   workspace?: string;
@@ -24,8 +13,8 @@ type OpenTodayNoteArguments = {
 export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: OpenTodayNoteArguments }>) {
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const hasRequestedWorkspace = requestedWorkspace.length > 0;
-  const preferences = getPreferenceValues<CommandPreferences>();
-  const defaultWorkspaceName = preferences.workspaceName?.trim() ?? "";
+  const preferences = useMemo(() => getOpenTodayNotePreferences(), []);
+  const defaultWorkspaceName = preferences.workspaceName;
   const targetWorkspaceName = hasRequestedWorkspace ? requestedWorkspace : defaultWorkspaceName;
   const hasTargetWorkspace = targetWorkspaceName.length > 0;
   const hasHandledDefaultWorkspace = useRef(false);

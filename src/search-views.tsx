@@ -1,27 +1,13 @@
-import {
-  Action,
-  ActionPanel,
-  Icon,
-  List,
-  Toast,
-  getPreferenceValues,
-  showToast,
-} from "@raycast/api";
+import { Action, ActionPanel, Icon, List, Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo, useState } from "react";
 import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
 import { openOctarineView } from "./lib/octarine";
+import { getSearchViewsPreferences } from "./lib/preferences";
 import { matchesSearchIndex } from "./lib/search";
 import { IndexedView, scanViewsFromWorkspaces } from "./lib/views";
-import { parseWorkspaceRoots } from "./lib/workspaces";
-
-type SearchViewsPreferences = {
-  workspaceRoots: string;
-  excludedFolders?: string;
-  showWorkspaceViewCount?: boolean;
-};
 
 function renderViewItem(view: IndexedView) {
   return (
@@ -44,12 +30,12 @@ function renderViewItem(view: IndexedView) {
 }
 
 export default function SearchViewsCommand() {
-  const preferences = getPreferenceValues<SearchViewsPreferences>();
-  const showWorkspaceViewCount = preferences.showWorkspaceViewCount ?? false;
+  const preferences = useMemo(() => getSearchViewsPreferences(), []);
+  const { extension: extensionPreferences, showWorkspaceViewCount } = preferences;
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const cacheKey = [preferences.workspaceRoots, preferences.excludedFolders ?? ""].filter(Boolean).join("::");
-  const hasConfiguredRoots = parseWorkspaceRoots(preferences.workspaceRoots).length > 0;
+  const cacheKey = extensionPreferences.workspaceDiscoverySignature;
+  const hasConfiguredRoots = extensionPreferences.hasConfiguredRoots;
   const {
     data: scanResult,
     error: scanError,
@@ -126,11 +112,7 @@ export default function SearchViewsCommand() {
   const showWorkspaceNotFound = !isLoading && !scanError && (!hasConfiguredRoots || !hasValidWorkspaces);
   const showNoViewsFound = !isLoading && !scanError && !showWorkspaceNotFound && views.length === 0;
   const showNoMatchingViews =
-    !isLoading &&
-    !scanError &&
-    !showWorkspaceNotFound &&
-    views.length > 0 &&
-    searchFilteredViews.length === 0;
+    !isLoading && !scanError && !showWorkspaceNotFound && views.length > 0 && searchFilteredViews.length === 0;
 
   return (
     <List

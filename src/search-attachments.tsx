@@ -1,25 +1,16 @@
-import {
-  Action,
-  ActionPanel,
-  Icon,
-  Grid,
-  Toast,
-  getPreferenceValues,
-  showToast,
-} from "@raycast/api";
+import { Action, ActionPanel, Icon, Grid, Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
-import { parseWorkspaceRoots } from "./lib/workspaces";
 import { buildSearchUri, openOctarineUri } from "./lib/octarine";
+import { getSearchAttachmentsPreferences } from "./lib/preferences";
 import { matchesSearchIndex } from "./lib/search";
 import { isIndexedAttachment, type IndexedAttachment } from "./types/attachment";
-import { type AttachmentScanResult, scanAttachmentsFromPreferences } from "./lib/attachments";
+import { type AttachmentScanResult, scanAttachments } from "./lib/attachments";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
-const loadAttachmentFiles = (excludeFileExtensions?: string) => scanAttachmentsFromPreferences(excludeFileExtensions);
 
 function getGridItemContent(file: IndexedAttachment): Grid.Item.Props["content"] {
   if (IMAGE_EXTENSIONS.has(file.extension)) {
@@ -45,38 +36,41 @@ function renderAttachmentActions(file: IndexedAttachment) {
 }
 
 export default function SearchAttachmentsCommand() {
-  const preferences = getPreferenceValues<{
-    workspaceRoots: string;
-    showWorkspaceAttachmentCount?: boolean;
-    hideWorkspaceSections?: boolean;
-    excludeFileExtensions?: string;
-  }>();
-  const showWorkspaceAttachmentCount = preferences.showWorkspaceAttachmentCount ?? false;
-  const hideWorkspaceSections = preferences.hideWorkspaceSections ?? false;
-  const excludeFileExtensions = preferences.excludeFileExtensions ?? "";
+  const preferences = useMemo(() => getSearchAttachmentsPreferences(), []);
+  const {
+    extension: extensionPreferences,
+    showWorkspaceAttachmentCount,
+    hideWorkspaceSections,
+    excludeFileExtensions,
+    excludeFileExtensionsSignature,
+  } = preferences;
   const shouldShowWorkspaceAttachmentCount = showWorkspaceAttachmentCount && !hideWorkspaceSections;
   const [selectedExtension, setSelectedExtension] = useState<string>("all");
   const [searchText, setSearchText] = useState("");
   const loadingToastRef = useRef<Toast | undefined>(undefined);
   const hasShownSectionWarningRef = useRef(false);
   const isTypeFilterActive = selectedExtension !== "all";
-  const hasConfiguredRoots = parseWorkspaceRoots(preferences.workspaceRoots).length > 0;
+  const hasConfiguredRoots = extensionPreferences.hasConfiguredRoots;
 
-  const { data: scanResult, isLoading } = useCachedPromise(loadAttachmentFiles, [excludeFileExtensions], {
-    initialData: { attachments: [], workspaceCount: 0 } satisfies AttachmentScanResult,
-    onError: async (error) => {
-      if (loadingToastRef.current) {
-        await loadingToastRef.current.hide();
-        loadingToastRef.current = undefined;
-      }
+  const { data: scanResult, isLoading } = useCachedPromise(
+    async () => scanAttachments({ excludedExtensions: excludeFileExtensions }),
+    [excludeFileExtensionsSignature],
+    {
+      initialData: { attachments: [], workspaceCount: 0 } satisfies AttachmentScanResult,
+      onError: async (error) => {
+        if (loadingToastRef.current) {
+          await loadingToastRef.current.hide();
+          loadingToastRef.current = undefined;
+        }
 
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to scan attachments",
-        message: error.message,
-      });
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Failed to scan attachments",
+          message: error.message,
+        });
+      },
     },
-  });
+  );
 
   const attachments = useMemo(
     () => (scanResult?.attachments ?? []).filter((file): file is IndexedAttachment => isIndexedAttachment(file)),
@@ -186,7 +180,8 @@ export default function SearchAttachmentsCommand() {
   }, [visibleAttachments]);
   const showWorkspaceNotFound = !isLoading && (!hasConfiguredRoots || !hasValidWorkspaces);
   const showNoAttachmentsFound = !isLoading && !showWorkspaceNotFound && attachments.length === 0;
-  const showNoMatchingAttachments = !isLoading && !showWorkspaceNotFound && attachments.length > 0 && sections.length === 0;
+  const showNoMatchingAttachments =
+    !isLoading && !showWorkspaceNotFound && attachments.length > 0 && sections.length === 0;
   const showAttachmentResults = !showWorkspaceNotFound && !showNoAttachmentsFound && !showNoMatchingAttachments;
 
   const searchBarPlaceholder = attachments.length === 0 ? "No attachments found" : "Search attachments...";
@@ -237,27 +232,27 @@ export default function SearchAttachmentsCommand() {
           ))
         : showAttachmentResults
           ? sections.map((section) => (
-            <Grid.Section
-              key={section.workspacePath}
-              title={
-                shouldShowWorkspaceAttachmentCount
-                  ? `${section.workspaceName} (${section.files.length})`
-                  : section.workspaceName
-              }
-            >
-              {section.files.map((file) => (
-                <Grid.Item
-                  key={file.path}
-                  title={file.name}
-                  subtitle={file.extension.toUpperCase()}
-                  content={getGridItemContent(file)}
-                  quickLook={{ name: file.name, path: file.path }}
-                  keywords={[file.workspace.name, file.extension]}
-                  actions={renderAttachmentActions(file)}
-                />
+              <Grid.Section
+                key={section.workspacePath}
+                title={
+                  shouldShowWorkspaceAttachmentCount
+                    ? `${section.workspaceName} (${section.files.length})`
+                    : section.workspaceName
+                }
+              >
+                {section.files.map((file) => (
+                  <Grid.Item
+                    key={file.path}
+                    title={file.name}
+                    subtitle={file.extension.toUpperCase()}
+                    content={getGridItemContent(file)}
+                    quickLook={{ name: file.name, path: file.path }}
+                    keywords={[file.workspace.name, file.extension]}
+                    actions={renderAttachmentActions(file)}
+                  />
                 ))}
-            </Grid.Section>
-          ))
+              </Grid.Section>
+            ))
           : null}
     </Grid>
   );

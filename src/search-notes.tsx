@@ -1,17 +1,10 @@
-import {
-  Action,
-  ActionPanel,
-  Clipboard,
-  List,
-  Toast,
-  getPreferenceValues,
-  showToast,
-} from "@raycast/api";
+import { Action, ActionPanel, Clipboard, List, Toast, showToast } from "@raycast/api";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
 import { buildOpenNoteUri, openOctarineUri } from "./lib/octarine";
+import { getSearchNotesPreferences } from "./lib/preferences";
 import type { Workspace } from "./types/octarine";
 import {
   IndexedNote,
@@ -20,13 +13,7 @@ import {
   saveCachedNotes,
   scanNotesFromWorkspaces,
 } from "./lib/notes";
-import { loadWorkspaces, parseWorkspaceRoots } from "./lib/workspaces";
-
-type SearchNotesPreferences = {
-  workspaceRoots: string;
-  excludedFolders?: string;
-  showWorkspaceNoteCount?: boolean;
-};
+import { loadWorkspaces } from "./lib/workspaces";
 
 function renderNoteItem(note: IndexedNote) {
   const octarineUri = buildOpenNoteUri(note.path, note.workspace.name);
@@ -39,10 +26,7 @@ function renderNoteItem(note: IndexedNote) {
       keywords={[note.path, note.workspace.name]}
       actions={
         <ActionPanel>
-          <Action
-            title="Open Note in Octarine"
-            onAction={() => void openOctarineUri(octarineUri)}
-          />
+          <Action title="Open Note in Octarine" onAction={() => void openOctarineUri(octarineUri)} />
           <Action title="Copy Octarine URL" onAction={() => void Clipboard.copy(octarineUri)} />
         </ActionPanel>
       }
@@ -51,14 +35,14 @@ function renderNoteItem(note: IndexedNote) {
 }
 
 export default function SearchNotesCommand() {
-  const preferences = getPreferenceValues<SearchNotesPreferences>();
-  const showWorkspaceNoteCount = preferences.showWorkspaceNoteCount ?? false;
+  const preferences = useMemo(() => getSearchNotesPreferences(), []);
+  const { extension: extensionPreferences, showWorkspaceNoteCount } = preferences;
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [notes, setNotes] = useState<IndexedNote[]>([]);
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
-  const [hasConfiguredRoots, setHasConfiguredRoots] = useState(true);
+  const [hasConfiguredRoots, setHasConfiguredRoots] = useState(extensionPreferences.hasConfiguredRoots);
   const hasShownScanErrorToast = useRef(false);
 
   useEffect(() => {
@@ -81,11 +65,7 @@ export default function SearchNotesCommand() {
       hasShownScanErrorToast.current = false;
 
       try {
-        const preferences = getPreferenceValues<SearchNotesPreferences>();
-        const roots = parseWorkspaceRoots(preferences.workspaceRoots);
-        const rootsConfigured = roots.length > 0;
-
-        if (!rootsConfigured) {
+        if (!extensionPreferences.hasConfiguredRoots) {
           if (!canceled) {
             setHasConfiguredRoots(false);
           }
@@ -151,7 +131,7 @@ export default function SearchNotesCommand() {
     return () => {
       canceled = true;
     };
-  }, []);
+  }, [extensionPreferences.hasConfiguredRoots]);
 
   const workspaceNames = useMemo(
     () =>
@@ -188,7 +168,8 @@ export default function SearchNotesCommand() {
 
   const showWorkspaceNotFound = !isLoading && (!hasConfiguredRoots || workspaces.length === 0);
   const showNoNotesFound = !isLoading && !showWorkspaceNotFound && notes.length === 0;
-  const showNoMatchingNotes = !isLoading && !showWorkspaceNotFound && !showNoNotesFound && searchFilteredNotes.length === 0;
+  const showNoMatchingNotes =
+    !isLoading && !showWorkspaceNotFound && !showNoNotesFound && searchFilteredNotes.length === 0;
 
   return (
     <List

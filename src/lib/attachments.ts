@@ -23,24 +23,6 @@ function isSystemGeneratedFile(name: string): boolean {
   return normalizedName.startsWith("~$") || SYSTEM_GENERATED_FILE_NAMES.has(normalizedName);
 }
 
-function parseExcludedExtensions(rawValue?: string): Set<string> {
-  const excludedExtensions = new Set<string>();
-  if (!rawValue) {
-    return excludedExtensions;
-  }
-
-  for (const part of rawValue.split(",")) {
-    const normalized = part.trim().toLowerCase().replace(/^\./, "");
-    if (!normalized) {
-      continue;
-    }
-
-    excludedExtensions.add(normalized);
-  }
-
-  return excludedExtensions;
-}
-
 async function collectIndexedAttachments(
   attachmentsPath: string,
   workspace: Workspace,
@@ -183,9 +165,9 @@ export type AttachmentScanResult = {
   workspaceCount: number;
 };
 
-export async function scanAttachmentsFromPreferences(excludeFileExtensions?: string): Promise<AttachmentScanResult> {
+export async function scanAttachments(options?: { excludedExtensions?: Set<string> }): Promise<AttachmentScanResult> {
   const workspaceResult = await loadWorkspaces();
-  const excludedExtensions = parseExcludedExtensions(excludeFileExtensions);
+  const excludedExtensions = options?.excludedExtensions ?? new Set<string>();
 
   for (const invalidRoot of workspaceResult.invalidRoots) {
     console.warn("Skipping inaccessible workspace root", { root: invalidRoot });

@@ -1,18 +1,13 @@
-import { LocalStorage, getPreferenceValues } from "@raycast/api";
+import { LocalStorage } from "@raycast/api";
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { isNote, isWorkspace, type Note, type Workspace } from "../types/octarine";
+import { getExtensionPreferences } from "./preferences";
 import { buildSearchIndexText, tokenizeSearchQuery } from "./search";
-import { parseWorkspaceRoots } from "./workspaces";
 
 const NOTES_CACHE_KEY = "octarine.notes.v1";
 const CACHE_VERSION = 3;
 const EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
-
-type NotesCachePreferences = {
-  workspaceRoots: string;
-  excludedFolders?: string;
-};
 
 type NotesCache = {
   version: number;
@@ -83,31 +78,6 @@ function toPosixPath(inputPath: string): string {
   return inputPath.split(path.sep).join(path.posix.sep);
 }
 
-function parseExcludedFolders(rawValue?: string): Set<string> {
-  const excludedFolders = new Set<string>();
-
-  if (!rawValue) {
-    return excludedFolders;
-  }
-
-  for (const part of rawValue.split(",")) {
-    const normalized = part.trim().toLowerCase();
-    if (!normalized) {
-      continue;
-    }
-
-    excludedFolders.add(normalized);
-  }
-
-  return excludedFolders;
-}
-
-function computeRootsDiscoverySignature(roots: string[], excludedFolders: Set<string>): string {
-  const rootsSignature = [...roots].sort().join("|");
-  const excludedFoldersSignature = [...excludedFolders].sort().join("|");
-  return `${rootsSignature}::${excludedFoldersSignature}`;
-}
-
 function isIndexedNote(value: unknown): value is IndexedNote {
   return (
     isNote(value) &&
@@ -176,13 +146,10 @@ async function saveCache(cache: NotesCache): Promise<void> {
 }
 
 export async function loadCachedNotes(): Promise<NotesCacheResult | undefined> {
-  const preferences = getPreferenceValues<NotesCachePreferences>();
-  const roots = parseWorkspaceRoots(preferences.workspaceRoots);
-  const excludedFolders = parseExcludedFolders(preferences.excludedFolders);
-  const rootsDiscoverySignature = computeRootsDiscoverySignature(roots, excludedFolders);
+  const preferences = getExtensionPreferences();
   const cached = await loadCache();
 
-  if (!cached || cached.rootsDiscoverySignature !== rootsDiscoverySignature) {
+  if (!cached || cached.rootsDiscoverySignature !== preferences.workspaceDiscoverySignature) {
     return undefined;
   }
 
@@ -193,14 +160,11 @@ export async function loadCachedNotes(): Promise<NotesCacheResult | undefined> {
 }
 
 export async function saveCachedNotes(workspaces: Workspace[], notes: IndexedNote[]): Promise<void> {
-  const preferences = getPreferenceValues<NotesCachePreferences>();
-  const roots = parseWorkspaceRoots(preferences.workspaceRoots);
-  const excludedFolders = parseExcludedFolders(preferences.excludedFolders);
-  const rootsDiscoverySignature = computeRootsDiscoverySignature(roots, excludedFolders);
+  const preferences = getExtensionPreferences();
 
   await saveCache({
     version: CACHE_VERSION,
-    rootsDiscoverySignature,
+    rootsDiscoverySignature: preferences.workspaceDiscoverySignature,
     scannedAt: new Date().toISOString(),
     workspaces,
     notes,

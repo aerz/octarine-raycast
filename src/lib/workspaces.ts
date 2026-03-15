@@ -1,8 +1,8 @@
-import { LocalStorage, getPreferenceValues } from "@raycast/api";
+import { LocalStorage } from "@raycast/api";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { isWorkspace, type Workspace } from "../types/octarine";
+import { getExtensionPreferences } from "./preferences";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
 const WORKSPACE_MARKER = ".octarine";
@@ -20,60 +20,6 @@ export type WorkspaceLoadResult = {
   invalidRoots: string[];
   fromCache: boolean;
 };
-
-function expandTilde(inputPath: string): string {
-  if (inputPath === "~") {
-    return os.homedir();
-  }
-
-  if (inputPath.startsWith("~/")) {
-    return path.join(os.homedir(), inputPath.slice(2));
-  }
-
-  return inputPath;
-}
-
-export function parseWorkspaceRoots(rawValue: string): string[] {
-  const dedupedRoots = new Set<string>();
-
-  for (const part of rawValue.split(",")) {
-    const trimmed = part.trim();
-    if (!trimmed) {
-      continue;
-    }
-
-    const expanded = expandTilde(trimmed);
-    const absolute = path.resolve(expanded);
-    dedupedRoots.add(path.normalize(absolute));
-  }
-
-  return Array.from(dedupedRoots);
-}
-
-function parseExcludedFolders(rawValue?: string): Set<string> {
-  const dedupedFolders = new Set<string>();
-
-  if (!rawValue) {
-    return dedupedFolders;
-  }
-
-  for (const part of rawValue.split(",")) {
-    const trimmed = part.trim().toLowerCase();
-    if (!trimmed) {
-      continue;
-    }
-
-    dedupedFolders.add(trimmed);
-  }
-
-  return dedupedFolders;
-}
-
-function computeRootsDiscoverySignature(roots: string[], excludedFolders: Set<string>): string {
-  const rootsSignature = [...roots].sort().join("|");
-  const excludedFoldersSignature = [...excludedFolders].sort().join("|");
-  return `${rootsSignature}::${excludedFoldersSignature}`;
-}
 
 function isWorkspaceCache(value: unknown): value is WorkspaceCache {
   if (!value || typeof value !== "object") {
@@ -208,15 +154,12 @@ async function discoverWorkspaces(
 }
 
 export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Promise<WorkspaceLoadResult> {
-  const preferences = getPreferenceValues<{ workspaceRoots: string; excludedFolders?: string }>();
-  const roots = parseWorkspaceRoots(preferences.workspaceRoots);
-  const excludedFolders = parseExcludedFolders(preferences.excludedFolders);
-  const rootsDiscoverySignature = computeRootsDiscoverySignature(roots, excludedFolders);
+  const preferences = getExtensionPreferences();
   const forceRefresh = options?.forceRefresh ?? false;
 
   if (!forceRefresh) {
     const cached = await loadCache();
-    if (cached && cached.rootsDiscoverySignature === rootsDiscoverySignature) {
+    if (cached && cached.rootsDiscoverySignature === preferences.workspaceDiscoverySignature) {
       return {
         workspaces: cached.workspaces,
         invalidRoots: [],
@@ -225,10 +168,10 @@ export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Prom
     }
   }
 
-  const discoveryResult = await discoverWorkspaces(roots, excludedFolders);
+  const discoveryResult = await discoverWorkspaces(preferences.workspaceRoots, preferences.excludedFolders);
   await saveCache({
     version: CACHE_VERSION,
-    rootsDiscoverySignature,
+    rootsDiscoverySignature: preferences.workspaceDiscoverySignature,
     scannedAt: new Date().toISOString(),
     workspaces: discoveryResult.workspaces,
   });
