@@ -103,7 +103,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
     hasRequestedWorkspace,
     isLoading,
     hasWorkspaceLoadFailed,
-    matchedWorkspace,
+    hasMatchedWorkspace: matchedWorkspace !== undefined,
     enabled: isDateValid,
   });
 

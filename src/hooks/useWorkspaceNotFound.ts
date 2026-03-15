@@ -6,7 +6,7 @@ type UseWorkspaceNotFoundOptions = {
   hasRequestedWorkspace: boolean;
   isLoading: boolean;
   hasWorkspaceLoadFailed: boolean;
-  matchedWorkspace?: unknown;
+  hasMatchedWorkspace: boolean;
   enabled?: boolean;
   toastTitle?: (workspaceName: string) => string;
 };
@@ -16,15 +16,15 @@ export function useWorkspaceNotFound({
   hasRequestedWorkspace,
   isLoading,
   hasWorkspaceLoadFailed,
-  matchedWorkspace,
+  hasMatchedWorkspace,
   enabled = true,
   toastTitle,
 }: UseWorkspaceNotFoundOptions): boolean {
   const lastWorkspaceNotFoundToast = useRef<string | undefined>(undefined);
 
   const isWorkspaceNotFound = useMemo(
-    () => Boolean(enabled && hasRequestedWorkspace && !isLoading && !hasWorkspaceLoadFailed && !matchedWorkspace),
-    [enabled, hasRequestedWorkspace, isLoading, hasWorkspaceLoadFailed, matchedWorkspace],
+    () => enabled && hasRequestedWorkspace && !isLoading && !hasWorkspaceLoadFailed && !hasMatchedWorkspace,
+    [enabled, hasRequestedWorkspace, isLoading, hasWorkspaceLoadFailed, hasMatchedWorkspace],
   );
 
   useEffect(() => {

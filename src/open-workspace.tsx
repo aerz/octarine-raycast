@@ -78,7 +78,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
     hasRequestedWorkspace,
     isLoading,
     hasWorkspaceLoadFailed,
-    matchedWorkspace,
+    hasMatchedWorkspace: matchedWorkspace !== undefined,
   });
 
   useEffect(() => {
@@ -121,11 +121,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Ope
       }
       renderActions={(workspace) => (
         <ActionPanel>
-          <Action
-            title="Open in Octarine"
-            icon={Icon.AppWindow}
-            onAction={() => void openWorkspace(workspace.name)}
-          />
+          <Action title="Open in Octarine" icon={Icon.AppWindow} onAction={() => void openWorkspace(workspace.name)} />
           <Action
             title="Rescan Workspaces"
             icon={Icon.ArrowClockwise}
