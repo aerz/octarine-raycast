@@ -28,6 +28,7 @@ async function collectIndexedAttachments(
   workspace: Workspace,
   initialEntries: Dirent[],
   excludedExtensions: Set<string>,
+  excludedDirectoryNames: Set<string>,
 ): Promise<IndexedAttachment[]> {
   const attachments: IndexedAttachment[] = [];
   const pendingDirectories: Array<{ directory: string; entries?: Dirent[] }> = [
@@ -58,8 +59,13 @@ async function collectIndexedAttachments(
 
     for (const entry of entries) {
       const absoluteEntryPath = path.resolve(next.directory, entry.name);
+      const normalizedEntryName = entry.name.toLowerCase();
 
       if (entry.isDirectory() && !entry.isSymbolicLink()) {
+        if (excludedDirectoryNames.has(normalizedEntryName)) {
+          continue;
+        }
+
         pendingDirectories.push({ directory: absoluteEntryPath });
         continue;
       }
@@ -94,6 +100,7 @@ async function scanAttachmentDirectory(
   workspace: Workspace,
   directoryName: (typeof ATTACHMENT_DIRECTORIES)[number],
   excludedExtensions: Set<string>,
+  excludedDirectoryNames: Set<string>,
 ): Promise<IndexedAttachment[]> {
   const attachmentsPath = path.join(workspace.path, directoryName);
   let attachmentsStats: Stats;
@@ -124,12 +131,13 @@ async function scanAttachmentDirectory(
     return [];
   }
 
-  return collectIndexedAttachments(attachmentsPath, workspace, rootEntries, excludedExtensions);
+  return collectIndexedAttachments(attachmentsPath, workspace, rootEntries, excludedExtensions, excludedDirectoryNames);
 }
 
 async function scanWorkspaceAttachments(
   workspace: Workspace,
   excludedExtensions: Set<string>,
+  excludedDirectoryNames: Set<string>,
 ): Promise<IndexedAttachment[]> {
   const normalizedWorkspacePath = path.normalize(path.resolve(workspace.path));
   const normalizedWorkspace = { ...workspace, path: normalizedWorkspacePath };
@@ -153,7 +161,7 @@ async function scanWorkspaceAttachments(
 
   const attachmentsByDirectory = await Promise.all(
     ATTACHMENT_DIRECTORIES.map((directoryName) =>
-      scanAttachmentDirectory(normalizedWorkspace, directoryName, excludedExtensions),
+      scanAttachmentDirectory(normalizedWorkspace, directoryName, excludedExtensions, excludedDirectoryNames),
     ),
   );
 
@@ -165,16 +173,22 @@ export type AttachmentScanResult = {
   workspaceCount: number;
 };
 
-export async function scanAttachments(options?: { excludedExtensions?: Set<string> }): Promise<AttachmentScanResult> {
+export async function scanAttachments(options?: {
+  excludedExtensions?: Set<string>;
+  excludedDirectoryNames?: Set<string>;
+}): Promise<AttachmentScanResult> {
   const workspaceResult = await loadWorkspaces();
   const excludedExtensions = options?.excludedExtensions ?? new Set<string>();
+  const excludedDirectoryNames = options?.excludedDirectoryNames ?? new Set<string>();
 
   for (const invalidRoot of workspaceResult.invalidRoots) {
     console.warn("Skipping inaccessible workspace root", { root: invalidRoot });
   }
 
   const attachmentsByWorkspace = await Promise.all(
-    workspaceResult.workspaces.map((workspace) => scanWorkspaceAttachments(workspace, excludedExtensions)),
+    workspaceResult.workspaces.map((workspace) =>
+      scanWorkspaceAttachments(workspace, excludedExtensions, excludedDirectoryNames),
+    ),
   );
   const attachments = attachmentsByWorkspace.flat();
 

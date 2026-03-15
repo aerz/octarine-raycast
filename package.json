@@ -22,12 +22,20 @@
       "placeholder": "~/Documents/Octarine, ~/Work/Notes"
     },
     {
-      "name": "excludedFolders",
+      "name": "excludedWorkspaces",
       "type": "textfield",
       "placeholder": "folder1, folder2, ...",
-      "title": "Exclude following folders",
+      "title": "Exclude Workspaces",
       "required": false,
-      "description": "Specify which folders to exclude (comma separated)"
+      "description": "Comma-separated workspace names to skip during workspace discovery"
+    },
+    {
+      "name": "excludedFoldersInWorkspaces",
+      "type": "textfield",
+      "placeholder": "folder1, folder2, ...",
+      "title": "Exclude Folders in Workspaces",
+      "required": false,
+      "description": "Comma-separated folder names to exclude from search results inside included workspaces"
     }
   ],
   "license": "MIT",

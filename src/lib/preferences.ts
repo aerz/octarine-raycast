@@ -4,9 +4,11 @@ import path from "node:path";
 
 export type ExtensionPreferences = {
   workspaceRoots: string[];
-  excludedFolders: Set<string>;
+  excludedWorkspaces: Set<string>;
+  excludedFoldersInWorkspaces: Set<string>;
   hasConfiguredRoots: boolean;
   workspaceDiscoverySignature: string;
+  workspaceSearchSignature: string;
 };
 
 export type SearchNotesPreferences = {
@@ -75,29 +77,40 @@ export function parseWorkspaceRoots(rawValue: string): string[] {
   return Array.from(dedupedRoots);
 }
 
-export function parseExcludedFolders(rawValue?: string): Set<string> {
-  return new Set(parseCommaSeparatedValues(rawValue).map((folder) => folder.toLowerCase()));
+export function parseExcludedNames(rawValue?: string): Set<string> {
+  return new Set(parseCommaSeparatedValues(rawValue).map((value) => value.toLowerCase()));
 }
 
 export function parseExcludedFileExtensions(rawValue?: string): Set<string> {
   return new Set(parseCommaSeparatedValues(rawValue).map((extension) => extension.toLowerCase().replace(/^\./, "")));
 }
 
-export function buildWorkspaceDiscoverySignature(workspaceRoots: string[], excludedFolders: Set<string>): string {
+export function buildWorkspaceDiscoverySignature(workspaceRoots: string[], excludedWorkspaces: Set<string>): string {
   const rootsSignature = buildSortedSignature(workspaceRoots);
-  const excludedFoldersSignature = buildSortedSignature(excludedFolders);
-  return `${rootsSignature}::${excludedFoldersSignature}`;
+  const excludedWorkspacesSignature = buildSortedSignature(excludedWorkspaces);
+  return `${rootsSignature}::${excludedWorkspacesSignature}`;
+}
+
+export function buildWorkspaceSearchSignature(
+  workspaceDiscoverySignature: string,
+  excludedFoldersInWorkspaces: Set<string>,
+): string {
+  return `${workspaceDiscoverySignature}::${buildSortedSignature(excludedFoldersInWorkspaces)}`;
 }
 
 function buildExtensionPreferences(preferences: Preferences): ExtensionPreferences {
   const workspaceRoots = parseWorkspaceRoots(preferences.workspaceRoots);
-  const excludedFolders = parseExcludedFolders(preferences.excludedFolders);
+  const excludedWorkspaces = parseExcludedNames(preferences.excludedWorkspaces);
+  const excludedFoldersInWorkspaces = parseExcludedNames(preferences.excludedFoldersInWorkspaces);
+  const workspaceDiscoverySignature = buildWorkspaceDiscoverySignature(workspaceRoots, excludedWorkspaces);
 
   return {
     workspaceRoots,
-    excludedFolders,
+    excludedWorkspaces,
+    excludedFoldersInWorkspaces,
     hasConfiguredRoots: workspaceRoots.length > 0,
-    workspaceDiscoverySignature: buildWorkspaceDiscoverySignature(workspaceRoots, excludedFolders),
+    workspaceDiscoverySignature,
+    workspaceSearchSignature: buildWorkspaceSearchSignature(workspaceDiscoverySignature, excludedFoldersInWorkspaces),
   };
 }
 

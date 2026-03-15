@@ -76,7 +76,7 @@ export default function SearchNotesCommand() {
           setHasConfiguredRoots(true);
         }
 
-        const cachedResult = await loadCachedNotes();
+        const cachedResult = await loadCachedNotes(extensionPreferences.workspaceSearchSignature);
         const hasCachedResult = Boolean(cachedResult);
 
         if (cachedResult && !canceled) {
@@ -102,12 +102,16 @@ export default function SearchNotesCommand() {
           });
         }
 
-        const discoveredNotes = await scanNotesFromWorkspaces(workspaceResult.workspaces, showScanFailureToast);
+        const discoveredNotes = await scanNotesFromWorkspaces(
+          workspaceResult.workspaces,
+          extensionPreferences.excludedFoldersInWorkspaces,
+          showScanFailureToast,
+        );
         if (canceled) {
           return;
         }
 
-        await saveCachedNotes(workspaceResult.workspaces, discoveredNotes);
+        await saveCachedNotes(workspaceResult.workspaces, discoveredNotes, extensionPreferences.workspaceSearchSignature);
 
         startTransition(() => {
           setWorkspaces(workspaceResult.workspaces);
@@ -131,7 +135,11 @@ export default function SearchNotesCommand() {
     return () => {
       canceled = true;
     };
-  }, [extensionPreferences.hasConfiguredRoots]);
+  }, [
+    extensionPreferences.excludedFoldersInWorkspaces,
+    extensionPreferences.hasConfiguredRoots,
+    extensionPreferences.workspaceSearchSignature,
+  ]);
 
   const workspaceNames = useMemo(
     () =>

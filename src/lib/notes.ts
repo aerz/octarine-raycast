@@ -2,16 +2,15 @@ import { LocalStorage } from "@raycast/api";
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { isNote, isWorkspace, type Note, type Workspace } from "../types/octarine";
-import { getExtensionPreferences } from "./preferences";
 import { buildSearchIndexText, tokenizeSearchQuery } from "./search";
 
 const NOTES_CACHE_KEY = "octarine.notes.v1";
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 const EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
 
 type NotesCache = {
   version: number;
-  rootsDiscoverySignature: string;
+  workspaceSearchSignature: string;
   scannedAt: string;
   workspaces: Workspace[];
   notes: IndexedNote[];
@@ -118,7 +117,7 @@ function isNotesCache(value: unknown): value is NotesCache {
   const cache = value as Partial<NotesCache>;
   return (
     cache.version === CACHE_VERSION &&
-    typeof cache.rootsDiscoverySignature === "string" &&
+    typeof cache.workspaceSearchSignature === "string" &&
     typeof cache.scannedAt === "string" &&
     Array.isArray(cache.workspaces) &&
     cache.workspaces.every(isWorkspace) &&
@@ -145,11 +144,10 @@ async function saveCache(cache: NotesCache): Promise<void> {
   await LocalStorage.setItem(NOTES_CACHE_KEY, JSON.stringify(cache));
 }
 
-export async function loadCachedNotes(): Promise<NotesCacheResult | undefined> {
-  const preferences = getExtensionPreferences();
+export async function loadCachedNotes(workspaceSearchSignature: string): Promise<NotesCacheResult | undefined> {
   const cached = await loadCache();
 
-  if (!cached || cached.rootsDiscoverySignature !== preferences.workspaceDiscoverySignature) {
+  if (!cached || cached.workspaceSearchSignature !== workspaceSearchSignature) {
     return undefined;
   }
 
@@ -159,12 +157,14 @@ export async function loadCachedNotes(): Promise<NotesCacheResult | undefined> {
   };
 }
 
-export async function saveCachedNotes(workspaces: Workspace[], notes: IndexedNote[]): Promise<void> {
-  const preferences = getExtensionPreferences();
-
+export async function saveCachedNotes(
+  workspaces: Workspace[],
+  notes: IndexedNote[],
+  workspaceSearchSignature: string,
+): Promise<void> {
   await saveCache({
     version: CACHE_VERSION,
-    rootsDiscoverySignature: preferences.workspaceDiscoverySignature,
+    workspaceSearchSignature,
     scannedAt: new Date().toISOString(),
     workspaces,
     notes,
@@ -225,6 +225,7 @@ export function sortNotes(notes: ScannedNote[]): void {
 
 export async function scanWorkspaceForNotes(
   workspace: Workspace,
+  excludedDirectoryNames: Set<string>,
   onError: (error: unknown) => Promise<void>,
 ): Promise<IndexedNote[]> {
   const pendingDirectories: string[] = [workspace.path];
@@ -250,7 +251,11 @@ export async function scanWorkspaceForNotes(
     }
 
     for (const entry of entries) {
-      if (EXCLUDED_DIRECTORY_NAMES.has(entry.name) && entry.isDirectory()) {
+      const normalizedEntryName = entry.name.toLowerCase();
+      if (
+        entry.isDirectory() &&
+        (EXCLUDED_DIRECTORY_NAMES.has(normalizedEntryName) || excludedDirectoryNames.has(normalizedEntryName))
+      ) {
         continue;
       }
 
@@ -282,11 +287,14 @@ export async function scanWorkspaceForNotes(
 
 export async function scanNotesFromWorkspaces(
   workspaces: Workspace[],
+  excludedDirectoryNames: Set<string>,
   onError: (error: unknown) => Promise<void>,
 ): Promise<IndexedNote[]> {
   const discoveredNoteIds = new Set<string>();
   const discoveredNotes: IndexedNote[] = [];
-  const notesByWorkspace = await Promise.all(workspaces.map((workspace) => scanWorkspaceForNotes(workspace, onError)));
+  const notesByWorkspace = await Promise.all(
+    workspaces.map((workspace) => scanWorkspaceForNotes(workspace, excludedDirectoryNames, onError)),
+  );
 
   for (const workspaceNotes of notesByWorkspace) {
     for (const note of workspaceNotes) {

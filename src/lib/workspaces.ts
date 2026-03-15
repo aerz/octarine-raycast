@@ -6,7 +6,7 @@ import { getExtensionPreferences } from "./preferences";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
 const WORKSPACE_MARKER = ".octarine";
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 type WorkspaceCache = {
   version: number;
@@ -54,17 +54,13 @@ async function saveCache(cache: WorkspaceCache): Promise<void> {
   await LocalStorage.setItem(WORKSPACES_CACHE_KEY, JSON.stringify(cache));
 }
 
-async function discoverWorkspacesInRoot(rootPath: string, excludedFolders: Set<string>): Promise<Workspace[]> {
+async function discoverWorkspacesInRoot(rootPath: string, excludedWorkspaces: Set<string>): Promise<Workspace[]> {
   const discovered: Workspace[] = [];
   const pendingDirectories: string[] = [rootPath];
 
   while (pendingDirectories.length > 0) {
     const currentDirectory = pendingDirectories.pop();
     if (!currentDirectory) {
-      continue;
-    }
-
-    if (excludedFolders.has(path.basename(currentDirectory).toLowerCase())) {
       continue;
     }
 
@@ -78,8 +74,14 @@ async function discoverWorkspacesInRoot(rootPath: string, excludedFolders: Set<s
     const hasWorkspaceMarker = entries.some((entry) => entry.isDirectory() && entry.name === WORKSPACE_MARKER);
     if (hasWorkspaceMarker) {
       const absoluteWorkspacePath = path.normalize(path.resolve(currentDirectory));
+      const workspaceName = path.basename(absoluteWorkspacePath);
+
+      if (excludedWorkspaces.has(workspaceName.toLowerCase())) {
+        continue;
+      }
+
       discovered.push({
-        name: path.basename(absoluteWorkspacePath),
+        name: workspaceName,
         path: absoluteWorkspacePath,
       });
       continue;
@@ -94,10 +96,6 @@ async function discoverWorkspacesInRoot(rootPath: string, excludedFolders: Set<s
         continue;
       }
 
-      if (excludedFolders.has(entry.name.toLowerCase())) {
-        continue;
-      }
-
       pendingDirectories.push(path.join(currentDirectory, entry.name));
     }
   }
@@ -107,7 +105,7 @@ async function discoverWorkspacesInRoot(rootPath: string, excludedFolders: Set<s
 
 async function discoverWorkspaces(
   roots: string[],
-  excludedFolders: Set<string>,
+  excludedWorkspaces: Set<string>,
 ): Promise<{ workspaces: Workspace[]; invalidRoots: string[] }> {
   const rootResults = await Promise.all(
     roots.map(async (rootPath) => {
@@ -120,7 +118,7 @@ async function discoverWorkspaces(
         return { rootPath, invalid: true, workspaces: [] as Workspace[] };
       }
 
-      const workspaces = await discoverWorkspacesInRoot(rootPath, excludedFolders);
+      const workspaces = await discoverWorkspacesInRoot(rootPath, excludedWorkspaces);
       return { rootPath, invalid: false, workspaces };
     }),
   );
@@ -168,7 +166,7 @@ export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Prom
     }
   }
 
-  const discoveryResult = await discoverWorkspaces(preferences.workspaceRoots, preferences.excludedFolders);
+  const discoveryResult = await discoverWorkspaces(preferences.workspaceRoots, preferences.excludedWorkspaces);
   await saveCache({
     version: CACHE_VERSION,
     rootsDiscoverySignature: preferences.workspaceDiscoverySignature,

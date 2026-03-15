@@ -53,11 +53,15 @@ export default function SearchAttachmentsCommand() {
   const hasConfiguredRoots = extensionPreferences.hasConfiguredRoots;
 
   const { data: scanResult, isLoading } = useCachedPromise(
-    async (excludeFileExtensionsSignature: string): Promise<AttachmentScanResult> => {
+    async (workspaceSearchSignature: string, excludeFileExtensionsSignature: string): Promise<AttachmentScanResult> => {
+      void workspaceSearchSignature;
       void excludeFileExtensionsSignature;
-      return scanAttachments({ excludedExtensions: excludeFileExtensions });
+      return scanAttachments({
+        excludedExtensions: excludeFileExtensions,
+        excludedDirectoryNames: extensionPreferences.excludedFoldersInWorkspaces,
+      });
     },
-    [excludeFileExtensionsSignature],
+    [extensionPreferences.workspaceSearchSignature, excludeFileExtensionsSignature],
     {
       initialData: { attachments: [], workspaceCount: 0 } satisfies AttachmentScanResult,
       onError: async (error) => {
