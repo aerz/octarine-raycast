@@ -13,10 +13,6 @@ type RawView = {
   desc?: unknown;
 };
 
-type ValidRawView = RawView & {
-  name: string;
-};
-
 export type IndexedView = View & {
   searchText: string;
 };
@@ -31,13 +27,30 @@ export type ViewsScanResult = Pick<WorkspaceLoadResult, "invalidRoots" | "fromCa
   workspaceViews: WorkspaceViews[];
 };
 
-function isValidRawView(value: unknown): value is ValidRawView {
-  if (!value || typeof value !== "object") {
-    return false;
+function parseView(rawValue: unknown, workspace: Workspace, index: number): IndexedView | undefined {
+  if (!rawValue || typeof rawValue !== "object") {
+    return undefined;
   }
 
-  const rawView = value as RawView;
-  return typeof rawView.name === "string" && rawView.name.trim().length > 0;
+  const rawView = rawValue as RawView;
+  if (typeof rawView.name !== "string") {
+    return undefined;
+  }
+
+  const viewName = rawView.name.trim();
+  if (!viewName) {
+    return undefined;
+  }
+
+  const description = typeof rawView.desc === "string" ? rawView.desc.trim() : "";
+
+  return {
+    id: typeof rawView.id === "string" && rawView.id.trim().length > 0 ? rawView.id : `${workspace.path}::${index}`,
+    name: viewName,
+    description,
+    workspace,
+    searchText: buildSearchIndexText(viewName, description, workspace.name),
+  };
 }
 
 function parseViews(rawValue: unknown, workspace: Workspace): IndexedView[] | undefined {
@@ -45,33 +58,18 @@ function parseViews(rawValue: unknown, workspace: Workspace): IndexedView[] | un
     return undefined;
   }
 
-  if (rawValue.length === 0) {
-    return [];
+  const views: IndexedView[] = [];
+
+  for (const [index, rawView] of rawValue.entries()) {
+    const parsedView = parseView(rawView, workspace, index);
+    if (!parsedView) {
+      return undefined;
+    }
+
+    views.push(parsedView);
   }
 
-  if (!rawValue.every(isValidRawView)) {
-    return undefined;
-  }
-
-  const validViews = rawValue.filter(isValidRawView);
-  if (validViews.length !== rawValue.length) {
-    return undefined;
-  }
-
-  return validViews
-    .map((rawView, index) => {
-      const viewName = rawView.name.trim();
-      const description = typeof rawView.desc === "string" ? rawView.desc.trim() : "";
-
-      return {
-        id: typeof rawView.id === "string" && rawView.id.trim().length > 0 ? rawView.id : `${workspace.path}::${index}`,
-        name: viewName,
-        description,
-        workspace,
-        searchText: buildSearchIndexText(viewName, description, workspace.name),
-      };
-    })
-    .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
+  return views.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
 }
 
 async function scanWorkspaceViews(workspace: Workspace): Promise<WorkspaceViews | undefined> {
