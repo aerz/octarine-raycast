@@ -111,7 +111,11 @@ export default function SearchNotesCommand() {
           return;
         }
 
-        await saveCachedNotes(workspaceResult.workspaces, discoveredNotes, extensionPreferences.workspaceSearchSignature);
+        await saveCachedNotes(
+          workspaceResult.workspaces,
+          discoveredNotes,
+          extensionPreferences.workspaceSearchSignature,
+        );
 
         startTransition(() => {
           setWorkspaces(workspaceResult.workspaces);
