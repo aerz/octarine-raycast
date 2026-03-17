@@ -1,7 +1,7 @@
 import { List } from "@raycast/api";
 import type { ReactNode } from "react";
 import type { Workspace } from "../types/octarine";
-import { WorkspaceNotFound } from "./empty-views/WorkspaceNotFound";
+import { WorkspaceNotFound } from "./EmptyViews/WorkspaceNotFound";
 
 type WorkspaceMenuProps = {
   isLoading: boolean;

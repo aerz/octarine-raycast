@@ -1,8 +1,8 @@
 import { Action, ActionPanel, Clipboard, List, Toast, showToast } from "@raycast/api";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
+import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
+import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
+import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { buildOpenNoteUri, openOctarineUri } from "./lib/octarine";
 import { getSearchNotesPreferences } from "./lib/preferences";
 import type { Workspace } from "./types/octarine";

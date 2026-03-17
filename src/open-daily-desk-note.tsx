@@ -1,8 +1,10 @@
-import { Action, ActionPanel, Detail, LaunchProps, Toast, showToast } from "@raycast/api";
+import { Action, ActionPanel, LaunchProps, Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DateFormatsDetail } from "./components/Notifications/DateFormatsDetail";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
+import { isSupportedDailyDeskDate } from "./lib/daily-desk";
 import { buildDailyNoteUri, openOctarineUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
 import type { Workspace } from "./types/octarine";
@@ -11,33 +13,6 @@ type OpenDailyDeskNoteArguments = {
   date: string;
   workspace?: string;
 };
-
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const ISO_WEEK_PATTERN = /^\d{4}-W\d{2}$/i;
-const NATURAL_EXACT_PATTERN = /^(today|yesterday|tomorrow)$/i;
-const RELATIVE_PATTERN = /^(?:\d+\s+(?:day|days|week|weeks)\s+ago|in\s+\d+\s+(?:day|days|week|weeks))$/i;
-const DAY_MODIFIER_PATTERN = /^(?:last|next)\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i;
-const WEEK_MODIFIER_PATTERN = /^(?:this|last|next)\s+week$/i;
-const PARTIAL_DATE_PATTERN =
-  /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}$/i;
-
-export function isSupportedDailyDeskDate(value: string): boolean {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    return false;
-  }
-
-  return (
-    ISO_DATE_PATTERN.test(normalized) ||
-    ISO_WEEK_PATTERN.test(normalized) ||
-    NATURAL_EXACT_PATTERN.test(normalized) ||
-    RELATIVE_PATTERN.test(normalized) ||
-    DAY_MODIFIER_PATTERN.test(normalized) ||
-    WEEK_MODIFIER_PATTERN.test(normalized) ||
-    PARTIAL_DATE_PATTERN.test(normalized)
-  );
-}
 
 export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments: OpenDailyDeskNoteArguments }>) {
   const requestedDate = props.arguments.date?.trim() ?? "";
@@ -141,21 +116,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   }, [requestedWorkspace, requestedDate]);
 
   if (!isDateValid) {
-    const markdown = [
-      "# Invalid Date",
-      "",
-      "**Supported Date Formats**",
-      "",
-      "- ISO date: `2024-01-15`, `2024-12-25`",
-      "- ISO week: `2024-W03`, `2026-W01`",
-      "- Natural language dates: `today`, `yesterday`, `tomorrow`",
-      "- Relative dates: `2 days ago`, `next monday`, `last friday`",
-      "- Partial dates: `jan 15`, `december 25`, `nov 3`",
-      "- Natural language weeks: `this week`, `last week`, `next week`",
-      "- Relative weeks: `2 weeks ago`, `in 2 weeks`",
-    ].join("\n");
-
-    return <Detail markdown={markdown} />;
+    return <DateFormatsDetail />;
   }
 
   if (hasRequestedWorkspace && matchedWorkspace && !hasDirectOpenFailed && !isWorkspaceNotFound) {

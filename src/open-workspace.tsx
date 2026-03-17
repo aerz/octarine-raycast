@@ -10,7 +10,7 @@ import {
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
+import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
 import { buildOpenWorkspaceUri, openOctarineUri } from "./lib/octarine";

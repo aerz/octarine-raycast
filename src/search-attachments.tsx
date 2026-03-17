@@ -1,9 +1,9 @@
 import { Action, ActionPanel, Icon, Grid, Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
+import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
+import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
+import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { buildSearchUri, openOctarineUri } from "./lib/octarine";
 import { getSearchAttachmentsPreferences } from "./lib/preferences";
 import { matchesSearchIndex } from "./lib/search";

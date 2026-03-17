@@ -1,4 +1,5 @@
 import { Toast, closeMainWindow, open, popToRoot, showToast } from "@raycast/api";
+import { compressToBase64 } from "lz-string";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -69,6 +70,29 @@ type OctarineUriRequest =
   | OctarineDailyUriRequest
   | OctarineCreateUriRequest;
 
+type BuildCreateNoteUriOptions = Omit<OctarineCreateUriRequest, "action" | "path" | "workspace"> & {
+  workspaceName?: string;
+};
+
+type BuildDailyNoteUriOptions = Omit<OctarineDailyUriRequest, "action" | "date" | "workspace"> & {
+  workspaceName?: string;
+};
+
+type UpsertOctarineNoteContentOptions = {
+  path: string;
+  workspaceName?: string;
+  content: string;
+  openAfter?: boolean;
+  position?: OctarinePosition;
+  separator?: string;
+};
+
+type AppendDailyNoteContentOptions = {
+  date: string;
+  workspaceName?: string;
+  content: string;
+};
+
 function appendParam(params: URLSearchParams, key: OctarineParam, value: string | boolean | undefined): void {
   if (value === undefined) {
     return;
@@ -132,11 +156,24 @@ export function buildSearchUri(query: string, workspaceName?: string): string {
   });
 }
 
-export function buildDailyNoteUri(date: string, workspaceName?: string): string {
+export function buildDailyNoteUri(date: string, workspaceName?: string): string;
+export function buildDailyNoteUri(date: string, options?: BuildDailyNoteUriOptions): string;
+export function buildDailyNoteUri(date: string, workspaceNameOrOptions?: string | BuildDailyNoteUriOptions): string {
+  const options =
+    typeof workspaceNameOrOptions === "string"
+      ? { workspaceName: workspaceNameOrOptions }
+      : (workspaceNameOrOptions ?? {});
+
   return buildOctarineUri({
     action: OctarineAction.Daily,
     date,
-    workspace: workspaceName,
+    workspace: options.workspaceName,
+    content: options.content,
+    template: options.template,
+    fresh: options.fresh,
+    position: options.position,
+    separator: options.separator,
+    openAfter: options.openAfter,
   });
 }
 
@@ -144,12 +181,61 @@ export function buildOpenWorkspaceUri(workspaceName: string): string {
   return buildDailyNoteUri("today", workspaceName);
 }
 
-export function buildCreateNoteUri(path: string, workspaceName?: string): string {
+export function buildCreateNoteUri(path: string, workspaceName?: string): string;
+export function buildCreateNoteUri(path: string, options?: BuildCreateNoteUriOptions): string;
+export function buildCreateNoteUri(path: string, workspaceNameOrOptions?: string | BuildCreateNoteUriOptions): string {
+  const options =
+    typeof workspaceNameOrOptions === "string"
+      ? { workspaceName: workspaceNameOrOptions }
+      : (workspaceNameOrOptions ?? {});
+
   return buildOctarineUri({
     action: OctarineAction.Create,
     path,
-    workspace: workspaceName,
+    workspace: options.workspaceName,
+    content: options.content,
+    template: options.template,
+    fresh: options.fresh,
+    position: options.position,
+    separator: options.separator,
+    openAfter: options.openAfter,
+    contentReference: options.contentReference,
+    compressedContent: options.compressedContent,
   });
+}
+
+export async function upsertOctarineNoteContent({
+  path,
+  workspaceName,
+  content,
+  openAfter = true,
+  position = "bottom",
+  separator = "\n\n",
+}: UpsertOctarineNoteContentOptions): Promise<boolean> {
+  const compressedContent = compressToBase64(content);
+
+  return openOctarineUri(
+    buildCreateNoteUri(path, {
+      workspaceName,
+      compressedContent,
+      openAfter,
+      position,
+      separator,
+    }),
+  );
+}
+
+export async function appendDailyNoteContent({
+  date,
+  workspaceName,
+  content,
+}: AppendDailyNoteContentOptions): Promise<boolean> {
+  return openOctarineUri(
+    buildDailyNoteUri(date, {
+      workspaceName,
+      content,
+    }),
+  );
 }
 
 export async function popToRootAndClose(): Promise<void> {

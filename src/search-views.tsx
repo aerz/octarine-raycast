@@ -1,9 +1,9 @@
 import { Action, ActionPanel, Icon, List, Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo, useState } from "react";
-import { SearchResultsEmptyView } from "./components/empty-views/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "./components/empty-views/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "./components/empty-views/WorkspaceNotFound";
+import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
+import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
+import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { openOctarineView } from "./lib/octarine";
 import { getSearchViewsPreferences } from "./lib/preferences";
 import { matchesSearchIndex } from "./lib/search";

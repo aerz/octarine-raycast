@@ -29,6 +29,14 @@ export type IndexedNote = ScannedNote & {
   searchText: string;
 };
 
+export type IndexedNoteFolder = {
+  id: string;
+  name: string;
+  path: string;
+  workspace: Workspace;
+  searchText: string;
+};
+
 export type NotesCacheResult = {
   workspaces: Workspace[];
   notes: IndexedNote[];
@@ -309,4 +317,109 @@ export async function scanNotesFromWorkspaces(
 
   sortNotes(discoveredNotes);
   return discoveredNotes;
+}
+
+export async function scanWorkspaceForNoteFolders(
+  workspace: Workspace,
+  excludedDirectoryNames: Set<string>,
+  onError: (error: unknown) => Promise<void>,
+): Promise<IndexedNoteFolder[]> {
+  const pendingDirectories: Array<{ absolutePath: string; relativePath: string }> = [
+    { absolutePath: workspace.path, relativePath: "" },
+  ];
+  const discoveredFolders: IndexedNoteFolder[] = [
+    {
+      id: `${workspace.path}::.`,
+      name: "Root (No folder)",
+      path: "",
+      workspace,
+      searchText: buildSearchIndexText("root", workspace.name),
+    },
+  ];
+
+  while (pendingDirectories.length > 0) {
+    const currentDirectory = pendingDirectories.pop();
+    if (!currentDirectory) {
+      continue;
+    }
+
+    let entries: Dirent[];
+    try {
+      entries = await fs.readdir(currentDirectory.absolutePath, { withFileTypes: true });
+    } catch (error) {
+      console.error("Failed to read directory during folder scan", {
+        workspace: workspace.path,
+        directory: currentDirectory.absolutePath,
+        error,
+      });
+      await onError(error);
+      continue;
+    }
+
+    for (const entry of entries) {
+      const normalizedEntryName = entry.name.toLowerCase();
+      const isRootLevelDailyFolder = currentDirectory.relativePath === "" && normalizedEntryName === "daily";
+      if (
+        !entry.isDirectory() ||
+        entry.isSymbolicLink() ||
+        entry.name.startsWith(".") ||
+        isRootLevelDailyFolder ||
+        EXCLUDED_DIRECTORY_NAMES.has(normalizedEntryName) ||
+        excludedDirectoryNames.has(normalizedEntryName)
+      ) {
+        continue;
+      }
+
+      const absolutePath = path.join(currentDirectory.absolutePath, entry.name);
+      const relativePath = currentDirectory.relativePath
+        ? path.posix.join(currentDirectory.relativePath, entry.name)
+        : entry.name;
+
+      discoveredFolders.push({
+        id: `${workspace.path}::${relativePath}`,
+        name: entry.name,
+        path: relativePath,
+        workspace,
+        searchText: buildSearchIndexText(entry.name, relativePath, workspace.name),
+      });
+
+      pendingDirectories.push({ absolutePath, relativePath });
+    }
+  }
+
+  return discoveredFolders;
+}
+
+export async function scanNoteFoldersFromWorkspaces(
+  workspaces: Workspace[],
+  excludedDirectoryNames: Set<string>,
+  onError: (error: unknown) => Promise<void>,
+): Promise<IndexedNoteFolder[]> {
+  const discoveredFolderIds = new Set<string>();
+  const discoveredFolders: IndexedNoteFolder[] = [];
+  const foldersByWorkspace = await Promise.all(
+    workspaces.map((workspace) => scanWorkspaceForNoteFolders(workspace, excludedDirectoryNames, onError)),
+  );
+
+  for (const workspaceFolders of foldersByWorkspace) {
+    for (const folder of workspaceFolders) {
+      if (discoveredFolderIds.has(folder.id)) {
+        continue;
+      }
+
+      discoveredFolderIds.add(folder.id);
+      discoveredFolders.push(folder);
+    }
+  }
+
+  discoveredFolders.sort((left, right) => {
+    const byWorkspace = left.workspace.name.localeCompare(right.workspace.name);
+    if (byWorkspace !== 0) {
+      return byWorkspace;
+    }
+
+    return left.path.localeCompare(right.path);
+  });
+
+  return discoveredFolders;
 }

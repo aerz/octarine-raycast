@@ -73,6 +73,12 @@
       ]
     },
     {
+      "name": "quick-capture",
+      "title": "Quick Capture",
+      "description": "Capture content into an Octarine note",
+      "mode": "view"
+    },
+    {
       "name": "search-attachments",
       "title": "Search Attachments",
       "description": "Search attached files across Octarine workspaces",
@@ -169,7 +175,8 @@
   ],
   "dependencies": {
     "@raycast/api": "^1.104.7",
-    "@raycast/utils": "^1.17.0"
+    "@raycast/utils": "^1.17.0",
+    "lz-string": "^1.5.0"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^2.0.4",
