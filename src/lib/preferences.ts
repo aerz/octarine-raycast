@@ -16,6 +16,11 @@ export type SearchNotesPreferences = {
   showWorkspaceNoteCount: boolean;
 };
 
+export type SearchPinnedNotesPreferences = {
+  extension: ExtensionPreferences;
+  showWorkspaceNoteCount: boolean;
+};
+
 export type SearchAttachmentsPreferences = {
   extension: ExtensionPreferences;
   showWorkspaceAttachmentCount: boolean;
@@ -120,6 +125,15 @@ export function getExtensionPreferences(): ExtensionPreferences {
 
 export function getSearchNotesPreferences(): SearchNotesPreferences {
   const preferences = getPreferenceValues<Preferences.SearchNotes>();
+
+  return {
+    extension: buildExtensionPreferences(preferences),
+    showWorkspaceNoteCount: preferences.showWorkspaceNoteCount,
+  };
+}
+
+export function getSearchPinnedNotesPreferences(): SearchPinnedNotesPreferences {
+  const preferences = getPreferenceValues<Preferences.SearchPinnedNotes>();
 
   return {
     extension: buildExtensionPreferences(preferences),
