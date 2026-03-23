@@ -14,6 +14,7 @@ export type ExtensionPreferences = {
 export type SearchNotesPreferences = {
   extension: ExtensionPreferences;
   showWorkspaceNoteCount: boolean;
+  showPinnedNotesFirst: boolean;
 };
 
 export type SearchPinnedNotesPreferences = {
@@ -129,6 +130,7 @@ export function getSearchNotesPreferences(): SearchNotesPreferences {
   return {
     extension: buildExtensionPreferences(preferences),
     showWorkspaceNoteCount: preferences.showWorkspaceNoteCount,
+    showPinnedNotesFirst: preferences.showPinnedNotesFirst,
   };
 }
 

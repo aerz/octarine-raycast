@@ -69,6 +69,15 @@
           "label": "Show note count in workspace section titles",
           "default": false,
           "required": false
+        },
+        {
+          "name": "showPinnedNotesFirst",
+          "type": "checkbox",
+          "title": "Show Pinned Notes First",
+          "description": "Sort the pinned notes to the top of the list in each workspace.",
+          "label": "Show pinned notes first",
+          "default": false,
+          "required": false
         }
       ]
     },
