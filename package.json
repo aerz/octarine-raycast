@@ -170,11 +170,11 @@
       ],
       "preferences": [
         {
-          "name": "workspaceName",
+          "name": "workspace",
           "type": "textfield",
-          "title": "Workspace Name",
+          "title": "Default Workspace",
           "required": false,
-          "description": "Default workspace. If empty, a selector will be shown."
+          "description": "Set default workspace. If empty, a selector will be shown."
         }
       ]
     },

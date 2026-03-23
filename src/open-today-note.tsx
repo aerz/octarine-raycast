@@ -1,89 +1,40 @@
-import { Action, ActionPanel, LaunchProps, List, Toast, showToast } from "@raycast/api";
-import { usePromise } from "@raycast/utils";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
+import { Action, ActionPanel, LaunchProps } from "@raycast/api";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
-import { buildDailyNoteUri, openOctarineUri } from "./lib/octarine";
+import { useOpenTodayNote } from "./hooks/useOpenTodayNote";
+import { useWorkspaces } from "./hooks/useWorkspaces";
+import { openOctarineTodayNote } from "./lib/octarine";
 import { getOpenTodayNotePreferences } from "./lib/preferences";
-import { loadWorkspaces } from "./lib/workspaces";
 
-type OpenTodayNoteArguments = {
+type Arguments = {
   workspace?: string;
 };
 
-export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: OpenTodayNoteArguments }>) {
-  const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
-  const hasRequestedWorkspace = requestedWorkspace.length > 0;
+export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const preferences = useMemo(() => getOpenTodayNotePreferences(), []);
-  const defaultWorkspaceName = preferences.workspaceName;
-  const targetWorkspaceName = hasRequestedWorkspace ? requestedWorkspace : defaultWorkspaceName;
-  const hasTargetWorkspace = targetWorkspaceName.length > 0;
-  const hasHandledDefaultWorkspace = useRef(false);
-  const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(!hasTargetWorkspace);
+  const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
+  const defaultWorkspace = preferences.workspace;
+  const targetWorkspace = requestedWorkspace ? requestedWorkspace : defaultWorkspace;
 
-  const openTodayNote = useCallback(async (workspaceName: string) => {
-    const octarineUri = buildDailyNoteUri("today", workspaceName);
-    await openOctarineUri(octarineUri);
-  }, []);
+  const { workspaces, status } = useWorkspaces();
+  const { shouldHideMenu } = useOpenTodayNote({
+    workspace: targetWorkspace,
+    workspaces,
+    status,
+  });
 
-  const { data: workspaceResult, isLoading } = usePromise(
-    async () => {
-      const result = await loadWorkspaces();
-      if (!result.fromCache && result.invalidRoots.length > 0) {
-        const noun = result.invalidRoots.length === 1 ? "root path" : "root paths";
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Some workspace roots were skipped",
-          message: `${result.invalidRoots.length} ${noun} could not be read.`,
-        });
-      }
-
-      return result;
-    },
-    [],
-    {
-      onError: async () => {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to Load Workspaces",
-        });
-      },
-    },
-  );
-
-  useEffect(() => {
-    if (!hasTargetWorkspace || hasHandledDefaultWorkspace.current || !workspaceResult) {
-      return;
-    }
-
-    hasHandledDefaultWorkspace.current = true;
-    const workspaceExists = workspaceResult.workspaces.some((workspace) => workspace.name === targetWorkspaceName);
-
-    if (!workspaceExists) {
-      void showToast({
-        style: Toast.Style.Failure,
-        title: `Workspace ${targetWorkspaceName} not found`,
-      });
-      setShowWorkspaceSelector(true);
-      return;
-    }
-
-    void openTodayNote(targetWorkspaceName);
-  }, [hasTargetWorkspace, openTodayNote, targetWorkspaceName, workspaceResult]);
-
-  if (!showWorkspaceSelector) {
-    return <List isLoading={isLoading} />;
+  if (shouldHideMenu) {
+    return null;
   }
-
-  const workspaces = workspaceResult?.workspaces ?? [];
 
   return (
     <WorkspaceMenu
-      isLoading={isLoading}
+      isLoading={status.isLoading}
       workspaces={workspaces}
-      searchBarPlaceholder="Select an Octarine workspace..."
+      searchBarPlaceholder="Search Octarine workspaces..."
       renderActions={(workspace) => (
         <ActionPanel>
-          <Action title="Open Today's Note" onAction={() => void openTodayNote(workspace.name)} />
+          <Action title="Open Today's Note" onAction={() => openOctarineTodayNote(workspace.name)} />
         </ActionPanel>
       )}
     />
