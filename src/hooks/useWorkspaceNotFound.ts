@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef } from "react";
 
 type UseWorkspaceNotFoundOptions = {
   requestedWorkspace: string;
-  hasRequestedWorkspace: boolean;
   isLoading: boolean;
   hasWorkspaceLoadFailed: boolean;
   hasMatchedWorkspace: boolean;
@@ -13,7 +12,6 @@ type UseWorkspaceNotFoundOptions = {
 
 export function useWorkspaceNotFound({
   requestedWorkspace,
-  hasRequestedWorkspace,
   isLoading,
   hasWorkspaceLoadFailed,
   hasMatchedWorkspace,
@@ -23,8 +21,8 @@ export function useWorkspaceNotFound({
   const lastWorkspaceNotFoundToast = useRef<string | undefined>(undefined);
 
   const isWorkspaceNotFound = useMemo(
-    () => enabled && hasRequestedWorkspace && !isLoading && !hasWorkspaceLoadFailed && !hasMatchedWorkspace,
-    [enabled, hasRequestedWorkspace, isLoading, hasWorkspaceLoadFailed, hasMatchedWorkspace],
+    () => enabled && Boolean(requestedWorkspace) && !isLoading && !hasWorkspaceLoadFailed && !hasMatchedWorkspace,
+    [enabled, requestedWorkspace, isLoading, hasWorkspaceLoadFailed, hasMatchedWorkspace],
   );
 
   useEffect(() => {

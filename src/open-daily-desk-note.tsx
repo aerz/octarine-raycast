@@ -75,7 +75,6 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
 
   const isWorkspaceNotFound = useWorkspaceNotFound({
     requestedWorkspace,
-    hasRequestedWorkspace,
     isLoading,
     hasWorkspaceLoadFailed,
     hasMatchedWorkspace: matchedWorkspace !== undefined,
