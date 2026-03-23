@@ -38,13 +38,9 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
       }
       renderActions={(workspace) => (
         <ActionPanel>
-          <Action
-            title="Open in Octarine"
-            icon={Icon.AppWindow}
-            onAction={() => void openOctarineWorkspace(workspace.name)}
-          />
+          <Action title="Open Workspace" icon={Icon.AppWindow} onAction={() => openOctarineWorkspace(workspace.name)} />
           <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => revalidate()} />
-          <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => void Clipboard.copy(workspace.path)} />
+          <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
           <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
         </ActionPanel>
       )}
