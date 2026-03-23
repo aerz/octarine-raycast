@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DateFormatsDetail } from "./components/Notifications/DateFormatsDetail";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
+import type { WorkspaceLoadStatus } from "./hooks/useWorkspaces";
 import { isSupportedDailyDeskDate } from "./lib/daily-desk";
 import { buildDailyNoteUri, openOctarineUri } from "./lib/octarine";
 import { loadWorkspaces } from "./lib/workspaces";
@@ -63,7 +64,10 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
     },
   );
   const workspaces = workspaceResult?.workspaces ?? [];
-  const hasWorkspaceLoadFailed = Boolean(workspaceLoadError);
+  const workspaceStatus: WorkspaceLoadStatus = {
+    isLoading,
+    hasFailed: Boolean(workspaceLoadError),
+  };
 
   const matchedWorkspace = useMemo(() => {
     if (!hasRequestedWorkspace) {
@@ -75,8 +79,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
 
   const isWorkspaceNotFound = useWorkspaceNotFound({
     requestedWorkspace,
-    isLoading,
-    hasWorkspaceLoadFailed,
+    status: workspaceStatus,
     hasMatchedWorkspace: matchedWorkspace !== undefined,
     enabled: isDateValid,
   });

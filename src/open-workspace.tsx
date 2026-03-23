@@ -12,15 +12,14 @@ type Arguments = {
 export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
 
-  const { workspaces, isLoading, revalidate, hasLoadFailed } = useWorkspaces({
+  const { workspaces, status, revalidate } = useWorkspaces({
     refresh: true,
   });
 
   const { shouldHideMenu } = useOpenWorkspace({
     requestedWorkspace,
     workspaces,
-    isLoading,
-    hasWorkspaceLoadFailed: hasLoadFailed,
+    status,
   });
 
   if (shouldHideMenu) {
@@ -29,7 +28,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
 
   return (
     <WorkspaceMenu
-      isLoading={isLoading}
+      isLoading={status.isLoading}
       workspaces={workspaces}
       searchBarPlaceholder="Search Octarine workspaces..."
       emptyView={

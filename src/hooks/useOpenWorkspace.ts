@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { openOctarineWorkspace } from "../lib/octarine";
 import type { Workspace } from "../types/octarine";
 import { useWorkspaceNotFound } from "./useWorkspaceNotFound";
+import type { WorkspaceLoadStatus } from "./useWorkspaces";
 
 type UseOpenWorkspaceOptions = {
   requestedWorkspace: string;
   workspaces: Workspace[];
-  isLoading: boolean;
-  hasWorkspaceLoadFailed: boolean;
+  status: WorkspaceLoadStatus;
 };
 
 type UseOpenWorkspaceResult = {
@@ -17,8 +17,7 @@ type UseOpenWorkspaceResult = {
 export function useOpenWorkspace({
   requestedWorkspace,
   workspaces,
-  isLoading,
-  hasWorkspaceLoadFailed,
+  status,
 }: UseOpenWorkspaceOptions): UseOpenWorkspaceResult {
   const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
   const hasAttemptedDirectOpen = useRef(false);
@@ -33,8 +32,7 @@ export function useOpenWorkspace({
 
   const isWorkspaceNotFound = useWorkspaceNotFound({
     requestedWorkspace,
-    isLoading,
-    hasWorkspaceLoadFailed,
+    status,
     hasMatchedWorkspace: matchedWorkspace !== undefined,
   });
 

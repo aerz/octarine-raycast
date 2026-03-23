@@ -7,12 +7,16 @@ type UseWorkspacesOptions = {
   refresh?: boolean;
 };
 
+export type WorkspaceLoadStatus = {
+  isLoading: boolean;
+  hasFailed: boolean;
+};
+
 type UseWorkspacesResult = {
   workspaces: Workspace[];
-  isLoading: boolean;
+  status: WorkspaceLoadStatus;
   revalidate: () => Promise<WorkspaceLoadResult>;
   error: Error | undefined;
-  hasLoadFailed: boolean;
 };
 
 export function useWorkspaces(options: UseWorkspacesOptions = {}): UseWorkspacesResult {
@@ -45,9 +49,11 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}): UseWorkspaces
 
   return {
     workspaces: data?.workspaces ?? [],
-    isLoading,
+    status: {
+      isLoading,
+      hasFailed: Boolean(error),
+    },
     revalidate,
     error: error instanceof Error ? error : undefined,
-    hasLoadFailed: Boolean(error),
   };
 }

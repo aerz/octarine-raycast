@@ -1,10 +1,11 @@
 import { Toast, showToast } from "@raycast/api";
 import { useEffect, useMemo, useRef } from "react";
 
+import type { WorkspaceLoadStatus } from "./useWorkspaces";
+
 type UseWorkspaceNotFoundOptions = {
   requestedWorkspace: string;
-  isLoading: boolean;
-  hasWorkspaceLoadFailed: boolean;
+  status: WorkspaceLoadStatus;
   hasMatchedWorkspace: boolean;
   enabled?: boolean;
   toastTitle?: (workspaceName: string) => string;
@@ -12,8 +13,7 @@ type UseWorkspaceNotFoundOptions = {
 
 export function useWorkspaceNotFound({
   requestedWorkspace,
-  isLoading,
-  hasWorkspaceLoadFailed,
+  status,
   hasMatchedWorkspace,
   enabled = true,
   toastTitle,
@@ -21,8 +21,8 @@ export function useWorkspaceNotFound({
   const lastWorkspaceNotFoundToast = useRef<string | undefined>(undefined);
 
   const isWorkspaceNotFound = useMemo(
-    () => enabled && Boolean(requestedWorkspace) && !isLoading && !hasWorkspaceLoadFailed && !hasMatchedWorkspace,
-    [enabled, requestedWorkspace, isLoading, hasWorkspaceLoadFailed, hasMatchedWorkspace],
+    () => enabled && Boolean(requestedWorkspace) && !status.isLoading && !status.hasFailed && !hasMatchedWorkspace,
+    [enabled, requestedWorkspace, status, hasMatchedWorkspace],
   );
 
   useEffect(() => {
