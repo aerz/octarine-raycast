@@ -25,7 +25,7 @@ export type SearchPinnedNotesPreferences = {
 export type SearchAttachmentsPreferences = {
   extension: ExtensionPreferences;
   showWorkspaceAttachmentCount: boolean;
-  hideWorkspaceSections: boolean;
+  flattenWorkspaceSections: boolean;
   excludedExtensions: Set<string>;
   excludedExtensionsSignature: string;
 };
@@ -148,7 +148,7 @@ export function getSearchAttachmentsPreferences(): SearchAttachmentsPreferences 
   return {
     extension: buildExtensionPreferences(preferences),
     showWorkspaceAttachmentCount: preferences.showWorkspaceAttachmentCount,
-    hideWorkspaceSections: preferences.hideWorkspaceSections,
+    flattenWorkspaceSections: preferences.flattenWorkspaceSections,
     excludedExtensions,
     excludedExtensionsSignature: buildSortedSignature(excludedExtensions),
   };

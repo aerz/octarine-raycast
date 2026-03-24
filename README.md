@@ -13,6 +13,7 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 - [Open Workspace](#open-workspace)
 - [Open Today's Note](#open-todays-note)
 - [Open Daily Desk Note](#open-daily-desk-note)
+- [Search Attachments](#search-attachments)
 
 ## Open Workspace
 
@@ -59,3 +60,26 @@ Open a note with any date from Daily Desk.
 
 - [Daily Desk / Smart Dates](https://docs.octarine.app/daily-desk/smart-dates)
 - [`daily` — Open a daily or weekly note](https://docs.octarine.app/workflows/uri-scheme#daily---open-a-daily-or-weekly-note)
+
+## Search Attachments
+
+Browse all files attached to notes across your Octarine workspaces. Search, preview, and open attachments from a visual grid.
+
+**Actions**
+
+| Shortcut  | Action                        |
+|-----------|-------------------------------|
+| `Enter`   | Search References in Octarine |
+| `⌘ Enter` | Open File                     |
+| `Space`   | Toggle Quick Look             |
+| `⌘ .`     | Copy File Path                |
+
+**Search & Filter**
+
+Type to filter by filename or extension. Use the dropdown to narrow results by file type.
+
+**Preferences**
+
+- **Show attachment count**. Display the number of attachments per workspace in parentheses.
+- **Flatten workspace sections**. Show all attachments in a single alphabetically sorted list.
+- **Exclude file extensions**. Comma-separated list of file extensions to omit from results.

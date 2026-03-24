@@ -86,7 +86,7 @@ export default function SearchAttachmentsCommand() {
           </SearchResultsEmptyView>
         );
       case "results":
-        if (preferences.hideWorkspaceSections) {
+        if (preferences.flattenWorkspaceSections) {
           return visibleAttachments.map((file) => <AttachmentGridItem key={file.path} file={file} />);
         }
 
