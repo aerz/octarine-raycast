@@ -181,7 +181,7 @@
     {
       "name": "open-daily-desk-note",
       "title": "Open Daily Desk Note",
-      "description": "Open a daily or weekly note in Daily Desk by date",
+      "description": "Open a note with any date from Daily Desk",
       "mode": "view",
       "arguments": [
         {
