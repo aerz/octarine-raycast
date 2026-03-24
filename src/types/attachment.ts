@@ -1,7 +1,6 @@
 import { isAttachment, type Attachment } from "./octarine";
 
 export type IndexedAttachment = Attachment & {
-  // Lowercased searchable text built during scan.
   searchText: string;
 };
 
