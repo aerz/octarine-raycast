@@ -1,142 +1,81 @@
-import { Action, ActionPanel, LaunchProps, Toast, showToast } from "@raycast/api";
-import { usePromise } from "@raycast/utils";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Action,
+  ActionPanel,
+  LaunchProps,
+  Toast,
+  showToast,
+  Clipboard,
+  Icon,
+  openExtensionPreferences,
+} from "@raycast/api";
+import { useEffect } from "react";
 import { DateFormatsDetail } from "./components/Notifications/DateFormatsDetail";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
-import { useWorkspaceNotFound } from "./hooks/useWorkspaceNotFound";
-import type { WorkspaceLoadStatus } from "./hooks/useWorkspaces";
+import { useOpenDailyDeskNote } from "./hooks/useOpenDailyDeskNote";
+import { useWorkspaces } from "./hooks/useWorkspaces";
 import { isSupportedDailyDeskDate } from "./lib/daily-desk";
-import { buildDailyNoteUri, openOctarineUri } from "./lib/octarine";
-import { loadWorkspaces } from "./lib/workspaces";
+import { openOctarineDailyDeskNote } from "./lib/octarine";
 import type { Workspace } from "./types/octarine";
 
-type OpenDailyDeskNoteArguments = {
+type Arguments = {
   date: string;
   workspace?: string;
 };
 
-export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments: OpenDailyDeskNoteArguments }>) {
+export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const requestedDate = props.arguments.date?.trim() ?? "";
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
-  const hasRequestedWorkspace = requestedWorkspace.length > 0;
-  const isDateValid = useMemo(() => isSupportedDailyDeskDate(requestedDate), [requestedDate]);
-
-  const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
-  const hasShownDateErrorToast = useRef(false);
-  const hasAttemptedAutoOpen = useRef(false);
-
-  const openDailyDeskNote = useCallback(
-    async (workspaceName: string) => {
-      const octarineUri = buildDailyNoteUri(requestedDate, workspaceName);
-      return openOctarineUri(octarineUri);
-    },
-    [requestedDate],
-  );
+  const isValidDate = isSupportedDailyDeskDate(requestedDate);
 
   const {
-    data: workspaceResult,
-    error: workspaceLoadError,
-    isLoading,
-  } = usePromise(
-    async () => {
-      const result = await loadWorkspaces();
-
-      if (!result.fromCache && result.invalidRoots.length > 0) {
-        const noun = result.invalidRoots.length === 1 ? "root path" : "root paths";
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Some workspace roots were skipped",
-          message: `${result.invalidRoots.length} ${noun} could not be read.`,
-        });
-      }
-
-      return result;
-    },
-    [],
-    {
-      execute: isDateValid,
-      onError: async () => {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to Load Workspaces",
-        });
-      },
-    },
-  );
-  const workspaces = workspaceResult?.workspaces ?? [];
-  const workspaceStatus: WorkspaceLoadStatus = {
-    isLoading,
-    hasFailed: Boolean(workspaceLoadError),
-  };
-
-  const matchedWorkspace = useMemo(() => {
-    if (!hasRequestedWorkspace) {
-      return undefined;
-    }
-
-    return workspaces.find((workspace) => workspace.name === requestedWorkspace);
-  }, [hasRequestedWorkspace, requestedWorkspace, workspaces]);
-
-  const isWorkspaceNotFound = useWorkspaceNotFound({
-    requestedWorkspace,
+    workspaces,
     status: workspaceStatus,
-    hasMatchedWorkspace: matchedWorkspace !== undefined,
-    enabled: isDateValid,
+    revalidate,
+  } = useWorkspaces({
+    enabled: isValidDate,
+  });
+  const { shouldHideMenu } = useOpenDailyDeskNote({
+    date: requestedDate,
+    requestedWorkspace,
+    workspaces,
+    status: workspaceStatus,
+    enabled: isValidDate,
   });
 
   useEffect(() => {
-    if (isDateValid || hasShownDateErrorToast.current) {
-      return;
+    if (!isValidDate) {
+      showToast({
+        style: Toast.Style.Failure,
+        title: "Invalid date",
+        message: "Use a supported Octarine date format",
+      });
     }
+  }, []);
 
-    hasShownDateErrorToast.current = true;
-    void showToast({
-      style: Toast.Style.Failure,
-      title: "Invalid date",
-      message: "Use a supported Octarine date format",
-    });
-  }, [isDateValid]);
-
-  useEffect(() => {
-    if (!isDateValid || !matchedWorkspace || hasAttemptedAutoOpen.current) {
-      return;
-    }
-
-    hasAttemptedAutoOpen.current = true;
-    void (async () => {
-      const didOpen = await openDailyDeskNote(matchedWorkspace.name);
-
-      if (!didOpen) {
-        setHasDirectOpenFailed(true);
-      }
-    })();
-  }, [isDateValid, matchedWorkspace, openDailyDeskNote]);
-
-  useEffect(() => {
-    hasAttemptedAutoOpen.current = false;
-    setHasDirectOpenFailed(false);
-  }, [requestedWorkspace, requestedDate]);
-
-  if (!isDateValid) {
+  if (!isValidDate) {
     return <DateFormatsDetail />;
   }
 
-  if (hasRequestedWorkspace && matchedWorkspace && !hasDirectOpenFailed && !isWorkspaceNotFound) {
+  if (shouldHideMenu) {
     return null;
   }
 
-  const workspaceMenu = (
+  return (
     <WorkspaceMenu
-      isLoading={isLoading}
+      isLoading={workspaceStatus.isLoading}
       workspaces={workspaces}
-      searchBarPlaceholder="Select an Octarine workspace..."
+      searchBarPlaceholder="Search Octarine workspaces..."
       renderActions={(workspace: Workspace) => (
         <ActionPanel>
-          <Action title="Open Daily Desk Note" onAction={() => void openDailyDeskNote(workspace.name)} />
+          <Action
+            title="Open Daily Desk Note"
+            onAction={() => openOctarineDailyDeskNote(requestedDate, workspace.name)}
+          />
+          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => revalidate()} />
+          <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
+          <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
         </ActionPanel>
       )}
     />
   );
-
-  return workspaceMenu;
 }
