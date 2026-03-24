@@ -15,7 +15,6 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
   const { workspaces, status, revalidate } = useWorkspaces({
     refresh: true,
   });
-
   const { shouldHideMenu } = useOpenWorkspace({
     requestedWorkspace,
     workspaces,
