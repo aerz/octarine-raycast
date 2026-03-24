@@ -185,8 +185,12 @@ export function openOctarineWorkspace(name: string): Promise<boolean> {
   return openOctarineUri(buildOpenWorkspaceUri(name));
 }
 
+export function openOctarineDailyDeskNote(date: string, workspace: string): Promise<boolean> {
+  return openOctarineUri(buildDailyNoteUri(date, workspace));
+}
+
 export function openOctarineTodayNote(workspace: string): Promise<boolean> {
-  return openOctarineUri(buildDailyNoteUri("today", workspace));
+  return openOctarineDailyDeskNote("today", workspace);
 }
 
 export function buildCreateNoteUri(path: string, workspaceName?: string): string;
