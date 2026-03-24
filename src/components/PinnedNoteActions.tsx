@@ -9,7 +9,7 @@ type Props = {
 export function PinnedNoteActions({ note }: Props) {
   return (
     <ActionPanel>
-      <Action title="Open Note in Octarine" onAction={() => void openPinnedNote(note.path, note.workspace.name)} />
+      <Action title="Open Pinned Note" onAction={() => void openPinnedNote(note.path, note.workspace.name)} />
     </ActionPanel>
   );
 }

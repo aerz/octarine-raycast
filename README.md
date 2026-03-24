@@ -14,6 +14,7 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 - [Open Today's Note](#open-todays-note)
 - [Open Daily Desk Note](#open-daily-desk-note)
 - [Search Attachments](#search-attachments)
+- [Search Pinned Notes](#search-pinned-notes)
 
 ## Open Workspace
 
@@ -83,3 +84,15 @@ Type to filter by filename or extension. Use the dropdown to narrow results by f
 - **Show attachment count**. Display the number of attachments per workspace in parentheses.
 - **Flatten workspace sections**. Show all attachments in a single alphabetically sorted list.
 - **Exclude file extensions**. Comma-separated list of file extensions to omit from results.
+
+## Search Pinned Notes
+
+Search pinned notes across all workspaces by title or path.
+
+**Search & Filter**
+
+Use the dropdown to filter by workspace.
+
+**Preferences**
+
+- **Show workspace note count**. Display the number of pinned notes per workspace in parentheses.
