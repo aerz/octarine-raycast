@@ -1,212 +1,150 @@
-import { Action, ActionPanel, Clipboard, List, Toast, showToast } from "@raycast/api";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { List } from "@raycast/api";
+import { useMemo, useState } from "react";
+import { PinnedNoteActions } from "./components/PinnedNoteActions";
 import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
-import { buildOpenNoteUri, openOctarineUri } from "./lib/octarine";
+import { usePinnedNotes } from "./hooks/usePinnedNotes";
 import { getSearchPinnedNotesPreferences } from "./lib/preferences";
-import { IndexedNote, loadCachedPinnedNotes, matchesSearchQuery, refreshPinnedNotesCache } from "./lib/notes";
-import { loadWorkspaces } from "./lib/workspaces";
-import type { Workspace } from "./types/octarine";
+import { IndexedNote, matchesSearchQuery } from "./lib/notes";
 
-function renderNoteItem(note: IndexedNote) {
-  const octarineUri = buildOpenNoteUri(note.path, note.workspace.name);
+type ViewState = "loading" | "workspace-not-found" | "no-notes" | "no-matching-notes" | "results";
 
+function assertNever(value: never): never {
+  throw new Error(`Unhandled view state: ${String(value)}`);
+}
+
+function getViewState({
+  isLoading,
+  hasConfiguredRoots,
+  workspaceCount,
+  noteCount,
+  filteredWorkspaceSections,
+}: {
+  isLoading: boolean;
+  hasConfiguredRoots: boolean;
+  workspaceCount: number;
+  noteCount: number;
+  filteredWorkspaceSections: { notes: IndexedNote[] }[];
+}): ViewState {
+  if (isLoading) {
+    return "loading";
+  }
+
+  if (!hasConfiguredRoots || workspaceCount === 0) {
+    return "workspace-not-found";
+  }
+
+  if (noteCount === 0) {
+    return "no-notes";
+  }
+
+  const visibleNoteCount = filteredWorkspaceSections.reduce(
+    (count, workspaceSection) => count + workspaceSection.notes.length,
+    0,
+  );
+  if (visibleNoteCount === 0) {
+    return "no-matching-notes";
+  }
+
+  return "results";
+}
+
+function PinnedNoteItem({ note }: { note: IndexedNote }) {
   return (
     <List.Item
-      key={note.id}
       title={note.title}
       subtitle={note.path}
       keywords={[note.path, note.workspace.name]}
-      actions={
-        <ActionPanel>
-          <Action title="Open Note in Octarine" onAction={() => void openOctarineUri(octarineUri)} />
-          <Action title="Copy Octarine URL" onAction={() => void Clipboard.copy(octarineUri)} />
-        </ActionPanel>
-      }
+      actions={<PinnedNoteActions note={note} />}
     />
   );
 }
 
 export default function SearchPinnedNotesCommand() {
-  const preferences = useMemo(() => getSearchPinnedNotesPreferences(), []);
-  const { extension: extensionPreferences, showWorkspaceNoteCount } = preferences;
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [notes, setNotes] = useState<IndexedNote[]>([]);
+  const preferences = getSearchPinnedNotesPreferences();
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasConfiguredRoots, setHasConfiguredRoots] = useState(extensionPreferences.hasConfiguredRoots);
-  const hasShownScanErrorToast = useRef(false);
+  const { workspaces, notes, workspaceSections, isLoading } = usePinnedNotes(preferences);
 
-  useEffect(() => {
-    let canceled = false;
-
-    const showScanFailureToast = async () => {
-      if (hasShownScanErrorToast.current) {
-        return;
-      }
-
-      hasShownScanErrorToast.current = true;
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to Scan Some Pinned Notes",
-      });
-    };
-
-    const scan = async () => {
-      setIsLoading(true);
-      hasShownScanErrorToast.current = false;
-
-      try {
-        if (!extensionPreferences.hasConfiguredRoots) {
-          if (!canceled) {
-            setHasConfiguredRoots(false);
-          }
-          return;
-        }
-
-        if (!canceled) {
-          setHasConfiguredRoots(true);
-        }
-
-        const cachedResult = await loadCachedPinnedNotes(extensionPreferences.workspaceSearchSignature);
-        const hasCachedResult = Boolean(cachedResult);
-
-        if (cachedResult && !canceled) {
-          startTransition(() => {
-            setWorkspaces(cachedResult.workspaces);
-            setNotes(cachedResult.notes);
-          });
-        } else {
-          startTransition(() => {
-            setNotes([]);
-            setWorkspaces([]);
-          });
-        }
-
-        const workspaceResult = await loadWorkspaces({ forceRefresh: true });
-        if (canceled) {
-          return;
-        }
-
-        if (!hasCachedResult) {
-          startTransition(() => {
-            setWorkspaces(workspaceResult.workspaces);
-          });
-        }
-
-        const discoveredNotes = await refreshPinnedNotesCache(
-          workspaceResult.workspaces,
-          extensionPreferences.excludedFoldersInWorkspaces,
-          extensionPreferences.workspaceSearchSignature,
-          showScanFailureToast,
-        );
-        if (canceled) {
-          return;
-        }
-
-        startTransition(() => {
-          setWorkspaces(workspaceResult.workspaces);
-          setNotes(discoveredNotes);
-        });
-      } catch (error) {
-        console.error("Failed to scan pinned Octarine notes", error);
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to Scan Pinned Notes",
-        });
-      } finally {
-        if (!canceled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void scan();
-
-    return () => {
-      canceled = true;
-    };
-  }, [
-    extensionPreferences.excludedFoldersInWorkspaces,
-    extensionPreferences.hasConfiguredRoots,
-    extensionPreferences.workspaceSearchSignature,
-  ]);
-
-  const workspaceNames = useMemo(
+  const filteredWorkspaceSections = useMemo(
     () =>
-      Array.from(new Set(notes.map((note) => note.workspace.name))).sort((left, right) => left.localeCompare(right)),
-    [notes],
+      workspaceSections
+        .filter(
+          (workspaceSection) => selectedWorkspace === "all" || workspaceSection.workspacePath === selectedWorkspace,
+        )
+        .map((workspaceSection) => ({
+          workspacePath: workspaceSection.workspacePath,
+          workspaceName: workspaceSection.workspaceName,
+          notes: workspaceSection.notes.filter((note) => matchesSearchQuery(note, searchText)),
+        }))
+        .filter((workspaceSection) => workspaceSection.notes.length > 0),
+    [searchText, selectedWorkspace, workspaceSections],
   );
+  const viewState = getViewState({
+    isLoading,
+    hasConfiguredRoots: preferences.extension.hasConfiguredRoots,
+    workspaceCount: workspaces.length,
+    noteCount: notes.length,
+    filteredWorkspaceSections,
+  });
 
-  const filteredNotes = useMemo(
-    () => notes.filter((note) => selectedWorkspace === "all" || note.workspace.name === selectedWorkspace),
-    [notes, selectedWorkspace],
-  );
+  function renderContent() {
+    switch (viewState) {
+      case "loading":
+        return null;
+      case "workspace-not-found":
+        return <WorkspaceNotFound />;
+      case "no-notes":
+        return <WorkspaceContentEmptyView resource="notes" />;
+      case "no-matching-notes":
+        return <SearchResultsEmptyView resource="notes" />;
+      case "results":
+        if (selectedWorkspace !== "all") {
+          return filteredWorkspaceSections.flatMap((workspaceSection) =>
+            workspaceSection.notes.map((note) => <PinnedNoteItem key={note.id} note={note} />),
+          );
+        }
 
-  const searchFilteredNotes = useMemo(
-    () => filteredNotes.filter((note) => matchesSearchQuery(note, searchText)),
-    [filteredNotes, searchText],
-  );
-
-  const notesByWorkspace = useMemo(() => {
-    const groupedNotes = new Map<string, IndexedNote[]>();
-    for (const note of searchFilteredNotes) {
-      const workspaceName = note.workspace.name;
-      const notesInWorkspace = groupedNotes.get(workspaceName);
-      if (notesInWorkspace) {
-        notesInWorkspace.push(note);
-      } else {
-        groupedNotes.set(workspaceName, [note]);
-      }
+        return filteredWorkspaceSections.map((workspaceSection) => (
+          <List.Section
+            key={workspaceSection.workspacePath}
+            title={
+              preferences.showWorkspaceNoteCount
+                ? `${workspaceSection.workspaceName} (${workspaceSection.notes.length})`
+                : workspaceSection.workspaceName
+            }
+          >
+            {workspaceSection.notes.map((note) => (
+              <PinnedNoteItem key={note.id} note={note} />
+            ))}
+          </List.Section>
+        ));
+      default:
+        return assertNever(viewState);
     }
-
-    return groupedNotes;
-  }, [searchFilteredNotes]);
-
-  const showWorkspaceNotFound = !isLoading && (!hasConfiguredRoots || workspaces.length === 0);
-  const showNoNotesFound = !isLoading && !showWorkspaceNotFound && notes.length === 0;
-  const showNoMatchingNotes =
-    !isLoading && !showWorkspaceNotFound && !showNoNotesFound && searchFilteredNotes.length === 0;
+  }
 
   return (
     <List
       filtering={false}
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search pinned Octarine notes..."
+      searchBarPlaceholder="Search pinned notes..."
       searchBarAccessory={
         <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
           <List.Dropdown.Item title="All" value="all" />
-          {workspaceNames.map((workspaceName) => (
-            <List.Dropdown.Item key={workspaceName} title={workspaceName} value={workspaceName} />
+          {workspaceSections.map((workspaceSection) => (
+            <List.Dropdown.Item
+              key={workspaceSection.workspacePath}
+              title={workspaceSection.workspaceName}
+              value={workspaceSection.workspacePath}
+            />
           ))}
         </List.Dropdown>
       }
     >
-      {showWorkspaceNotFound ? <WorkspaceNotFound /> : null}
-      {showNoNotesFound ? <WorkspaceContentEmptyView resource="notes" /> : null}
-      {showNoMatchingNotes ? <SearchResultsEmptyView resource="notes" /> : null}
-      {!showWorkspaceNotFound && !showNoNotesFound && !showNoMatchingNotes
-        ? selectedWorkspace === "all"
-          ? workspaceNames.map((workspaceName) => {
-              const notesInWorkspace = notesByWorkspace.get(workspaceName) ?? [];
-              if (notesInWorkspace.length === 0) {
-                return null;
-              }
-
-              return (
-                <List.Section
-                  key={workspaceName}
-                  title={showWorkspaceNoteCount ? `${workspaceName} (${notesInWorkspace.length})` : workspaceName}
-                >
-                  {notesInWorkspace.map((note) => renderNoteItem(note))}
-                </List.Section>
-              );
-            })
-          : searchFilteredNotes.map((note) => renderNoteItem(note))
-        : null}
+      {renderContent()}
     </List>
   );
 }
