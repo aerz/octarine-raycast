@@ -2,23 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { openOctarineTodayNote } from "../lib/octarine";
 import type { Workspace } from "../types/octarine";
 import { useWorkspaceNotFound } from "./useWorkspaceNotFound";
-import type { WorkspaceLoadStatus } from "./useWorkspaces";
+import type { LoadStatus } from "./useWorkspaces";
 
-type UseOpenTodayNoteOptions = {
+type Options = {
   workspace: string;
   workspaces: Workspace[];
-  status: WorkspaceLoadStatus;
+  status: LoadStatus;
 };
 
-type UseOpenTodayNoteResult = {
+type Result = {
   shouldHideMenu: boolean;
 };
 
-export function useOpenTodayNote({
-  workspace,
-  workspaces,
-  status,
-}: UseOpenTodayNoteOptions): UseOpenTodayNoteResult {
+export function useOpenTodayNote({ workspace, workspaces, status }: Options): Result {
   const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
   const hasAttemptedDirectOpen = useRef(false);
 

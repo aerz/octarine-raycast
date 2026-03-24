@@ -1,11 +1,11 @@
 import { Toast, showToast } from "@raycast/api";
 import { useEffect, useMemo, useRef } from "react";
 
-import type { WorkspaceLoadStatus } from "./useWorkspaces";
+import type { LoadStatus } from "./useWorkspaces";
 
-type UseWorkspaceNotFoundOptions = {
+type Options = {
   requestedWorkspace: string;
-  status: WorkspaceLoadStatus;
+  status: LoadStatus;
   hasMatchedWorkspace: boolean;
   enabled?: boolean;
   toastTitle?: (workspaceName: string) => string;
@@ -17,7 +17,7 @@ export function useWorkspaceNotFound({
   hasMatchedWorkspace,
   enabled = true,
   toastTitle,
-}: UseWorkspaceNotFoundOptions): boolean {
+}: Options): boolean {
   const lastWorkspaceNotFoundToast = useRef<string | undefined>(undefined);
 
   const isWorkspaceNotFound = useMemo(

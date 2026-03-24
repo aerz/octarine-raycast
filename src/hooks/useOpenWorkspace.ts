@@ -2,23 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { openOctarineWorkspace } from "../lib/octarine";
 import type { Workspace } from "../types/octarine";
 import { useWorkspaceNotFound } from "./useWorkspaceNotFound";
-import type { WorkspaceLoadStatus } from "./useWorkspaces";
+import type { LoadStatus } from "./useWorkspaces";
 
-type UseOpenWorkspaceOptions = {
+type Options = {
   requestedWorkspace: string;
   workspaces: Workspace[];
-  status: WorkspaceLoadStatus;
+  status: LoadStatus;
 };
 
-type UseOpenWorkspaceResult = {
+type Result = {
   shouldHideMenu: boolean;
 };
 
-export function useOpenWorkspace({
-  requestedWorkspace,
-  workspaces,
-  status,
-}: UseOpenWorkspaceOptions): UseOpenWorkspaceResult {
+export function useOpenWorkspace({ requestedWorkspace, workspaces, status }: Options): Result {
   const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
   const hasAttemptedDirectOpen = useRef(false);
 

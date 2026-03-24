@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { openOctarineDailyDeskNote } from "../lib/octarine";
 import type { Workspace } from "../types/octarine";
 import { useWorkspaceNotFound } from "./useWorkspaceNotFound";
-import type { WorkspaceLoadStatus } from "./useWorkspaces";
+import type { LoadStatus } from "./useWorkspaces";
 
 type Options = {
   date: string;
   requestedWorkspace: string;
   workspaces: Workspace[];
-  status: WorkspaceLoadStatus;
+  status: LoadStatus;
   enabled?: boolean;
 };
 

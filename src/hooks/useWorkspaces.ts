@@ -8,14 +8,14 @@ type Options = {
   enabled?: boolean;
 };
 
-export type WorkspaceLoadStatus = {
+export type LoadStatus = {
   isLoading: boolean;
   hasFailed: boolean;
 };
 
 type Result = {
   workspaces: Workspace[];
-  status: WorkspaceLoadStatus;
+  status: LoadStatus;
   revalidate: () => Promise<WorkspaceLoadResult>;
   error: Error | undefined;
 };
