@@ -26,8 +26,8 @@ export type SearchAttachmentsPreferences = {
   extension: ExtensionPreferences;
   showWorkspaceAttachmentCount: boolean;
   hideWorkspaceSections: boolean;
-  excludeFileExtensions: Set<string>;
-  excludeFileExtensionsSignature: string;
+  excludedExtensions: Set<string>;
+  excludedExtensionsSignature: string;
 };
 
 export type SearchViewsPreferences = {
@@ -44,12 +44,12 @@ function normalizeOptionalString(value?: string): string {
   return value?.trim() ?? "";
 }
 
-function parseCommaSeparatedValues(rawValue?: string): string[] {
-  if (!rawValue) {
+function parseList(str?: string): string[] {
+  if (!str) {
     return [];
   }
 
-  return rawValue
+  return str
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
@@ -74,7 +74,7 @@ function buildSortedSignature(values: Iterable<string>): string {
 export function parseWorkspaceRoots(rawValue: string): string[] {
   const dedupedRoots = new Set<string>();
 
-  for (const root of parseCommaSeparatedValues(rawValue)) {
+  for (const root of parseList(rawValue)) {
     const expanded = expandTilde(root);
     const absolute = path.resolve(expanded);
     dedupedRoots.add(path.normalize(absolute));
@@ -84,11 +84,7 @@ export function parseWorkspaceRoots(rawValue: string): string[] {
 }
 
 export function parseExcludedNames(rawValue?: string): Set<string> {
-  return new Set(parseCommaSeparatedValues(rawValue).map((value) => value.toLowerCase()));
-}
-
-export function parseExcludedFileExtensions(rawValue?: string): Set<string> {
-  return new Set(parseCommaSeparatedValues(rawValue).map((extension) => extension.toLowerCase().replace(/^\./, "")));
+  return new Set(parseList(rawValue).map((value) => value.toLowerCase()));
 }
 
 export function buildWorkspaceDiscoverySignature(workspaceRoots: string[], excludedWorkspaces: Set<string>): string {
@@ -145,14 +141,16 @@ export function getSearchPinnedNotesPreferences(): SearchPinnedNotesPreferences 
 
 export function getSearchAttachmentsPreferences(): SearchAttachmentsPreferences {
   const preferences = getPreferenceValues<Preferences.SearchAttachments>();
-  const excludeFileExtensions = parseExcludedFileExtensions(preferences.excludeFileExtensions);
+  const excludedExtensions = new Set(
+    parseList(preferences.excludeFileExtensions).map((extension) => extension.toLowerCase().replace(/^\./, "")),
+  );
 
   return {
     extension: buildExtensionPreferences(preferences),
     showWorkspaceAttachmentCount: preferences.showWorkspaceAttachmentCount,
     hideWorkspaceSections: preferences.hideWorkspaceSections,
-    excludeFileExtensions,
-    excludeFileExtensionsSignature: buildSortedSignature(excludeFileExtensions),
+    excludedExtensions,
+    excludedExtensionsSignature: buildSortedSignature(excludedExtensions),
   };
 }
 
