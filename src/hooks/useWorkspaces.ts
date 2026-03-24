@@ -3,8 +3,9 @@ import { usePromise } from "@raycast/utils";
 import { loadWorkspaces, type WorkspaceLoadResult } from "../lib/workspaces";
 import type { Workspace } from "../types/octarine";
 
-type UseWorkspacesOptions = {
+type Options = {
   refresh?: boolean;
+  enabled?: boolean;
 };
 
 export type WorkspaceLoadStatus = {
@@ -12,15 +13,16 @@ export type WorkspaceLoadStatus = {
   hasFailed: boolean;
 };
 
-type UseWorkspacesResult = {
+type Result = {
   workspaces: Workspace[];
   status: WorkspaceLoadStatus;
   revalidate: () => Promise<WorkspaceLoadResult>;
   error: Error | undefined;
 };
 
-export function useWorkspaces(options: UseWorkspacesOptions = {}): UseWorkspacesResult {
+export function useWorkspaces(options: Options = {}): Result {
   const refresh = options.refresh ?? false;
+  const enabled = options.enabled ?? true;
 
   const { data, error, isLoading, revalidate } = usePromise(
     async (refresh: boolean) => {
@@ -38,6 +40,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}): UseWorkspaces
     },
     [refresh],
     {
+      execute: enabled,
       onError: async () => {
         await showToast({
           style: Toast.Style.Failure,
