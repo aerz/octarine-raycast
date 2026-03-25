@@ -4,10 +4,18 @@ import { skippedRootsToast, viewsLoadToast } from "../components/Toasts";
 import { matchesSearchIndex } from "../lib/search";
 import { type IndexedView, type ViewsScanResult, scanViewsFromWorkspaces } from "../lib/views";
 
-export type ViewSection = {
+export type WorkspaceViewSection = {
   workspaceName: string;
   views: IndexedView[];
 };
+
+type SearchState =
+  | "loading"
+  | "noConfiguredWorkspaces"
+  | "noAvailableViews"
+  | "noMatchingViews"
+  | "showByWorkspace"
+  | "showFlat";
 
 type Options = {
   searchText: string;
@@ -19,15 +27,11 @@ type Options = {
 type Result = {
   workspaceNames: string[];
   visibleViews: IndexedView[];
-  sections: ViewSection[];
-  isLoading: boolean;
-  error: Error | undefined;
-  hasConfiguredRoots: boolean;
-  hasValidWorkspaces: boolean;
-  totalViewCount: number;
+  sections: WorkspaceViewSection[];
+  searchState: SearchState;
 };
 
-export function useViews({
+export function useSearchViews({
   searchText,
   selectedWorkspace,
   workspaceDiscoverySignature,
@@ -64,19 +68,19 @@ export function useViews({
   );
   const hasValidWorkspaces = (scanResult?.workspaceCount ?? 0) > 0;
 
-  const { totalViewCount, visibleViews, sections } = useMemo(() => {
+  const { availableViewCount, visibleViews, sections } = useMemo(() => {
     const workspaceViews = scanResult?.workspaceViews ?? [];
     const visibleViews: IndexedView[] = [];
-    const sections: ViewSection[] = [];
-    let totalViewCount = 0;
+    const sections: WorkspaceViewSection[] = [];
+    let availableViewCount = 0;
 
     for (const entry of workspaceViews) {
-      totalViewCount += entry.views.length;
-
       const matchesWorkspace = selectedWorkspace === "all" || entry.workspace.name === selectedWorkspace;
       if (!matchesWorkspace) {
         continue;
       }
+
+      availableViewCount += entry.views.length;
 
       const matchingViews = entry.views.filter((view) => matchesSearchIndex(view.searchText, searchText));
       if (matchingViews.length === 0) {
@@ -90,17 +94,63 @@ export function useViews({
       });
     }
 
-    return { totalViewCount, visibleViews, sections };
+    return { availableViewCount, visibleViews, sections };
   }, [scanResult, searchText, selectedWorkspace]);
+
+  const searchState = getSearchState({
+    isLoading,
+    error: error instanceof Error ? error : undefined,
+    hasConfiguredRoots,
+    hasValidWorkspaces,
+    availableViewCount,
+    matchedViewCount: visibleViews.length,
+    selectedWorkspace,
+  });
 
   return {
     workspaceNames,
     visibleViews,
     sections,
-    isLoading,
-    error: error instanceof Error ? error : undefined,
-    hasConfiguredRoots,
-    hasValidWorkspaces,
-    totalViewCount,
+    searchState,
   };
+}
+
+function getSearchState({
+  isLoading,
+  error,
+  hasConfiguredRoots,
+  hasValidWorkspaces,
+  availableViewCount,
+  matchedViewCount,
+  selectedWorkspace,
+}: {
+  isLoading: boolean;
+  error: Error | undefined;
+  hasConfiguredRoots: boolean;
+  hasValidWorkspaces: boolean;
+  availableViewCount: number;
+  matchedViewCount: number;
+  selectedWorkspace: string;
+}): SearchState {
+  if (isLoading && availableViewCount === 0) {
+    return "loading";
+  }
+
+  if (error || !hasConfiguredRoots || !hasValidWorkspaces) {
+    return "noConfiguredWorkspaces";
+  }
+
+  if (availableViewCount === 0) {
+    return "noAvailableViews";
+  }
+
+  if (matchedViewCount === 0) {
+    return "noMatchingViews";
+  }
+
+  if (selectedWorkspace === "all") {
+    return "showByWorkspace";
+  }
+
+  return "showFlat";
 }
