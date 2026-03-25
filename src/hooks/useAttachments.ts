@@ -12,13 +12,23 @@ export type AttachmentSection = {
   files: IndexedAttachment[];
 };
 
+type SearchState =
+  | "loading"
+  | "noConfiguredWorkspaces"
+  | "noAvailableAttachments"
+  | "noMatchingAttachments"
+  | "showByWorkspace"
+  | "showFlat";
+
 type Options = {
   excludedExtensions: Set<string>;
   excludedDirectoryNames: Set<string>;
   workspaceSearchSignature: string;
   excludedExtensionsSignature: string;
+  hasConfiguredRoots: boolean;
   searchText: string;
-  fileExtensionFilter: string;
+  selectedExtension: string;
+  flattenWorkspaceSections: boolean;
 };
 
 type Result = {
@@ -26,17 +36,57 @@ type Result = {
   visibleAttachments: IndexedAttachment[];
   sections: AttachmentSection[];
   filters: string[];
+  searchState: SearchState;
   isLoading: boolean;
-  hasValidWorkspaces: boolean;
 };
+
+function getSearchState({
+  isLoading,
+  hasConfiguredRoots,
+  hasValidWorkspaces,
+  attachmentCount,
+  visibleAttachmentCount,
+  flattenWorkspaceSections,
+}: {
+  isLoading: boolean;
+  hasConfiguredRoots: boolean;
+  hasValidWorkspaces: boolean;
+  attachmentCount: number;
+  visibleAttachmentCount: number;
+  flattenWorkspaceSections: boolean;
+}): SearchState {
+  if (isLoading && attachmentCount === 0) {
+    return "loading";
+  }
+
+  if (!hasConfiguredRoots || !hasValidWorkspaces) {
+    return "noConfiguredWorkspaces";
+  }
+
+  if (attachmentCount === 0) {
+    return "noAvailableAttachments";
+  }
+
+  if (visibleAttachmentCount === 0) {
+    return "noMatchingAttachments";
+  }
+
+  if (flattenWorkspaceSections) {
+    return "showFlat";
+  }
+
+  return "showByWorkspace";
+}
 
 export function useAttachments({
   excludedExtensions,
   excludedDirectoryNames,
   workspaceSearchSignature,
   excludedExtensionsSignature,
+  hasConfiguredRoots,
   searchText,
-  fileExtensionFilter,
+  selectedExtension,
+  flattenWorkspaceSections,
 }: Options): Result {
   const { data: scanResult, isLoading } = useCachedPromise(
     async (workspaceSearchSignature: string, excludedExtensionsSignature: string): Promise<AttachmentScanResult> => {
@@ -82,15 +132,15 @@ export function useAttachments({
   }, [attachments]);
 
   const visibleAttachments = useMemo(() => {
-    if (fileExtensionFilter === "all") {
+    if (selectedExtension === "all") {
       // Raycast built-in filtering handles search text only when the type filter is inactive
       return attachments;
     }
 
     return attachments
-      .filter((file) => file.extension === fileExtensionFilter)
+      .filter((file) => file.extension === selectedExtension)
       .filter((file) => matchesSearchIndex(file.searchText, searchText));
-  }, [attachments, fileExtensionFilter, searchText]);
+  }, [attachments, selectedExtension, searchText]);
 
   const sections = useMemo(() => {
     const grouped = new Map<string, AttachmentSection>();
@@ -109,13 +159,21 @@ export function useAttachments({
 
     return Array.from(grouped.values()).sort((left, right) => left.workspaceName.localeCompare(right.workspaceName));
   }, [visibleAttachments]);
+  const searchState = getSearchState({
+    isLoading,
+    hasConfiguredRoots,
+    hasValidWorkspaces,
+    attachmentCount: attachments.length,
+    visibleAttachmentCount: visibleAttachments.length,
+    flattenWorkspaceSections,
+  });
 
   return {
     attachments,
     visibleAttachments,
     sections,
     filters,
+    searchState,
     isLoading,
-    hasValidWorkspaces,
   };
 }
