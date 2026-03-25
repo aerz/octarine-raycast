@@ -15,6 +15,7 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 - [Open Daily Desk Note](#open-daily-desk-note)
 - [Search Attachments](#search-attachments)
 - [Search Pinned Notes](#search-pinned-notes)
+- [Search Views](#search-views)
 
 ## Open Workspace
 
@@ -96,3 +97,15 @@ Use the dropdown to filter by workspace.
 **Preferences**
 
 - **Show workspace note count**. Display the number of pinned notes per workspace in parentheses.
+
+## Search Views
+
+Browse views across all workspaces.
+
+> [!WARNING]
+> Requires AppleScript to open views in Octarine. May fail until a native implementation via
+> Octarine's URI scheme is available.
+
+**Preferences**
+
+- **Show workspace view count**. Show a view counter for each workspace section.
