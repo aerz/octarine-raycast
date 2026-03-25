@@ -26,7 +26,7 @@ type Options = {
 
 type Result = {
   workspaceNames: string[];
-  visibleViews: IndexedView[];
+  matchingViews: IndexedView[];
   sections: WorkspaceViewSection[];
   searchState: SearchState;
 };
@@ -68,9 +68,9 @@ export function useSearchViews({
   );
   const hasValidWorkspaces = (scanResult?.workspaceCount ?? 0) > 0;
 
-  const { availableViewCount, visibleViews, sections } = useMemo(() => {
+  const { availableViewCount, matchingViews, sections } = useMemo(() => {
     const workspaceViews = scanResult?.workspaceViews ?? [];
-    const visibleViews: IndexedView[] = [];
+    const matchingViews: IndexedView[] = [];
     const sections: WorkspaceViewSection[] = [];
     let availableViewCount = 0;
 
@@ -82,19 +82,19 @@ export function useSearchViews({
 
       availableViewCount += entry.views.length;
 
-      const matchingViews = entry.views.filter((view) => matchesSearchIndex(view.searchText, searchText));
-      if (matchingViews.length === 0) {
+      const workspaceMatchingViews = entry.views.filter((view) => matchesSearchIndex(view.searchText, searchText));
+      if (workspaceMatchingViews.length === 0) {
         continue;
       }
 
-      visibleViews.push(...matchingViews);
+      matchingViews.push(...workspaceMatchingViews);
       sections.push({
         workspaceName: entry.workspace.name,
-        views: matchingViews,
+        views: workspaceMatchingViews,
       });
     }
 
-    return { availableViewCount, visibleViews, sections };
+    return { availableViewCount, matchingViews, sections };
   }, [scanResult, searchText, selectedWorkspace]);
 
   const searchState = getSearchState({
@@ -103,13 +103,13 @@ export function useSearchViews({
     hasConfiguredRoots,
     hasValidWorkspaces,
     availableViewCount,
-    matchedViewCount: visibleViews.length,
+    matchedViewCount: matchingViews.length,
     selectedWorkspace,
   });
 
   return {
     workspaceNames,
-    visibleViews,
+    matchingViews,
     sections,
     searchState,
   };

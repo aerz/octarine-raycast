@@ -13,7 +13,7 @@ export default function SearchViewsCommand() {
   const preferences = getSearchViewsPreferences();
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const { workspaceNames, visibleViews, sections, searchState } = useSearchViews({
+  const { workspaceNames, matchingViews, sections, searchState } = useSearchViews({
     searchText,
     selectedWorkspace,
     workspaceDiscoverySignature: preferences.extension.workspaceDiscoverySignature,
@@ -43,7 +43,7 @@ export default function SearchViewsCommand() {
         showByWorkspace: () => (
           <WorkspaceSectionList sections={sections} showWorkspaceViewCount={preferences.showWorkspaceViewCount} />
         ),
-        showFlat: () => visibleViews.map((view) => <ViewItem key={view.id} view={view} />),
+        showFlat: () => matchingViews.map((view) => <ViewItem key={view.id} view={view} />),
       })}
     </List>
   );
