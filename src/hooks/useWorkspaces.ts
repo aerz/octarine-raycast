@@ -1,5 +1,5 @@
-import { Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
+import { skippedWorkspacesToast, workspacesLoadToast } from "../components/Toasts";
 import { loadWorkspaces, type WorkspaceLoadResult } from "../lib/workspaces";
 import type { Workspace } from "../types/octarine";
 
@@ -27,13 +27,8 @@ export function useWorkspaces(options: Options = {}): Result {
   const { data, error, isLoading, revalidate } = usePromise(
     async (refresh: boolean) => {
       const result = await loadWorkspaces({ forceRefresh: refresh });
-
       if (!result.fromCache && result.invalidRoots.length > 0) {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Workspaces were skipped",
-          message: `${result.invalidRoots.length} workspace roots could not be read.`,
-        });
+        await skippedWorkspacesToast(result.invalidRoots.length);
       }
 
       return result;
@@ -41,12 +36,7 @@ export function useWorkspaces(options: Options = {}): Result {
     [refresh],
     {
       execute: enabled,
-      onError: async () => {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to load workspaces",
-        });
-      },
+      onError: workspacesLoadToast,
     },
   );
 
