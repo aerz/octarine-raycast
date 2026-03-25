@@ -26,7 +26,7 @@ function getViewState({
   attachmentCount: number;
   visibleAttachmentCount: number;
 }): ViewState {
-  if (isLoading) {
+  if (isLoading && attachmentCount === 0) {
     return "loading";
   }
 

@@ -27,7 +27,7 @@ function getViewState({
   noteCount: number;
   filteredWorkspaceSections: { notes: IndexedNote[] }[];
 }): ViewState {
-  if (isLoading) {
+  if (isLoading && noteCount === 0) {
     return "loading";
   }
 
