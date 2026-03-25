@@ -1,21 +1,146 @@
-import { Action, ActionPanel, Icon, List, Toast, showToast } from "@raycast/api";
-import { useCachedPromise } from "@raycast/utils";
-import { useMemo, useState } from "react";
+import { Action, ActionPanel, Icon, List } from "@raycast/api";
+import { useState } from "react";
 import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
+import { useViews } from "./hooks/useViews";
 import { openOctarineView } from "./lib/octarine";
 import { getSearchViewsPreferences } from "./lib/preferences";
-import { matchesSearchIndex } from "./lib/search";
-import { IndexedView, scanViewsFromWorkspaces } from "./lib/views";
+import { IndexedView } from "./lib/views";
 
-function renderViewItem(view: IndexedView) {
+type ViewState = "loading" | "workspace-not-found" | "no-views" | "no-matching-views" | "show-sections" | "show-flat";
+
+export default function SearchViewsCommand() {
+  const preferences = getSearchViewsPreferences();
+  const [searchText, setSearchText] = useState("");
+  const [selectedWorkspace, setSelectedWorkspace] = useState("all");
+  const {
+    workspaceNames,
+    visibleViews,
+    sections,
+    isLoading,
+    error,
+    hasConfiguredRoots,
+    hasValidWorkspaces,
+    totalViewCount,
+  } = useViews({
+    searchText,
+    selectedWorkspace,
+    workspaceDiscoverySignature: preferences.extension.workspaceDiscoverySignature,
+    hasConfiguredRoots: preferences.extension.hasConfiguredRoots,
+  });
+  const viewState = getViewState({
+    isLoading,
+    error,
+    hasConfiguredRoots,
+    hasValidWorkspaces,
+    totalViewCount,
+    visibleViewCount: visibleViews.length,
+    selectedWorkspace,
+  });
+
+  function renderContent() {
+    switch (viewState) {
+      case "loading":
+        return null;
+      case "workspace-not-found":
+        return <WorkspaceNotFound />;
+      case "no-views":
+        return <WorkspaceContentEmptyView resource="views" />;
+      case "no-matching-views":
+        return <SearchResultsEmptyView resource="views" />;
+      case "show-sections":
+        return sections.map((section) => (
+          <List.Section
+            key={section.workspaceName}
+            title={
+              preferences.showWorkspaceViewCount
+                ? `${section.workspaceName} (${section.views.length})`
+                : section.workspaceName
+            }
+          >
+            {section.views.map((view) => (
+              <ViewItem key={view.id} view={view} />
+            ))}
+          </List.Section>
+        ));
+      case "show-flat":
+        return visibleViews.map((view) => <ViewItem key={view.id} view={view} />);
+      default:
+        return assertNever(viewState);
+    }
+  }
+
+  return (
+    <List
+      filtering={false}
+      isLoading={viewState === "loading"}
+      onSearchTextChange={setSearchText}
+      searchBarPlaceholder="Search views..."
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
+          <List.Dropdown.Item title="All" value="all" />
+          {workspaceNames.map((workspaceName) => (
+            <List.Dropdown.Item key={workspaceName} title={workspaceName} value={workspaceName} />
+          ))}
+        </List.Dropdown>
+      }
+    >
+      {renderContent()}
+    </List>
+  );
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled view state: ${String(value)}`);
+}
+
+function getViewState({
+  isLoading,
+  error,
+  hasConfiguredRoots,
+  hasValidWorkspaces,
+  totalViewCount,
+  visibleViewCount,
+  selectedWorkspace,
+}: {
+  isLoading: boolean;
+  error: Error | undefined;
+  hasConfiguredRoots: boolean;
+  hasValidWorkspaces: boolean;
+  totalViewCount: number;
+  visibleViewCount: number;
+  selectedWorkspace: string;
+}): ViewState {
+  if (isLoading && totalViewCount === 0) {
+    return "loading";
+  }
+
+  if (error || !hasConfiguredRoots || !hasValidWorkspaces) {
+    return "workspace-not-found";
+  }
+
+  if (totalViewCount === 0) {
+    return "no-views";
+  }
+
+  if (visibleViewCount === 0) {
+    return "no-matching-views";
+  }
+
+  if (selectedWorkspace === "all") {
+    return "show-sections";
+  }
+
+  return "show-flat";
+}
+
+function ViewItem({ view }: { view: IndexedView }) {
   return (
     <List.Item
-      key={view.id}
       title={view.name}
       subtitle={view.description}
-      keywords={[view.workspace.name, view.description]}
+      keywords={[view.workspace.name]}
       actions={
         <ActionPanel>
           <Action
@@ -26,131 +151,5 @@ function renderViewItem(view: IndexedView) {
         </ActionPanel>
       }
     />
-  );
-}
-
-export default function SearchViewsCommand() {
-  const preferences = useMemo(() => getSearchViewsPreferences(), []);
-  const { extension: extensionPreferences, showWorkspaceViewCount } = preferences;
-  const [searchText, setSearchText] = useState("");
-  const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const cacheKey = extensionPreferences.workspaceDiscoverySignature;
-  const hasConfiguredRoots = extensionPreferences.hasConfiguredRoots;
-  const {
-    data: scanResult,
-    error: scanError,
-    isLoading,
-  } = useCachedPromise(
-    async (preferenceCacheKey: string) => {
-      if (!preferenceCacheKey) {
-        return {
-          workspaceCount: 0,
-          workspaceViews: [],
-          invalidRoots: [],
-          fromCache: true,
-        };
-      }
-
-      return scanViewsFromWorkspaces();
-    },
-    [cacheKey],
-    {
-      execute: hasConfiguredRoots,
-      onData: async (result) => {
-        if (!result.fromCache && result.invalidRoots.length > 0) {
-          const noun = result.invalidRoots.length === 1 ? "root path" : "root paths";
-          await showToast({
-            style: Toast.Style.Failure,
-            title: "Some workspace roots were skipped",
-            message: `${result.invalidRoots.length} ${noun} could not be read.`,
-          });
-        }
-      },
-      onError: async (error) => {
-        console.error("Failed to scan Octarine views", error);
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to Scan Views",
-        });
-      },
-    },
-  );
-
-  const workspaceNames = useMemo(
-    () => scanResult?.workspaceViews.map((entry) => entry.workspace.name) ?? [],
-    [scanResult],
-  );
-  const views = useMemo(() => scanResult?.workspaceViews.flatMap((entry) => entry.views) ?? [], [scanResult]);
-  const hasValidWorkspaces = (scanResult?.workspaceCount ?? 0) > 0;
-
-  const filteredViews = useMemo(
-    () => views.filter((view) => selectedWorkspace === "all" || view.workspace.name === selectedWorkspace),
-    [views, selectedWorkspace],
-  );
-
-  const searchFilteredViews = useMemo(
-    () => filteredViews.filter((view) => matchesSearchIndex(view.searchText, searchText)),
-    [filteredViews, searchText],
-  );
-
-  const viewsByWorkspace = useMemo(() => {
-    const groupedViews = new Map<string, IndexedView[]>();
-
-    for (const view of searchFilteredViews) {
-      const workspaceName = view.workspace.name;
-      const viewsInWorkspace = groupedViews.get(workspaceName);
-      if (viewsInWorkspace) {
-        viewsInWorkspace.push(view);
-      } else {
-        groupedViews.set(workspaceName, [view]);
-      }
-    }
-
-    return groupedViews;
-  }, [searchFilteredViews]);
-
-  const showWorkspaceNotFound = !isLoading && !scanError && (!hasConfiguredRoots || !hasValidWorkspaces);
-  const showNoViewsFound = !isLoading && !scanError && !showWorkspaceNotFound && views.length === 0;
-  const showNoMatchingViews =
-    !isLoading && !scanError && !showWorkspaceNotFound && views.length > 0 && searchFilteredViews.length === 0;
-
-  return (
-    <List
-      filtering={false}
-      isLoading={isLoading}
-      onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search Octarine views..."
-      searchBarAccessory={
-        <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
-          <List.Dropdown.Item title="All" value="all" />
-          {workspaceNames.map((workspaceName) => (
-            <List.Dropdown.Item key={workspaceName} title={workspaceName} value={workspaceName} />
-          ))}
-        </List.Dropdown>
-      }
-    >
-      {showWorkspaceNotFound ? <WorkspaceNotFound /> : null}
-      {showNoViewsFound ? <WorkspaceContentEmptyView resource="views" /> : null}
-      {showNoMatchingViews ? <SearchResultsEmptyView resource="views" /> : null}
-      {!showWorkspaceNotFound && !showNoViewsFound && !showNoMatchingViews
-        ? selectedWorkspace === "all"
-          ? workspaceNames.map((workspaceName) => {
-              const viewsInWorkspace = viewsByWorkspace.get(workspaceName) ?? [];
-              if (viewsInWorkspace.length === 0) {
-                return null;
-              }
-
-              return (
-                <List.Section
-                  key={workspaceName}
-                  title={showWorkspaceViewCount ? `${workspaceName} (${viewsInWorkspace.length})` : workspaceName}
-                >
-                  {viewsInWorkspace.map((view) => renderViewItem(view))}
-                </List.Section>
-              );
-            })
-          : searchFilteredViews.map((view) => renderViewItem(view))
-        : null}
-    </List>
   );
 }
