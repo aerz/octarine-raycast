@@ -13,13 +13,14 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 - [Open Workspace](#open-workspace)
 - [Open Today's Note](#open-todays-note)
 - [Open Daily Desk Note](#open-daily-desk-note)
+- [Search Notes](#search-notes)
 - [Search Attachments](#search-attachments)
 - [Search Pinned Notes](#search-pinned-notes)
 - [Search Views](#search-views)
 
 ## Open Workspace
 
-Displays a list of your workspaces. Press `Enter` to open the selected one.
+Browse and open any of your Octarine workspaces with a single keystroke.
 
 **Arguments**
 
@@ -27,7 +28,7 @@ Displays a list of your workspaces. Press `Enter` to open the selected one.
 
 ## Open Today's Note
 
-Opens today's note from Daily Desk.
+Opens today's Daily Desk note instantly, switching to the right workspace automatically.
 
 **Arguments**
 
@@ -39,7 +40,7 @@ Opens today's note from Daily Desk.
 
 ## Open Daily Desk Note
 
-Open a note with any date from Daily Desk.
+Open any Daily Desk note by typing a date in natural language. The command switches to the right workspace automatically, and if it can't find it, a selector lets you pick from all available ones.
 
 **Arguments**
 
@@ -62,6 +63,20 @@ Open a note with any date from Daily Desk.
 
 - [Daily Desk / Smart Dates](https://docs.octarine.app/daily-desk/smart-dates)
 - [`daily` — Open a daily or weekly note](https://docs.octarine.app/workflows/uri-scheme#daily---open-a-daily-or-weekly-note)
+
+## Search Notes
+
+Search and open your Octarine notes from anywhere on your computer. Instantly filter across all configured workspaces by note name, folder, or workspace — without leaving your current context.
+
+**Search & Filter**
+
+- Queries are fuzzy by default for broader matches. To scope results to a specific folder, append a trailing slash to the folder name (e.g. articles/).
+- Use the dropdown to filter by workspace.
+
+**Preferences**
+
+- **Show workspace note count**. Displays a note counter for each workspace section.
+- **Show Pinned Notes First**. Sorts pinned notes to the top of each workspace list.
 
 ## Search Attachments
 
@@ -100,7 +115,7 @@ Use the dropdown to filter by workspace.
 
 ## Search Views
 
-Browse views across all workspaces.
+Search and open any view across all your workspaces. Filter by workspace or search by title to get to the right view instantly.
 
 > [!WARNING]
 > Requires AppleScript to open views in Octarine. May fail until a native implementation via
