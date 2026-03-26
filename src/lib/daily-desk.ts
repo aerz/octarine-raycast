@@ -1,3 +1,5 @@
+import { normalize } from "./search";
+
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_WEEK_PATTERN = /^\d{4}-W\d{2}$/i;
 const NATURAL_EXACT_PATTERN = /^(today|yesterday|tomorrow)$/i;
@@ -21,12 +23,8 @@ export const DAILY_DESK_DATE_FORMATS_MARKDOWN = [
   "- Relative weeks: `2 weeks ago`, `in 2 weeks`",
 ].join("\n");
 
-export function normalizeDailyDeskDate(value: string): string {
-  return value.trim().replace(/\s+/g, " ");
-}
-
 export function isSupportedDailyDeskDate(value: string): boolean {
-  const normalized = normalizeDailyDeskDate(value);
+  const normalized = normalize(value);
 
   if (!normalized) {
     return false;

@@ -89,7 +89,7 @@ export function matchQueryPrefix(candidates: string[], query: string): QueryPref
   return undefined;
 }
 
-function normalize(value: string): string {
+export function normalize(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
