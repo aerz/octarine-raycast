@@ -140,7 +140,7 @@ function buildOctarineUri(request: OctarineUriRequest): string {
   return `octarine://${request.action}?${params.toString()}`;
 }
 
-export function buildOpenNoteUri(path: string, workspaceName?: string): string {
+function buildOpenNoteUri(path: string, workspaceName?: string): string {
   return buildOctarineUri({
     action: OctarineAction.Open,
     path,
@@ -189,8 +189,12 @@ export function openOctarineAttachment(name: string, workspaceName?: string): Pr
   return openOctarineUri(buildSearchUri(name, workspaceName));
 }
 
-export function openPinnedNote(path: string, workspace?: string): Promise<boolean> {
+export function openNote(path: string, workspace?: string): Promise<boolean> {
   return openOctarineUri(buildOpenNoteUri(path, workspace));
+}
+
+export function openPinnedNote(path: string, workspace?: string): Promise<boolean> {
+  return openNote(path, workspace);
 }
 
 export function openOctarineDailyDeskNote(date: string, workspace: string): Promise<boolean> {

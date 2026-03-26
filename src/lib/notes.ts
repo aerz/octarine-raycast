@@ -287,6 +287,10 @@ export async function loadCachedPinnedNotes(
   };
 }
 
+export function toPinnedNoteIds(notes: IndexedNote[]): Set<string> {
+  return new Set(notes.map((note) => note.id));
+}
+
 function extractFrontmatter(content: string): string | undefined {
   const normalizedContent = content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
   const lines = normalizedContent.split(/\r?\n/);
