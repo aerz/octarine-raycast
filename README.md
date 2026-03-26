@@ -20,7 +20,7 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 
 ## Open Workspace
 
-Browse and open any of your Octarine workspaces with a single keystroke.
+Browse and open any of your [workspaces](https://docs.octarine.app/core-concepts/workspaces) with a single keystroke.
 
 **Arguments**
 
@@ -40,7 +40,7 @@ Opens today's Daily Desk note instantly, switching to the right workspace automa
 
 ## Open Daily Desk Note
 
-Open any Daily Desk note by typing a date in natural language. The command switches to the right workspace automatically, and if it can't find it, a selector lets you pick from all available ones.
+Open any [Daily Desk](https://docs.octarine.app/daily-desk/) note by typing a date in natural language. The command switches to the right workspace automatically, and if it can't find it, a selector lets you pick from all available ones.
 
 **Arguments**
 
@@ -80,7 +80,7 @@ Search and open your Octarine notes from anywhere on your computer. Instantly fi
 
 ## Search Attachments
 
-Browse all files attached to notes across your Octarine workspaces. Search, preview, and open attachments from a visual grid.
+Browse all [files attached](https://docs.octarine.app/editor/attachments) to notes across your workspaces. Search, preview, and open attachments from a visual grid.
 
 **Actions**
 
@@ -103,7 +103,7 @@ Type to filter by filename or extension. Use the dropdown to narrow results by f
 
 ## Search Pinned Notes
 
-Search pinned notes across all workspaces by title or path.
+Search [pinned notes](https://docs.octarine.app/note-management/pinned) across all workspaces by title.
 
 **Search & Filter**
 
@@ -115,7 +115,7 @@ Use the dropdown to filter by workspace.
 
 ## Search Views
 
-Search and open any view across all your workspaces. Filter by workspace or search by title to get to the right view instantly.
+Search and open any [view](https://docs.octarine.app/organization/views) across all your workspaces. Filter by workspace or search by title to get to the right view instantly.
 
 > [!WARNING]
 > Requires AppleScript to open views in Octarine. May fail until a native implementation via
