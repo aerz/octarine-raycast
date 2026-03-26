@@ -13,36 +13,30 @@ import {
   showToast,
   useNavigation,
 } from "@raycast/api";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import path from "node:path";
 import { DateFormatsDetail } from "./components/Notifications/DateFormatsDetail";
 import { CollectionEmptyView } from "./components/EmptyViews/CollectionEmptyView";
 import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
+import { useNotes } from "./hooks/useNotes";
 import { isSupportedDailyDeskDate } from "./lib/daily-desk";
-import {
-  IndexedNote,
-  IndexedNoteFolder,
-  loadCachedNotes,
-  matchesSearchQuery,
-  saveCachedNotes,
-  scanNoteFoldersFromWorkspaces,
-  scanNotesFromWorkspaces,
-} from "./lib/notes";
-import { appendDailyNoteContent, buildOpenNoteUri, openOctarineUri, upsertOctarineNoteContent } from "./lib/octarine";
+import { IndexedNote, IndexedNoteFolder, scanNoteFoldersFromWorkspaces } from "./lib/notes";
+import { appendDailyNoteContent, openNote, upsertOctarineNoteContent } from "./lib/octarine";
 import { getExtensionPreferences } from "./lib/preferences";
 import { buildSearchIndexText, matchesSearchIndex } from "./lib/search";
+import { match } from "./utils/match";
 import { loadWorkspaces } from "./lib/workspaces";
 import type { Workspace } from "./types/octarine";
 
-type AppendFormValues = {
+type AppendForm = {
   content: string;
 };
 
 type FolderPickerProps = {
-  workspaces: Workspace[];
   excludedDirectoryNames: Set<string>;
+  hasConfiguredRoots: boolean;
 };
 
 type DailyDeskItem = {
@@ -51,7 +45,7 @@ type DailyDeskItem = {
   kind: "daily-desk";
   searchIndex: string;
   title: string;
-  workspace: Workspace;
+  workspaceName: string;
 };
 
 type SearchableNoteItem = IndexedNote | DailyDeskItem;
@@ -59,13 +53,224 @@ type SearchableNoteItem = IndexedNote | DailyDeskItem;
 type NotePickerProps = {
   actionTitle: string;
   buildDailyDeskTarget: (workspaceName: string, date: string, title: string) => React.ReactElement;
-  hasWorkspaces: boolean;
-  isLoading: boolean;
-  notes: IndexedNote[];
-  workspaces: Workspace[];
+  excludedDirectoryNames: Set<string>;
+  hasConfiguredRoots: boolean;
   onSelectNote: (note: IndexedNote) => Promise<void>;
   searchBarPlaceholder: string;
+  workspaceSearchSignature: string;
 };
+
+type NotePickerRenderState =
+  | "noConfiguredWorkspaces"
+  | "noAvailableNotes"
+  | "noMatchingNotes"
+  | "showByWorkspace"
+  | "showFlat";
+
+type FolderPickerRenderState = "noConfiguredWorkspaces" | "noMatchingFolders" | "showByWorkspace" | "showFlat";
+
+type QuickCaptureRenderState =
+  | "noConfiguredWorkspaces"
+  | "noAvailableNotes"
+  | "noMatchingNotes"
+  | "showByWorkspace"
+  | "showFlat"
+  | "showByWorkspaceWithQuickCapture"
+  | "showFlatWithQuickCapture";
+
+export default function QuickCaptureCommand() {
+  const preferences = getExtensionPreferences();
+  const excludedDirectoryNames = useMemo(
+    () => preferences.excludedFoldersInWorkspaces,
+    [preferences.workspaceSearchSignature],
+  );
+  const [searchText, setSearchText] = useState("");
+  const [selectedWorkspace, setSelectedWorkspace] = useState("all");
+  const { workspaceNames, matchingNotes, searchState, isLoading } = useNotes({
+    searchText,
+    selectedWorkspace,
+    excludedDirectoryNames,
+    workspaceSearchSignature: preferences.workspaceSearchSignature,
+    hasConfiguredRoots: preferences.hasConfiguredRoots,
+    showPinnedNotesFirst: false,
+  });
+  const searchableItems = useMemo(
+    () => [...matchingNotes, ...buildDailyDeskItems(workspaceNames, searchText)],
+    [matchingNotes, searchText, workspaceNames],
+  );
+  const filteredItems = useMemo(
+    () =>
+      searchableItems.filter(
+        (item) =>
+          selectedWorkspace === "all" ||
+          (isDailyDeskItem(item) ? item.workspaceName : item.workspace.name) === selectedWorkspace,
+      ),
+    [searchableItems, selectedWorkspace],
+  );
+  const itemsByWorkspace = useMemo(() => groupItemsByWorkspace(filteredItems), [filteredItems]);
+  const showStaticActions = searchText.trim().length === 0;
+  const renderState = getQuickCaptureRenderState({
+    filteredItemCount: filteredItems.length,
+    isLoading,
+    searchState,
+    selectedWorkspace,
+    showStaticActions,
+  });
+
+  return (
+    <List
+      filtering={false}
+      isLoading={isLoading}
+      onSearchTextChange={setSearchText}
+      searchBarPlaceholder="Search notes or type a date..."
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
+          <List.Dropdown.Item title="All" value="all" />
+          {workspaceNames.map((workspaceName) => (
+            <List.Dropdown.Item key={workspaceName} title={workspaceName} value={workspaceName} />
+          ))}
+        </List.Dropdown>
+      }
+    >
+      {match(renderState, {
+        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
+        noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
+        noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
+        showByWorkspaceWithQuickCapture: () => (
+          <QuickCaptureWithWorkspaceSections
+            excludedDirectoryNames={excludedDirectoryNames}
+            hasConfiguredRoots={preferences.hasConfiguredRoots}
+            itemsByWorkspace={itemsByWorkspace}
+            workspaceNames={workspaceNames}
+            workspaceSearchSignature={preferences.workspaceSearchSignature}
+          />
+        ),
+        showByWorkspace: () => (
+          <WorkspaceSections itemsByWorkspace={itemsByWorkspace} workspaceNames={workspaceNames} />
+        ),
+        showFlatWithQuickCapture: () => (
+          <QuickCaptureWithNotes
+            excludedDirectoryNames={excludedDirectoryNames}
+            filteredItems={filteredItems}
+            hasConfiguredRoots={preferences.hasConfiguredRoots}
+            workspaceSearchSignature={preferences.workspaceSearchSignature}
+          />
+        ),
+        showFlat: () => <FlatItems filteredItems={filteredItems} />,
+      })}
+    </List>
+  );
+}
+
+function getNotePickerRenderState({
+  filteredItemCount,
+  isLoading,
+  searchState,
+  searchText,
+  selectedWorkspace,
+}: {
+  filteredItemCount: number;
+  isLoading: boolean;
+  searchState:
+    | "loading"
+    | "noConfiguredWorkspaces"
+    | "noAvailableNotes"
+    | "noMatchingNotes"
+    | "showByWorkspace"
+    | "showFlat";
+  searchText: string;
+  selectedWorkspace: string;
+}): NotePickerRenderState {
+  if (searchState === "noConfiguredWorkspaces") {
+    return "noConfiguredWorkspaces";
+  }
+
+  if (searchText.trim().length === 0 && searchState === "noAvailableNotes") {
+    return "noAvailableNotes";
+  }
+
+  if (!isLoading && searchText.trim().length > 0 && filteredItemCount === 0) {
+    return "noMatchingNotes";
+  }
+
+  if (selectedWorkspace === "all") {
+    return "showByWorkspace";
+  }
+
+  return "showFlat";
+}
+
+function getFolderPickerRenderState({
+  hasWorkspaces,
+  isLoading,
+  searchFilteredFolderCount,
+  selectedWorkspace,
+}: {
+  hasWorkspaces: boolean;
+  isLoading: boolean;
+  searchFilteredFolderCount: number;
+  selectedWorkspace: string;
+}): FolderPickerRenderState {
+  if (!isLoading && !hasWorkspaces) {
+    return "noConfiguredWorkspaces";
+  }
+
+  if (!isLoading && searchFilteredFolderCount === 0) {
+    return "noMatchingFolders";
+  }
+
+  if (selectedWorkspace === "all") {
+    return "showByWorkspace";
+  }
+
+  return "showFlat";
+}
+
+function getQuickCaptureRenderState({
+  filteredItemCount,
+  isLoading,
+  searchState,
+  selectedWorkspace,
+  showStaticActions,
+}: {
+  filteredItemCount: number;
+  isLoading: boolean;
+  searchState:
+    | "loading"
+    | "noConfiguredWorkspaces"
+    | "noAvailableNotes"
+    | "noMatchingNotes"
+    | "showByWorkspace"
+    | "showFlat";
+  selectedWorkspace: string;
+  showStaticActions: boolean;
+}): QuickCaptureRenderState {
+  if (searchState === "noConfiguredWorkspaces") {
+    return "noConfiguredWorkspaces";
+  }
+
+  if (showStaticActions && searchState === "noAvailableNotes") {
+    return "noAvailableNotes";
+  }
+
+  if (!showStaticActions && !isLoading && filteredItemCount === 0) {
+    return "noMatchingNotes";
+  }
+
+  if (showStaticActions && selectedWorkspace === "all") {
+    return "showByWorkspaceWithQuickCapture";
+  }
+
+  if (showStaticActions) {
+    return "showFlatWithQuickCapture";
+  }
+
+  if (selectedWorkspace === "all") {
+    return "showByWorkspace";
+  }
+
+  return "showFlat";
+}
 
 function groupFoldersByWorkspace(folders: IndexedNoteFolder[]): Map<string, IndexedNoteFolder[]> {
   const groupedFolders = new Map<string, IndexedNoteFolder[]>();
@@ -88,7 +293,7 @@ function groupItemsByWorkspace(items: SearchableNoteItem[]): Map<string, Searcha
   const groupedItems = new Map<string, SearchableNoteItem[]>();
 
   for (const item of items) {
-    const workspaceName = item.workspace.name;
+    const workspaceName = isDailyDeskItem(item) ? item.workspaceName : item.workspace.name;
     const itemsInWorkspace = groupedItems.get(workspaceName);
 
     if (itemsInWorkspace) {
@@ -195,7 +400,7 @@ async function appendContentToDailyTarget(
   loadingToast.title = successTitle;
 }
 
-function renderNoteItem({
+function NoteListItem({
   actionTitle,
   actionTarget,
   note,
@@ -206,11 +411,8 @@ function renderNoteItem({
   note: IndexedNote;
   onAction?: (note: IndexedNote) => void;
 }) {
-  const openUri = buildOpenNoteUri(note.path, note.workspace.name);
-
   return (
     <List.Item
-      key={note.id}
       title={note.title}
       subtitle={note.path}
       keywords={[note.path, note.workspace.name]}
@@ -221,7 +423,11 @@ function renderNoteItem({
           ) : (
             <Action title={actionTitle} onAction={() => onAction?.(note)} />
           )}
-          <Action title="Open Note in Octarine" icon={Icon.AppWindow} onAction={() => void openOctarineUri(openUri)} />
+          <Action
+            title="Open Note in Octarine"
+            icon={Icon.AppWindow}
+            onAction={() => void openNote(note.path, note.workspace.name)}
+          />
           <Action.CopyToClipboard title="Copy Note Path" content={note.path} />
         </ActionPanel>
       }
@@ -238,9 +444,9 @@ function normalizeWorkspacePhrase(value: string): string {
 }
 
 function findScopedWorkspaceMatch(
-  workspaces: Workspace[],
+  workspaceNames: string[],
   searchText: string,
-): { date: string; matchedWorkspaces: Workspace[] } | undefined {
+): { date: string; matchedWorkspaceNames: string[] } | undefined {
   const trimmedSearchText = searchText.trim();
   const queryTokens = trimmedSearchText.split(/\s+/).filter(Boolean);
 
@@ -253,67 +459,59 @@ function findScopedWorkspaceMatch(
       continue;
     }
 
-    const matchedWorkspaces = workspaces.filter((workspace) => {
-      const normalizedWorkspaceName = normalizeWorkspacePhrase(workspace.name);
+    const matchedWorkspaceNames = workspaceNames.filter((workspaceName) => {
+      const normalizedWorkspaceName = normalizeWorkspacePhrase(workspaceName);
       return (
         normalizedWorkspaceName === normalizedWorkspacePrefix ||
         normalizedWorkspaceName.startsWith(`${normalizedWorkspacePrefix} `)
       );
     });
 
-    if (matchedWorkspaces.length > 0) {
-      return { date, matchedWorkspaces };
+    if (matchedWorkspaceNames.length > 0) {
+      return { date, matchedWorkspaceNames };
     }
   }
 
   return undefined;
 }
 
-function buildDailyDeskItems(workspaces: Workspace[], searchText: string): DailyDeskItem[] {
+function buildDailyDeskItems(workspaceNames: string[], searchText: string): DailyDeskItem[] {
   const trimmedSearchText = searchText.trim();
   if (!trimmedSearchText) {
     return [];
   }
 
-  const scopedMatch = findScopedWorkspaceMatch(workspaces, trimmedSearchText);
+  const scopedMatch = findScopedWorkspaceMatch(workspaceNames, trimmedSearchText);
   if (scopedMatch) {
-    return scopedMatch.matchedWorkspaces.map((workspace) => {
+    return scopedMatch.matchedWorkspaceNames.map((workspaceName) => {
       const title = `Use "${scopedMatch.date}" in Daily Desk`;
 
       return {
         date: scopedMatch.date,
-        id: `daily-desk::${workspace.path}::${scopedMatch.date}`,
+        id: `daily-desk::${workspaceName}::${scopedMatch.date}`,
         kind: "daily-desk" as const,
-        searchIndex: buildSearchIndexText(title, "Daily Desk", workspace.name),
+        searchIndex: buildSearchIndexText(title, "Daily Desk", workspaceName),
         title,
-        workspace,
+        workspaceName,
       };
     });
   }
 
-  return workspaces.map((workspace) => {
+  return workspaceNames.map((workspaceName) => {
     const title = `Use "${trimmedSearchText}" in Daily Desk`;
 
     return {
       date: trimmedSearchText,
-      id: `daily-desk::${workspace.path}::${trimmedSearchText}`,
+      id: `daily-desk::${workspaceName}::${trimmedSearchText}`,
       kind: "daily-desk" as const,
-      searchIndex: buildSearchIndexText(title, "Daily Desk", workspace.name),
+      searchIndex: buildSearchIndexText(title, "Daily Desk", workspaceName),
       title,
-      workspace,
+      workspaceName,
     };
   });
 }
 
-function matchesSearchableItem(item: SearchableNoteItem, searchText: string): boolean {
-  if (isDailyDeskItem(item)) {
-    return matchesSearchIndex(item.searchIndex, searchText);
-  }
-
-  return matchesSearchQuery(item, searchText);
-}
-
-function renderDailyDeskItem({
+function DailyDeskListItem({
   actionTitle,
   actionTarget,
   item,
@@ -326,16 +524,15 @@ function renderDailyDeskItem({
 }) {
   return (
     <List.Item
-      key={item.id}
       icon={Icon.Calendar}
       title={item.title}
-      keywords={[item.title, item.workspace.name]}
+      keywords={[item.title, item.workspaceName]}
       actions={
         <ActionPanel>
           {actionTarget ? (
             <Action.Push title={actionTitle} target={actionTarget} />
           ) : (
-            <Action title={actionTitle} onAction={() => onAction?.(item.workspace.name)} />
+            <Action title={actionTitle} onAction={() => onAction?.(item.workspaceName)} />
           )}
         </ActionPanel>
       }
@@ -359,7 +556,7 @@ function InvalidDailyDeskDateView() {
 }
 
 function AppendToNoteForm({ note }: { note: IndexedNote }) {
-  async function handleSubmit(values: AppendFormValues) {
+  async function handleSubmit(values: AppendForm) {
     if (!values.content.trim()) {
       await showCaptureFailureToast("Nothing to Append", "Enter some text before submitting.");
       return;
@@ -373,10 +570,7 @@ function AppendToNoteForm({ note }: { note: IndexedNote }) {
       navigationTitle={`Append to ${note.title}`}
       actions={
         <ActionPanel>
-          <Action.SubmitForm
-            title="Append to Note"
-            onSubmit={(values) => void handleSubmit(values as AppendFormValues)}
-          />
+          <Action.SubmitForm title="Append to Note" onSubmit={(values) => void handleSubmit(values as AppendForm)} />
         </ActionPanel>
       }
     >
@@ -389,7 +583,7 @@ function AppendToNoteForm({ note }: { note: IndexedNote }) {
 function AppendToDailyNoteForm({ workspaceName, date, title }: { workspaceName: string; date: string; title: string }) {
   const isDateValid = useMemo(() => isSupportedDailyDeskDate(date), [date]);
 
-  async function handleSubmit(values: AppendFormValues) {
+  async function handleSubmit(values: AppendForm) {
     if (!values.content.trim()) {
       await showCaptureFailureToast("Nothing to Append", "Enter some text before submitting.");
       return;
@@ -415,7 +609,7 @@ function AppendToDailyNoteForm({ workspaceName, date, title }: { workspaceName: 
         <ActionPanel>
           <Action.SubmitForm
             title={`Append to ${title}`}
-            onSubmit={(values) => void handleSubmit(values as AppendFormValues)}
+            onSubmit={(values) => void handleSubmit(values as AppendForm)}
           />
         </ActionPanel>
       }
@@ -462,44 +656,125 @@ function AutoCaptureToDailyDeskTarget({
   return <Detail isLoading markdown={loadingMarkdown} />;
 }
 
+function NotePickerWorkspaceSections({
+  actionTitle,
+  buildDailyDeskTarget,
+  itemsByWorkspace,
+  onSelectNote,
+  workspaceNames,
+}: {
+  actionTitle: string;
+  buildDailyDeskTarget: (workspaceName: string, date: string, title: string) => React.ReactElement;
+  itemsByWorkspace: Map<string, SearchableNoteItem[]>;
+  onSelectNote: (note: IndexedNote) => Promise<void>;
+  workspaceNames: string[];
+}) {
+  return workspaceNames.map((workspaceName) => {
+    const itemsInWorkspace = itemsByWorkspace.get(workspaceName) ?? [];
+
+    if (itemsInWorkspace.length === 0) {
+      return null;
+    }
+
+    return (
+      <List.Section key={workspaceName} title={workspaceName}>
+        {itemsInWorkspace.map((item) =>
+          isDailyDeskItem(item) ? (
+            <DailyDeskListItem
+              key={item.id}
+              item={item}
+              actionTitle={item.title}
+              actionTarget={buildDailyDeskTarget(item.workspaceName, item.date, item.title)}
+            />
+          ) : (
+            <NoteListItem
+              key={item.id}
+              note={item}
+              actionTitle={actionTitle}
+              onAction={(selectedNote) => {
+                void onSelectNote(selectedNote);
+              }}
+            />
+          ),
+        )}
+      </List.Section>
+    );
+  });
+}
+
+function NotePickerFlatItems({
+  actionTitle,
+  buildDailyDeskTarget,
+  filteredItems,
+  onSelectNote,
+}: {
+  actionTitle: string;
+  buildDailyDeskTarget: (workspaceName: string, date: string, title: string) => React.ReactElement;
+  filteredItems: SearchableNoteItem[];
+  onSelectNote: (note: IndexedNote) => Promise<void>;
+}) {
+  return filteredItems.map((item) =>
+    isDailyDeskItem(item) ? (
+      <DailyDeskListItem
+        key={item.id}
+        item={item}
+        actionTitle={item.title}
+        actionTarget={buildDailyDeskTarget(item.workspaceName, item.date, item.title)}
+      />
+    ) : (
+      <NoteListItem
+        key={item.id}
+        note={item}
+        actionTitle={actionTitle}
+        onAction={(selectedNote) => {
+          void onSelectNote(selectedNote);
+        }}
+      />
+    ),
+  );
+}
+
 function NotePicker({
   actionTitle,
   buildDailyDeskTarget,
-  hasWorkspaces,
-  isLoading,
-  notes,
-  workspaces,
+  excludedDirectoryNames,
+  hasConfiguredRoots,
   onSelectNote,
   searchBarPlaceholder,
+  workspaceSearchSignature,
 }: NotePickerProps) {
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-
-  const workspaceNames = useMemo(
-    () =>
-      Array.from(new Set(workspaces.map((workspace) => workspace.name))).sort((left, right) =>
-        left.localeCompare(right),
-      ),
-    [workspaces],
-  );
+  const { workspaceNames, matchingNotes, searchState, isLoading } = useNotes({
+    searchText,
+    selectedWorkspace,
+    excludedDirectoryNames,
+    workspaceSearchSignature,
+    hasConfiguredRoots,
+    showPinnedNotesFirst: false,
+  });
 
   const searchableItems = useMemo(
-    () => [...notes, ...buildDailyDeskItems(workspaces, searchText)],
-    [notes, searchText, workspaces],
+    () => [...matchingNotes, ...buildDailyDeskItems(workspaceNames, searchText)],
+    [matchingNotes, searchText, workspaceNames],
   );
   const filteredItems = useMemo(
-    () => searchableItems.filter((item) => selectedWorkspace === "all" || item.workspace.name === selectedWorkspace),
+    () =>
+      searchableItems.filter(
+        (item) =>
+          selectedWorkspace === "all" ||
+          (isDailyDeskItem(item) ? item.workspaceName : item.workspace.name) === selectedWorkspace,
+      ),
     [searchableItems, selectedWorkspace],
   );
-  const searchFilteredItems = useMemo(
-    () => filteredItems.filter((item) => matchesSearchableItem(item, searchText)),
-    [filteredItems, searchText],
-  );
-  const itemsByWorkspace = useMemo(() => groupItemsByWorkspace(searchFilteredItems), [searchFilteredItems]);
-  const showWorkspaceNotFound = !isLoading && !hasWorkspaces;
-  const showNoNotesFound = !isLoading && hasWorkspaces && notes.length === 0 && searchText.trim().length === 0;
-  const showNoMatchingNotes =
-    !isLoading && !showWorkspaceNotFound && searchText.trim().length > 0 && searchFilteredItems.length === 0;
+  const itemsByWorkspace = useMemo(() => groupItemsByWorkspace(filteredItems), [filteredItems]);
+  const renderState = getNotePickerRenderState({
+    filteredItemCount: filteredItems.length,
+    isLoading,
+    searchState,
+    searchText,
+    selectedWorkspace,
+  });
 
   return (
     <List
@@ -516,68 +791,40 @@ function NotePicker({
         </List.Dropdown>
       }
     >
-      {showWorkspaceNotFound ? <WorkspaceNotFound /> : null}
-      {showNoNotesFound ? <WorkspaceContentEmptyView resource="notes" /> : null}
-      {showNoMatchingNotes ? <SearchResultsEmptyView resource="notes" /> : null}
-      {!showWorkspaceNotFound && !showNoNotesFound && !showNoMatchingNotes
-        ? selectedWorkspace === "all"
-          ? workspaceNames.map((workspaceName) => {
-              const itemsInWorkspace = itemsByWorkspace.get(workspaceName) ?? [];
-
-              if (itemsInWorkspace.length === 0) {
-                return null;
-              }
-
-              return (
-                <List.Section key={workspaceName} title={workspaceName}>
-                  {itemsInWorkspace.map((item) =>
-                    isDailyDeskItem(item)
-                      ? renderDailyDeskItem({
-                          item,
-                          actionTitle: item.title,
-                          actionTarget: buildDailyDeskTarget(item.workspace.name, item.date, item.title),
-                        })
-                      : renderNoteItem({
-                          note: item,
-                          actionTitle,
-                          onAction: (selectedNote) => {
-                            void onSelectNote(selectedNote);
-                          },
-                        }),
-                  )}
-                </List.Section>
-              );
-            })
-          : searchFilteredItems.map((item) =>
-              isDailyDeskItem(item)
-                ? renderDailyDeskItem({
-                    item,
-                    actionTitle: item.title,
-                    actionTarget: buildDailyDeskTarget(item.workspace.name, item.date, item.title),
-                  })
-                : renderNoteItem({
-                    note: item,
-                    actionTitle,
-                    onAction: (selectedNote) => {
-                      void onSelectNote(selectedNote);
-                    },
-                  }),
-            )
-        : null}
+      {match(renderState, {
+        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
+        noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
+        noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
+        showByWorkspace: () => (
+          <NotePickerWorkspaceSections
+            actionTitle={actionTitle}
+            buildDailyDeskTarget={buildDailyDeskTarget}
+            itemsByWorkspace={itemsByWorkspace}
+            onSelectNote={onSelectNote}
+            workspaceNames={workspaceNames}
+          />
+        ),
+        showFlat: () => (
+          <NotePickerFlatItems
+            actionTitle={actionTitle}
+            buildDailyDeskTarget={buildDailyDeskTarget}
+            filteredItems={filteredItems}
+            onSelectNote={onSelectNote}
+          />
+        ),
+      })}
     </List>
   );
 }
 
 function ClipboardCapturePicker({
-  hasWorkspaces,
-  isLoading,
-  notes,
-  workspaces,
+  excludedDirectoryNames,
+  hasConfiguredRoots,
+  workspaceSearchSignature,
 }: {
-  hasWorkspaces: boolean;
-  isLoading: boolean;
-  notes: IndexedNote[];
-  workspaces: Workspace[];
+  excludedDirectoryNames: Set<string>;
+  hasConfiguredRoots: boolean;
+  workspaceSearchSignature: string;
 }) {
   async function handleSelectNote(note: IndexedNote) {
     const clipboardText = await Clipboard.readText();
@@ -615,26 +862,23 @@ function ClipboardCapturePicker({
           }}
         />
       )}
-      hasWorkspaces={hasWorkspaces}
-      isLoading={isLoading}
-      notes={notes}
-      workspaces={workspaces}
+      excludedDirectoryNames={excludedDirectoryNames}
+      hasConfiguredRoots={hasConfiguredRoots}
       onSelectNote={handleSelectNote}
       searchBarPlaceholder="Search notes or type a date for clipboard..."
+      workspaceSearchSignature={workspaceSearchSignature}
     />
   );
 }
 
 function SelectedTextCapturePicker({
-  hasWorkspaces,
-  isLoading,
-  notes,
-  workspaces,
+  excludedDirectoryNames,
+  hasConfiguredRoots,
+  workspaceSearchSignature,
 }: {
-  hasWorkspaces: boolean;
-  isLoading: boolean;
-  notes: IndexedNote[];
-  workspaces: Workspace[];
+  excludedDirectoryNames: Set<string>;
+  hasConfiguredRoots: boolean;
+  workspaceSearchSignature: string;
 }) {
   async function handleSelectNote(note: IndexedNote) {
     let selectedText: string;
@@ -692,17 +936,17 @@ function SelectedTextCapturePicker({
           }}
         />
       )}
-      hasWorkspaces={hasWorkspaces}
-      isLoading={isLoading}
-      notes={notes}
-      workspaces={workspaces}
+      excludedDirectoryNames={excludedDirectoryNames}
+      hasConfiguredRoots={hasConfiguredRoots}
       onSelectNote={handleSelectNote}
       searchBarPlaceholder="Search notes or type a date for selected text..."
+      workspaceSearchSignature={workspaceSearchSignature}
     />
   );
 }
 
-function WebsiteCaptureFolderPicker({ excludedDirectoryNames, workspaces }: FolderPickerProps) {
+function WebsiteCaptureFolderPicker({ excludedDirectoryNames, hasConfiguredRoots }: FolderPickerProps) {
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [folders, setFolders] = useState<IndexedNoteFolder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
@@ -729,15 +973,32 @@ function WebsiteCaptureFolderPicker({ excludedDirectoryNames, workspaces }: Fold
       hasShownScanErrorToast.current = false;
 
       try {
-        if (workspaces.length === 0) {
+        if (!hasConfiguredRoots) {
+          if (!canceled) {
+            setWorkspaces([]);
+            setFolders([]);
+          }
+          return;
+        }
+
+        const workspaceResult = await loadWorkspaces({ forceRefresh: true });
+        if (!canceled) {
+          setWorkspaces(workspaceResult.workspaces);
+        }
+
+        if (workspaceResult.workspaces.length === 0) {
           if (!canceled) {
             setFolders([]);
           }
           return;
         }
 
+        if (canceled) {
+          return;
+        }
+
         const discoveredFolders = await scanNoteFoldersFromWorkspaces(
-          workspaces,
+          workspaceResult.workspaces,
           excludedDirectoryNames,
           showScanFailureToast,
         );
@@ -760,7 +1021,7 @@ function WebsiteCaptureFolderPicker({ excludedDirectoryNames, workspaces }: Fold
     return () => {
       canceled = true;
     };
-  }, [excludedDirectoryNames, workspaces]);
+  }, [excludedDirectoryNames, hasConfiguredRoots]);
 
   const workspaceNames = useMemo(
     () =>
@@ -778,8 +1039,12 @@ function WebsiteCaptureFolderPicker({ excludedDirectoryNames, workspaces }: Fold
     [filteredFolders, searchText],
   );
   const foldersByWorkspace = useMemo(() => groupFoldersByWorkspace(searchFilteredFolders), [searchFilteredFolders]);
-  const showWorkspaceNotFound = !isLoading && workspaces.length === 0;
-  const showNoMatchingFolders = !isLoading && !showWorkspaceNotFound && searchFilteredFolders.length === 0;
+  const renderState = getFolderPickerRenderState({
+    hasWorkspaces: workspaces.length > 0,
+    isLoading,
+    searchFilteredFolderCount: searchFilteredFolders.length,
+    selectedWorkspace,
+  });
 
   async function handleFolderSelection(folder: IndexedNoteFolder) {
     if (!environment.canAccess(BrowserExtension)) {
@@ -845,348 +1110,214 @@ function WebsiteCaptureFolderPicker({ excludedDirectoryNames, workspaces }: Fold
         </List.Dropdown>
       }
     >
-      {showWorkspaceNotFound ? <WorkspaceNotFound /> : null}
-      {showNoMatchingFolders ? (
-        <CollectionEmptyView
-          title="No Matching Folders"
-          description="Try a different workspace filter or search text."
-        />
-      ) : null}
-      {!showWorkspaceNotFound && !showNoMatchingFolders
-        ? selectedWorkspace === "all"
-          ? workspaceNames.map((workspaceName) => {
-              const foldersInWorkspace = foldersByWorkspace.get(workspaceName) ?? [];
-              if (foldersInWorkspace.length === 0) {
-                return null;
-              }
+      {match(renderState, {
+        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
+        noMatchingFolders: () => (
+          <CollectionEmptyView
+            title="No Matching Folders"
+            description="Try a different workspace filter or search text."
+          />
+        ),
+        showByWorkspace: () =>
+          workspaceNames.map((workspaceName) => {
+            const foldersInWorkspace = foldersByWorkspace.get(workspaceName) ?? [];
+            if (foldersInWorkspace.length === 0) {
+              return null;
+            }
 
-              return (
-                <List.Section key={workspaceName} title={workspaceName}>
-                  {foldersInWorkspace.map((folder) => (
-                    <List.Item
-                      key={folder.id}
-                      icon={Icon.Folder}
-                      title={folder.name}
-                      subtitle={folder.path || "/"}
-                      keywords={[folder.path, folder.workspace.name]}
-                      actions={
-                        <ActionPanel>
-                          <Action title="Capture Website" onAction={() => void handleFolderSelection(folder)} />
-                        </ActionPanel>
-                      }
-                    />
-                  ))}
-                </List.Section>
-              );
-            })
-          : searchFilteredFolders.map((folder) => (
-              <List.Item
-                key={folder.id}
-                icon={Icon.Folder}
-                title={folder.name}
-                subtitle={folder.path || "/"}
-                keywords={[folder.path, folder.workspace.name]}
-                actions={
-                  <ActionPanel>
-                    <Action title="Capture Website" onAction={() => void handleFolderSelection(folder)} />
-                  </ActionPanel>
-                }
-              />
-            ))
-        : null}
+            return (
+              <List.Section key={workspaceName} title={workspaceName}>
+                {foldersInWorkspace.map((folder) => (
+                  <List.Item
+                    key={folder.id}
+                    icon={Icon.Folder}
+                    title={folder.name}
+                    subtitle={folder.path || "/"}
+                    keywords={[folder.path, folder.workspace.name]}
+                    actions={
+                      <ActionPanel>
+                        <Action title="Capture Website" onAction={() => void handleFolderSelection(folder)} />
+                      </ActionPanel>
+                    }
+                  />
+                ))}
+              </List.Section>
+            );
+          }),
+        showFlat: () =>
+          searchFilteredFolders.map((folder) => (
+            <List.Item
+              key={folder.id}
+              icon={Icon.Folder}
+              title={folder.name}
+              subtitle={folder.path || "/"}
+              keywords={[folder.path, folder.workspace.name]}
+              actions={
+                <ActionPanel>
+                  <Action title="Capture Website" onAction={() => void handleFolderSelection(folder)} />
+                </ActionPanel>
+              }
+            />
+          )),
+      })}
     </List>
   );
 }
 
-export default function QuickCaptureCommand() {
-  const extensionPreferences = useMemo(() => getExtensionPreferences(), []);
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [notes, setNotes] = useState<IndexedNote[]>([]);
-  const [searchText, setSearchText] = useState("");
-  const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasConfiguredRoots, setHasConfiguredRoots] = useState(extensionPreferences.hasConfiguredRoots);
-  const hasShownScanErrorToast = useRef(false);
-
-  useEffect(() => {
-    let canceled = false;
-
-    const showScanFailureToast = async () => {
-      if (hasShownScanErrorToast.current) {
-        return;
-      }
-
-      hasShownScanErrorToast.current = true;
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to Scan Some Notes",
-      });
-    };
-
-    const scan = async () => {
-      setIsLoading(true);
-      hasShownScanErrorToast.current = false;
-
-      try {
-        if (!extensionPreferences.hasConfiguredRoots) {
-          if (!canceled) {
-            setHasConfiguredRoots(false);
-          }
-          return;
-        }
-
-        if (!canceled) {
-          setHasConfiguredRoots(true);
-        }
-
-        const cachedResult = await loadCachedNotes(extensionPreferences.workspaceSearchSignature);
-        const hasCachedResult = Boolean(cachedResult);
-
-        if (cachedResult && !canceled) {
-          startTransition(() => {
-            setWorkspaces(cachedResult.workspaces);
-            setNotes(cachedResult.notes);
-          });
-        } else {
-          startTransition(() => {
-            setWorkspaces([]);
-            setNotes([]);
-          });
-        }
-
-        const workspaceResult = await loadWorkspaces({ forceRefresh: true });
-        if (canceled) {
-          return;
-        }
-
-        if (!hasCachedResult) {
-          startTransition(() => {
-            setWorkspaces(workspaceResult.workspaces);
-          });
-        }
-
-        const discoveredNotes = await scanNotesFromWorkspaces(
-          workspaceResult.workspaces,
-          extensionPreferences.excludedFoldersInWorkspaces,
-          showScanFailureToast,
-        );
-        if (canceled) {
-          return;
-        }
-
-        await saveCachedNotes(
-          workspaceResult.workspaces,
-          discoveredNotes,
-          extensionPreferences.workspaceSearchSignature,
-        );
-
-        startTransition(() => {
-          setWorkspaces(workspaceResult.workspaces);
-          setNotes(discoveredNotes);
-        });
-      } catch (error) {
-        console.error("Failed to scan Octarine notes", error);
-        await showCaptureFailureToast("Failed to Scan Notes");
-      } finally {
-        if (!canceled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void scan();
-
-    return () => {
-      canceled = true;
-    };
-  }, [
-    extensionPreferences.excludedFoldersInWorkspaces,
-    extensionPreferences.hasConfiguredRoots,
-    extensionPreferences.workspaceSearchSignature,
-  ]);
-
-  const workspaceNames = useMemo(
-    () =>
-      Array.from(new Set(workspaces.map((workspace) => workspace.name))).sort((left, right) =>
-        left.localeCompare(right),
-      ),
-    [workspaces],
-  );
-  const searchableItems = useMemo(
-    () => [...notes, ...buildDailyDeskItems(workspaces, searchText)],
-    [notes, searchText, workspaces],
-  );
-  const filteredItems = useMemo(
-    () => searchableItems.filter((item) => selectedWorkspace === "all" || item.workspace.name === selectedWorkspace),
-    [searchableItems, selectedWorkspace],
-  );
-  const searchFilteredItems = useMemo(
-    () => filteredItems.filter((item) => matchesSearchableItem(item, searchText)),
-    [filteredItems, searchText],
-  );
-  const itemsByWorkspace = useMemo(() => groupItemsByWorkspace(searchFilteredItems), [searchFilteredItems]);
-  const showStaticActions = searchText.trim().length === 0;
-  const showWorkspaceNotFound = !isLoading && (!hasConfiguredRoots || workspaces.length === 0);
-  const showNoNotesFound = !isLoading && !showWorkspaceNotFound && notes.length === 0 && showStaticActions;
-  const showNoMatchingNotes =
-    !isLoading && !showWorkspaceNotFound && !showStaticActions && searchFilteredItems.length === 0;
-
+function QuickCaptureSection({
+  excludedDirectoryNames,
+  hasConfiguredRoots,
+  workspaceSearchSignature,
+}: {
+  excludedDirectoryNames: Set<string>;
+  hasConfiguredRoots: boolean;
+  workspaceSearchSignature: string;
+}) {
   return (
-    <List
-      filtering={false}
-      isLoading={isLoading}
-      onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search notes or type a date..."
-      searchBarAccessory={
-        <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
-          <List.Dropdown.Item title="All" value="all" />
-          {workspaceNames.map((workspaceName) => (
-            <List.Dropdown.Item key={workspaceName} title={workspaceName} value={workspaceName} />
-          ))}
-        </List.Dropdown>
-      }
-    >
-      {showWorkspaceNotFound ? <WorkspaceNotFound /> : null}
-      {showNoNotesFound ? <WorkspaceContentEmptyView resource="notes" /> : null}
-      {showNoMatchingNotes ? <SearchResultsEmptyView resource="notes" /> : null}
-
-      {!showWorkspaceNotFound && showStaticActions ? (
-        <List.Section title="Quick Capture">
-          <List.Item
-            title="Website"
-            icon={Icon.Globe}
-            actions={
-              <ActionPanel>
-                <Action.Push
-                  title="Capture Website"
-                  target={
-                    <WebsiteCaptureFolderPicker
-                      workspaces={workspaces}
-                      excludedDirectoryNames={extensionPreferences.excludedFoldersInWorkspaces}
-                    />
-                  }
+    <List.Section title="Quick Capture">
+      <List.Item
+        title="Website"
+        icon={Icon.Globe}
+        actions={
+          <ActionPanel>
+            <Action.Push
+              title="Capture Website"
+              target={
+                <WebsiteCaptureFolderPicker
+                  excludedDirectoryNames={excludedDirectoryNames}
+                  hasConfiguredRoots={hasConfiguredRoots}
                 />
-              </ActionPanel>
-            }
-          />
-          <List.Item
-            title="Clipboard"
-            icon={Icon.Clipboard}
-            actions={
-              <ActionPanel>
-                <Action.Push
-                  title="Capture Clipboard"
-                  target={
-                    <ClipboardCapturePicker
-                      hasWorkspaces={workspaces.length > 0}
-                      isLoading={isLoading}
-                      notes={notes}
-                      workspaces={workspaces}
-                    />
-                  }
-                />
-              </ActionPanel>
-            }
-          />
-          <List.Item
-            title="Selected Text"
-            icon={Icon.Text}
-            actions={
-              <ActionPanel>
-                <Action.Push
-                  title="Capture Selected Text"
-                  target={
-                    <SelectedTextCapturePicker
-                      hasWorkspaces={workspaces.length > 0}
-                      isLoading={isLoading}
-                      notes={notes}
-                      workspaces={workspaces}
-                    />
-                  }
-                />
-              </ActionPanel>
-            }
-          />
-        </List.Section>
-      ) : null}
-
-      {!showWorkspaceNotFound && !showNoNotesFound && !showNoMatchingNotes
-        ? selectedWorkspace === "all"
-          ? workspaceNames.map((workspaceName) => {
-              const itemsInWorkspace = itemsByWorkspace.get(workspaceName) ?? [];
-
-              if (itemsInWorkspace.length === 0) {
-                return null;
               }
+            />
+          </ActionPanel>
+        }
+      />
+      <List.Item
+        title="Clipboard"
+        icon={Icon.Clipboard}
+        actions={
+          <ActionPanel>
+            <Action.Push
+              title="Capture Clipboard"
+              target={
+                <ClipboardCapturePicker
+                  excludedDirectoryNames={excludedDirectoryNames}
+                  hasConfiguredRoots={hasConfiguredRoots}
+                  workspaceSearchSignature={workspaceSearchSignature}
+                />
+              }
+            />
+          </ActionPanel>
+        }
+      />
+      <List.Item
+        title="Selected Text"
+        icon={Icon.Text}
+        actions={
+          <ActionPanel>
+            <Action.Push
+              title="Capture Selected Text"
+              target={
+                <SelectedTextCapturePicker
+                  excludedDirectoryNames={excludedDirectoryNames}
+                  hasConfiguredRoots={hasConfiguredRoots}
+                  workspaceSearchSignature={workspaceSearchSignature}
+                />
+              }
+            />
+          </ActionPanel>
+        }
+      />
+    </List.Section>
+  );
+}
 
-              return (
-                <List.Section key={workspaceName} title={workspaceName}>
-                  {itemsInWorkspace.map((item) =>
-                    isDailyDeskItem(item)
-                      ? renderDailyDeskItem({
-                          item,
-                          actionTitle: item.title,
-                          actionTarget: (
-                            <AppendToDailyNoteForm
-                              workspaceName={item.workspace.name}
-                              date={item.date}
-                              title={item.title}
-                            />
-                          ),
-                        })
-                      : renderNoteItem({
-                          note: item,
-                          actionTitle: "Append to Note",
-                          actionTarget: <AppendToNoteForm note={item} />,
-                        }),
-                  )}
-                </List.Section>
-              );
-            })
-          : showStaticActions
-            ? [
-                <List.Section key="filtered-notes" title="Notes">
-                  {searchFilteredItems.map((item) =>
-                    isDailyDeskItem(item)
-                      ? renderDailyDeskItem({
-                          item,
-                          actionTitle: item.title,
-                          actionTarget: (
-                            <AppendToDailyNoteForm
-                              workspaceName={item.workspace.name}
-                              date={item.date}
-                              title={item.title}
-                            />
-                          ),
-                        })
-                      : renderNoteItem({
-                          note: item,
-                          actionTitle: "Append to Note",
-                          actionTarget: <AppendToNoteForm note={item} />,
-                        }),
-                  )}
-                </List.Section>,
-              ]
-            : searchFilteredItems.map((item) =>
-                isDailyDeskItem(item)
-                  ? renderDailyDeskItem({
-                      item,
-                      actionTitle: item.title,
-                      actionTarget: (
-                        <AppendToDailyNoteForm
-                          workspaceName={item.workspace.name}
-                          date={item.date}
-                          title={item.title}
-                        />
-                      ),
-                    })
-                  : renderNoteItem({
-                      note: item,
-                      actionTitle: "Append to Note",
-                      actionTarget: <AppendToNoteForm note={item} />,
-                    }),
-              )
-        : null}
-    </List>
+function ResultItem({ item }: { item: SearchableNoteItem }) {
+  return isDailyDeskItem(item) ? (
+    <DailyDeskListItem
+      item={item}
+      actionTitle={item.title}
+      actionTarget={<AppendToDailyNoteForm workspaceName={item.workspaceName} date={item.date} title={item.title} />}
+    />
+  ) : (
+    <NoteListItem note={item} actionTitle="Append to Note" actionTarget={<AppendToNoteForm note={item} />} />
+  );
+}
+
+function WorkspaceSections({
+  itemsByWorkspace,
+  workspaceNames,
+}: {
+  itemsByWorkspace: Map<string, SearchableNoteItem[]>;
+  workspaceNames: string[];
+}) {
+  return workspaceNames.map((workspaceName) => {
+    const itemsInWorkspace = itemsByWorkspace.get(workspaceName) ?? [];
+
+    if (itemsInWorkspace.length === 0) {
+      return null;
+    }
+
+    return (
+      <List.Section key={workspaceName} title={workspaceName}>
+        {itemsInWorkspace.map((item) => (
+          <ResultItem key={item.id} item={item} />
+        ))}
+      </List.Section>
+    );
+  });
+}
+
+function FlatItems({ filteredItems }: { filteredItems: SearchableNoteItem[] }) {
+  return filteredItems.map((item) => <ResultItem key={item.id} item={item} />);
+}
+
+function QuickCaptureWithNotes({
+  excludedDirectoryNames,
+  filteredItems,
+  hasConfiguredRoots,
+  workspaceSearchSignature,
+}: {
+  excludedDirectoryNames: Set<string>;
+  filteredItems: SearchableNoteItem[];
+  hasConfiguredRoots: boolean;
+  workspaceSearchSignature: string;
+}) {
+  return (
+    <>
+      <QuickCaptureSection
+        excludedDirectoryNames={excludedDirectoryNames}
+        hasConfiguredRoots={hasConfiguredRoots}
+        workspaceSearchSignature={workspaceSearchSignature}
+      />
+      <List.Section title="Notes">
+        <FlatItems filteredItems={filteredItems} />
+      </List.Section>
+    </>
+  );
+}
+
+function QuickCaptureWithWorkspaceSections({
+  excludedDirectoryNames,
+  hasConfiguredRoots,
+  itemsByWorkspace,
+  workspaceNames,
+  workspaceSearchSignature,
+}: {
+  excludedDirectoryNames: Set<string>;
+  hasConfiguredRoots: boolean;
+  itemsByWorkspace: Map<string, SearchableNoteItem[]>;
+  workspaceNames: string[];
+  workspaceSearchSignature: string;
+}) {
+  return (
+    <>
+      <QuickCaptureSection
+        excludedDirectoryNames={excludedDirectoryNames}
+        hasConfiguredRoots={hasConfiguredRoots}
+        workspaceSearchSignature={workspaceSearchSignature}
+      />
+      <WorkspaceSections itemsByWorkspace={itemsByWorkspace} workspaceNames={workspaceNames} />
+    </>
   );
 }
