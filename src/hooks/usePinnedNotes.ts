@@ -1,7 +1,8 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
-import { IndexedNote, matchesSearchQuery, refreshPinnedNotesCache } from "../lib/notes";
+import { IndexedNote, refreshPinnedNotesCache } from "../lib/notes";
+import { matchesPathSearch } from "../lib/search";
 import { loadWorkspaces } from "../lib/workspaces";
 
 export type PinnedNoteWorkspaceSection = {
@@ -164,7 +165,7 @@ export function usePinnedNotes({
         .map((workspaceSection) => ({
           workspacePath: workspaceSection.workspacePath,
           workspaceName: workspaceSection.workspaceName,
-          notes: workspaceSection.notes.filter((note) => matchesSearchQuery(note, searchText)),
+          notes: workspaceSection.notes.filter((note) => matchesPathSearch(note, searchText)),
         }))
         .filter((workspaceSection) => workspaceSection.notes.length > 0),
     [searchText, selectedWorkspace, workspaceSections],

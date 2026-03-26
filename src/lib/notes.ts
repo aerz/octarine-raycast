@@ -2,7 +2,7 @@ import { LocalStorage } from "@raycast/api";
 import { Dirent, Stats, promises as fs } from "node:fs";
 import path from "node:path";
 import { isNote, isWorkspace, type Note, type Workspace } from "../types/octarine";
-import { buildSearchIndexText, tokenizeSearchQuery } from "./search";
+import { buildSearchIndexText } from "./search";
 
 const NOTES_CACHE_KEY = "octarine.notes.v1";
 const NOTES_CACHE_VERSION = 4;
@@ -64,43 +64,11 @@ export type NotesCacheResult = {
 
 export type PinnedNotesCacheResult = NotesCacheResult;
 
-function normalizeSearchPart(searchPart: string): string {
-  return searchPart.trim().toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/");
-}
-
 function toPathSegments(pathValue: string): string[] {
   return pathValue
     .split("/")
     .map((segment) => segment.trim())
     .filter(Boolean);
-}
-
-function matchesDirectoryScopeAtAnyDepth(noteDirectorySegments: string[], directoryQuery: string): boolean {
-  const querySegments = toPathSegments(directoryQuery);
-  if (querySegments.length === 0) {
-    return true;
-  }
-
-  if (noteDirectorySegments.length < querySegments.length) {
-    return false;
-  }
-
-  for (let start = 0; start <= noteDirectorySegments.length - querySegments.length; start += 1) {
-    let matchesAllSegments = true;
-
-    for (let index = 0; index < querySegments.length; index += 1) {
-      if (noteDirectorySegments[start + index] !== querySegments[index]) {
-        matchesAllSegments = false;
-        break;
-      }
-    }
-
-    if (matchesAllSegments) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 function toPosixPath(inputPath: string): string {
@@ -335,47 +303,6 @@ function hasPinnedFrontmatter(content: string): boolean {
   }
 
   return false;
-}
-
-export function matchesSearchQuery(note: IndexedNote, searchText: string): boolean {
-  const normalizedQuery = normalizeSearchPart(searchText);
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  const hasSlash = normalizedQuery.includes("/");
-
-  if (!hasSlash) {
-    const tokens = tokenizeSearchQuery(normalizedQuery);
-    if (tokens.length === 0) {
-      return true;
-    }
-
-    return tokens.every((token) => note.searchText.includes(token));
-  }
-
-  const hasTrailingSlash = normalizedQuery.endsWith("/");
-  const queryWithoutOuterSlashes = normalizedQuery.replace(/^\/+|\/+$/g, "");
-
-  if (hasTrailingSlash) {
-    return matchesDirectoryScopeAtAnyDepth(note.directorySegments, queryWithoutOuterSlashes);
-  }
-
-  const fuzzyPathMatch =
-    note.normalizedDirectory.includes(queryWithoutOuterSlashes) ||
-    note.normalizedPath.includes(queryWithoutOuterSlashes);
-
-  const lastSlashIndex = queryWithoutOuterSlashes.lastIndexOf("/");
-  const directoryPrefix = lastSlashIndex === -1 ? "" : queryWithoutOuterSlashes.slice(0, lastSlashIndex).trim();
-  const titleQuery =
-    lastSlashIndex === -1 ? queryWithoutOuterSlashes : queryWithoutOuterSlashes.slice(lastSlashIndex + 1).trim();
-  const titleTokens = tokenizeSearchQuery(titleQuery);
-
-  const scopedTitleMatch =
-    matchesDirectoryScopeAtAnyDepth(note.directorySegments, directoryPrefix) &&
-    (titleTokens.length === 0 || titleTokens.every((token) => note.normalizedTitle.includes(token)));
-
-  return fuzzyPathMatch || scopedTitleMatch;
 }
 
 export function sortNotes(notes: ScannedNote[]): void {

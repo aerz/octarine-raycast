@@ -4,12 +4,12 @@ import {
   type IndexedNote,
   loadCachedNotes,
   loadCachedPinnedNotes,
-  matchesSearchQuery,
   refreshPinnedNotesCache,
   saveCachedNotes,
   scanNotesFromWorkspaces,
   toPinnedNoteIds,
 } from "../lib/notes";
+import { matchesPathSearch } from "../lib/search";
 import { loadWorkspaces } from "../lib/workspaces";
 import type { Workspace } from "../types/octarine";
 
@@ -177,7 +177,7 @@ export function useNotes({
       orderNotesByPinnedState(
         notes
           .filter((note) => selectedWorkspace === "all" || note.workspace.name === selectedWorkspace)
-          .filter((note) => matchesSearchQuery(note, searchText)),
+          .filter((note) => matchesPathSearch(note, searchText)),
         pinnedNoteIds,
         showPinnedNotesFirst,
       ),
