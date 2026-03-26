@@ -7,158 +7,14 @@ import { CaptureWebsite } from "./components/QuickCapture/CaptureWebsite";
 import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
-import { useNotes } from "./hooks/useNotes";
+import { useQuickCapture, type DailyDeskItem, type QuickCaptureItem } from "./hooks/useQuickCapture";
 import { type IndexedNote } from "./lib/notes";
 import { openNote } from "./lib/octarine";
 import { getExtensionPreferences } from "./lib/preferences";
 import { match } from "./utils/match";
 
-type DailyDeskItem = {
-  date: string;
-  id: string;
-  kind: "daily-desk";
-  title: string;
-  workspaceName: string;
-};
-
-type SearchableNoteItem = IndexedNote | DailyDeskItem;
-
-type QuickCaptureRenderState =
-  | "noConfiguredWorkspaces"
-  | "noAvailableNotes"
-  | "noMatchingNotes"
-  | "showByWorkspace"
-  | "showFlat"
-  | "showByWorkspaceWithQuickCapture"
-  | "showFlatWithQuickCapture";
-
-function getQuickCaptureRenderState({
-  filteredItemCount,
-  isLoading,
-  searchState,
-  selectedWorkspace,
-  showStaticActions,
-}: {
-  filteredItemCount: number;
-  isLoading: boolean;
-  searchState:
-    | "loading"
-    | "noConfiguredWorkspaces"
-    | "noAvailableNotes"
-    | "noMatchingNotes"
-    | "showByWorkspace"
-    | "showFlat";
-  selectedWorkspace: string;
-  showStaticActions: boolean;
-}): QuickCaptureRenderState {
-  if (searchState === "noConfiguredWorkspaces") {
-    return "noConfiguredWorkspaces";
-  }
-
-  if (showStaticActions && searchState === "noAvailableNotes") {
-    return "noAvailableNotes";
-  }
-
-  if (!showStaticActions && !isLoading && filteredItemCount === 0) {
-    return "noMatchingNotes";
-  }
-
-  if (showStaticActions && selectedWorkspace === "all") {
-    return "showByWorkspaceWithQuickCapture";
-  }
-
-  if (showStaticActions) {
-    return "showFlatWithQuickCapture";
-  }
-
-  if (selectedWorkspace === "all") {
-    return "showByWorkspace";
-  }
-
-  return "showFlat";
-}
-
-function isDailyDeskItem(item: SearchableNoteItem): item is DailyDeskItem {
+function isDailyDeskItem(item: QuickCaptureItem): item is DailyDeskItem {
   return "kind" in item && item.kind === "daily-desk";
-}
-
-function groupItemsByWorkspace(items: SearchableNoteItem[]): Map<string, SearchableNoteItem[]> {
-  const groupedItems = new Map<string, SearchableNoteItem[]>();
-
-  for (const item of items) {
-    const workspaceName = isDailyDeskItem(item) ? item.workspaceName : item.workspace.name;
-    const itemsInWorkspace = groupedItems.get(workspaceName);
-
-    if (itemsInWorkspace) {
-      itemsInWorkspace.push(item);
-    } else {
-      groupedItems.set(workspaceName, [item]);
-    }
-  }
-
-  return groupedItems;
-}
-
-function normalizeWorkspacePhrase(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function findScopedWorkspaceMatch(
-  workspaceNames: string[],
-  searchText: string,
-): { date: string; matchedWorkspaceNames: string[] } | undefined {
-  const trimmedSearchText = searchText.trim();
-  const queryTokens = trimmedSearchText.split(/\s+/).filter(Boolean);
-
-  for (let tokenCount = queryTokens.length - 1; tokenCount >= 1; tokenCount -= 1) {
-    const workspacePrefix = queryTokens.slice(0, tokenCount).join(" ");
-    const normalizedWorkspacePrefix = normalizeWorkspacePhrase(workspacePrefix);
-    const date = trimmedSearchText.slice(workspacePrefix.length).trim();
-
-    if (!date) {
-      continue;
-    }
-
-    const matchedWorkspaceNames = workspaceNames.filter((workspaceName) => {
-      const normalizedWorkspaceName = normalizeWorkspacePhrase(workspaceName);
-      return (
-        normalizedWorkspaceName === normalizedWorkspacePrefix ||
-        normalizedWorkspaceName.startsWith(`${normalizedWorkspacePrefix} `)
-      );
-    });
-
-    if (matchedWorkspaceNames.length > 0) {
-      return { date, matchedWorkspaceNames };
-    }
-  }
-
-  return undefined;
-}
-
-function buildDailyDeskItems(workspaceNames: string[], searchText: string): DailyDeskItem[] {
-  const trimmedSearchText = searchText.trim();
-  if (!trimmedSearchText) {
-    return [];
-  }
-
-  const scopedMatch = findScopedWorkspaceMatch(workspaceNames, trimmedSearchText);
-  if (scopedMatch) {
-    return scopedMatch.matchedWorkspaceNames.map((workspaceName) => ({
-      date: scopedMatch.date,
-      id: `daily-desk::${workspaceName}::${scopedMatch.date}`,
-      kind: "daily-desk",
-      title: `Use "${scopedMatch.date}" in Daily Desk`,
-      workspaceName,
-    }));
-  }
-
-  return workspaceNames.map((workspaceName) => ({
-    date: trimmedSearchText,
-    id: `daily-desk::${workspaceName}::${trimmedSearchText}`,
-    kind: "daily-desk",
-    title: `Use "${trimmedSearchText}" in Daily Desk`,
-    workspaceName,
-  }));
 }
 
 function DailyDeskListItem({ item }: { item: DailyDeskItem }) {
@@ -166,12 +22,12 @@ function DailyDeskListItem({ item }: { item: DailyDeskItem }) {
     <List.Item
       icon={Icon.Calendar}
       title={item.title}
-      keywords={[item.title, item.workspaceName]}
+      keywords={[item.title, item.workspace]}
       actions={
         <ActionPanel>
           <Action.Push
             title={item.title}
-            target={<AppendContentForm workspaceName={item.workspaceName} date={item.date} title={item.title} />}
+            target={<AppendContentForm workspace={item.workspace} date={item.date} title={item.title} />}
           />
         </ActionPanel>
       }
@@ -200,7 +56,7 @@ function NoteListItem({ note }: { note: IndexedNote }) {
   );
 }
 
-function ResultItem({ item }: { item: SearchableNoteItem }) {
+function ResultItem({ item }: { item: QuickCaptureItem }) {
   return isDailyDeskItem(item) ? <DailyDeskListItem item={item} /> : <NoteListItem note={item} />;
 }
 
@@ -208,7 +64,7 @@ function WorkspaceSections({
   itemsByWorkspace,
   workspaceNames,
 }: {
-  itemsByWorkspace: Map<string, SearchableNoteItem[]>;
+  itemsByWorkspace: Map<string, QuickCaptureItem[]>;
   workspaceNames: string[];
 }) {
   return workspaceNames.map((workspaceName) => {
@@ -228,7 +84,7 @@ function WorkspaceSections({
   });
 }
 
-function FlatItems({ filteredItems }: { filteredItems: SearchableNoteItem[] }) {
+function FlatItems({ filteredItems }: { filteredItems: QuickCaptureItem[] }) {
   return filteredItems.map((item) => <ResultItem key={item.id} item={item} />);
 }
 
@@ -307,7 +163,7 @@ function QuickCaptureWithNotes({
   workspaceSearchSignature,
 }: {
   excludedDirectoryNames: Set<string>;
-  filteredItems: SearchableNoteItem[];
+  filteredItems: QuickCaptureItem[];
   hasConfiguredRoots: boolean;
   workspaceSearchSignature: string;
 }) {
@@ -334,7 +190,7 @@ function QuickCaptureWithWorkspaceSections({
 }: {
   excludedDirectoryNames: Set<string>;
   hasConfiguredRoots: boolean;
-  itemsByWorkspace: Map<string, SearchableNoteItem[]>;
+  itemsByWorkspace: Map<string, QuickCaptureItem[]>;
   workspaceNames: string[];
   workspaceSearchSignature: string;
 }) {
@@ -358,35 +214,12 @@ export default function QuickCaptureCommand() {
   );
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const { workspaceNames, matchingNotes, searchState, isLoading } = useNotes({
+  const { workspaceNames, filteredItems, itemsByWorkspace, renderState, isLoading } = useQuickCapture({
     searchText,
     selectedWorkspace,
     excludedDirectoryNames,
     workspaceSearchSignature: preferences.workspaceSearchSignature,
     hasConfiguredRoots: preferences.hasConfiguredRoots,
-    showPinnedNotesFirst: false,
-  });
-  const searchableItems = useMemo(
-    () => [...matchingNotes, ...buildDailyDeskItems(workspaceNames, searchText)],
-    [matchingNotes, searchText, workspaceNames],
-  );
-  const filteredItems = useMemo(
-    () =>
-      searchableItems.filter(
-        (item) =>
-          selectedWorkspace === "all" ||
-          (isDailyDeskItem(item) ? item.workspaceName : item.workspace.name) === selectedWorkspace,
-      ),
-    [searchableItems, selectedWorkspace],
-  );
-  const itemsByWorkspace = useMemo(() => groupItemsByWorkspace(filteredItems), [filteredItems]);
-  const showStaticActions = searchText.trim().length === 0;
-  const renderState = getQuickCaptureRenderState({
-    filteredItemCount: filteredItems.length,
-    isLoading,
-    searchState,
-    selectedWorkspace,
-    showStaticActions,
   });
 
   return (

@@ -1,3 +1,8 @@
+export type QueryPrefixMatch = {
+  remainder: string;
+  matches: string[];
+};
+
 export type PathSearchableItem = {
   searchText: string;
   normalizedTitle: string;

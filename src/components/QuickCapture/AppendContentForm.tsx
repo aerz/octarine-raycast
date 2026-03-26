@@ -14,7 +14,7 @@ type AppendContentFormProps =
       note: IndexedNote;
     }
   | {
-      workspaceName: string;
+      workspace: string;
       date: string;
       title: string;
     };
@@ -67,7 +67,7 @@ export function AppendContentForm(props: AppendContentFormProps) {
     }
 
     await appendContentToDailyTarget(
-      dailyDeskTarget.workspaceName,
+      dailyDeskTarget.workspace,
       dailyDeskTarget.date,
       values.content,
       `Appending to ${dailyDeskTarget.title}…`,
@@ -87,7 +87,7 @@ export function AppendContentForm(props: AppendContentFormProps) {
         </ActionPanel>
       }
     >
-      <Form.Description text={`${dailyDeskTarget.workspaceName} / ${dailyDeskTarget.title}`} />
+      <Form.Description text={`${dailyDeskTarget.workspace} / ${dailyDeskTarget.title}`} />
       <Form.TextArea
         id="content"
         title="Content"

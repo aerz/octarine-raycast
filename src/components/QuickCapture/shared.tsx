@@ -4,6 +4,7 @@ import { SearchResultsEmptyView } from "../EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "../EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "../EmptyViews/WorkspaceNotFound";
 import { DateFormatsDetail } from "../Notifications/DateFormatsDetail";
+import { buildDailyDeskItems, type DailyDeskItem } from "../../hooks/useQuickCapture";
 import { useNotes } from "../../hooks/useNotes";
 import { isSupportedDailyDeskDate } from "../../lib/daily-desk";
 import { type IndexedNote } from "../../lib/notes";
@@ -12,14 +13,6 @@ import { match } from "../../utils/match";
 
 type AppendFormValues = {
   content: string;
-};
-
-type DailyDeskItem = {
-  date: string;
-  id: string;
-  kind: "daily-desk";
-  title: string;
-  workspaceName: string;
 };
 
 type SearchableNoteItem = IndexedNote | DailyDeskItem;
@@ -89,7 +82,7 @@ function groupItemsByWorkspace(items: SearchableNoteItem[]): Map<string, Searcha
   const groupedItems = new Map<string, SearchableNoteItem[]>();
 
   for (const item of items) {
-    const workspaceName = isDailyDeskItem(item) ? item.workspaceName : item.workspace.name;
+    const workspaceName = isDailyDeskItem(item) ? item.workspace : item.workspace.name;
     const itemsInWorkspace = groupedItems.get(workspaceName);
 
     if (itemsInWorkspace) {
@@ -100,68 +93,6 @@ function groupItemsByWorkspace(items: SearchableNoteItem[]): Map<string, Searcha
   }
 
   return groupedItems;
-}
-
-function normalizeWorkspacePhrase(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function findScopedWorkspaceMatch(
-  workspaceNames: string[],
-  searchText: string,
-): { date: string; matchedWorkspaceNames: string[] } | undefined {
-  const trimmedSearchText = searchText.trim();
-  const queryTokens = trimmedSearchText.split(/\s+/).filter(Boolean);
-
-  for (let tokenCount = queryTokens.length - 1; tokenCount >= 1; tokenCount -= 1) {
-    const workspacePrefix = queryTokens.slice(0, tokenCount).join(" ");
-    const normalizedWorkspacePrefix = normalizeWorkspacePhrase(workspacePrefix);
-    const date = trimmedSearchText.slice(workspacePrefix.length).trim();
-
-    if (!date) {
-      continue;
-    }
-
-    const matchedWorkspaceNames = workspaceNames.filter((workspaceName) => {
-      const normalizedWorkspaceName = normalizeWorkspacePhrase(workspaceName);
-      return (
-        normalizedWorkspaceName === normalizedWorkspacePrefix ||
-        normalizedWorkspaceName.startsWith(`${normalizedWorkspacePrefix} `)
-      );
-    });
-
-    if (matchedWorkspaceNames.length > 0) {
-      return { date, matchedWorkspaceNames };
-    }
-  }
-
-  return undefined;
-}
-
-function buildDailyDeskItems(workspaceNames: string[], searchText: string): DailyDeskItem[] {
-  const trimmedSearchText = searchText.trim();
-  if (!trimmedSearchText) {
-    return [];
-  }
-
-  const scopedMatch = findScopedWorkspaceMatch(workspaceNames, trimmedSearchText);
-  if (scopedMatch) {
-    return scopedMatch.matchedWorkspaceNames.map((workspaceName) => ({
-      date: scopedMatch.date,
-      id: `daily-desk::${workspaceName}::${scopedMatch.date}`,
-      kind: "daily-desk",
-      title: `Use "${scopedMatch.date}" in Daily Desk`,
-      workspaceName,
-    }));
-  }
-
-  return workspaceNames.map((workspaceName) => ({
-    date: trimmedSearchText,
-    id: `daily-desk::${workspaceName}::${trimmedSearchText}`,
-    kind: "daily-desk",
-    title: `Use "${trimmedSearchText}" in Daily Desk`,
-    workspaceName,
-  }));
 }
 
 function isDailyDeskItem(item: SearchableNoteItem): item is DailyDeskItem {
@@ -271,7 +202,7 @@ function DailyDeskListItem({
     <List.Item
       icon={Icon.Calendar}
       title={item.title}
-      keywords={[item.title, item.workspaceName]}
+      keywords={[item.title, item.workspace]}
       actions={
         <ActionPanel>
           <Action.Push title={actionTitle} target={actionTarget} />
@@ -356,7 +287,7 @@ function NotePickerWorkspaceSections({
               key={item.id}
               item={item}
               actionTitle={item.title}
-              actionTarget={buildDailyDeskTarget(item.workspaceName, item.date, item.title)}
+              actionTarget={buildDailyDeskTarget(item.workspace, item.date, item.title)}
             />
           ) : (
             <NoteListItem
@@ -391,7 +322,7 @@ function NotePickerFlatItems({
         key={item.id}
         item={item}
         actionTitle={item.title}
-        actionTarget={buildDailyDeskTarget(item.workspaceName, item.date, item.title)}
+        actionTarget={buildDailyDeskTarget(item.workspace, item.date, item.title)}
       />
     ) : (
       <NoteListItem
@@ -429,8 +360,7 @@ export function NotePicker({
   const searchableItems = [...matchingNotes, ...buildDailyDeskItems(workspaceNames, searchText)];
   const filteredItems = searchableItems.filter(
     (item) =>
-      selectedWorkspace === "all" ||
-      (isDailyDeskItem(item) ? item.workspaceName : item.workspace.name) === selectedWorkspace,
+      selectedWorkspace === "all" || (isDailyDeskItem(item) ? item.workspace : item.workspace.name) === selectedWorkspace,
   );
   const itemsByWorkspace = groupItemsByWorkspace(filteredItems);
   const renderState = getNotePickerRenderState({
