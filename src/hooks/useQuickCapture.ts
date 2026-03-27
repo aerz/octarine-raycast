@@ -37,7 +37,12 @@ export function useQuickCapture({
   workspacesSignature,
   hasWorkspaces,
 }: Options): Result {
-  const { workspaceNames: workspaces, matchingNotes, searchState: notesSearchState, isLoading } = useNotes({
+  const {
+    workspaceNames: workspaces,
+    matchingNotes,
+    searchState: notesSearchState,
+    isLoading,
+  } = useNotes({
     searchText: search,
     selectedWorkspace: workspace,
     excludedDirectoryNames: excludedFolders,
@@ -58,13 +63,13 @@ export function useQuickCapture({
     [searchableItems, workspace],
   );
   const workspaceItems = useMemo(() => groupItemsByWorkspace(items), [items]);
-  const showStaticActions = search.trim().length === 0;
+  const showQuickCapture = search.trim().length === 0;
   const searchState = getSearchState({
     filteredItemCount: items.length,
     isLoading,
     searchState: notesSearchState,
     workspace,
-    showStaticActions,
+    showQuickCapture,
   });
 
   return {
@@ -81,7 +86,7 @@ function getSearchState({
   isLoading,
   searchState,
   workspace,
-  showStaticActions,
+  showQuickCapture,
 }: {
   filteredItemCount: number;
   isLoading: boolean;
@@ -93,25 +98,25 @@ function getSearchState({
     | "showByWorkspace"
     | "showFlat";
   workspace: string;
-  showStaticActions: boolean;
+  showQuickCapture: boolean;
 }): SearchState {
   if (searchState === "noConfiguredWorkspaces") {
     return "noConfiguredWorkspaces";
   }
 
-  if (showStaticActions && searchState === "noAvailableNotes") {
+  if (showQuickCapture && searchState === "noAvailableNotes") {
     return "noAvailableNotes";
   }
 
-  if (!showStaticActions && !isLoading && filteredItemCount === 0) {
+  if (!showQuickCapture && !isLoading && filteredItemCount === 0) {
     return "noMatchingNotes";
   }
 
-  if (showStaticActions && workspace === "all") {
+  if (showQuickCapture && workspace === "all") {
     return "showByWorkspaceWithQuickCapture";
   }
 
-  if (showStaticActions) {
+  if (showQuickCapture) {
     return "showFlatWithQuickCapture";
   }
 
