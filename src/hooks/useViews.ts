@@ -87,7 +87,7 @@ export function useViews({
     workspaceNames,
     matchingViews,
     sections,
-    renderState: renderState(renderStateInput),
+    renderState: getRenderState(renderStateInput),
   };
 }
 
@@ -238,7 +238,7 @@ function buildSearchResults({ views, search, workspace }: SearchResultsInput) {
   return { availableCount, matchingViews, sections };
 }
 
-function renderState({
+function getRenderState({
   loading,
   hasConfiguredRoots,
   hasWorkspaces,
