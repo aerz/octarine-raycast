@@ -14,6 +14,65 @@ import { openNote } from "./lib/octarine";
 import { getExtensionPreferences } from "./lib/preferences";
 import { match } from "./utils/match";
 
+export default function QuickCaptureCommand() {
+  const preferences = getExtensionPreferences();
+  const excludedDirectoryNames = useMemo(
+    () => preferences.excludedFoldersInWorkspaces,
+    [preferences.workspaceSearchSignature],
+  );
+  const [searchText, setSearchText] = useState("");
+  const [selectedWorkspace, setSelectedWorkspace] = useState("all");
+  const { workspaces, items, workspaceItems, searchState, isLoading } = useQuickCapture({
+    search: searchText,
+    workspace: selectedWorkspace,
+    excludedFolders: excludedDirectoryNames,
+    workspacesSignature: preferences.workspaceSearchSignature,
+    hasWorkspaces: preferences.hasConfiguredRoots,
+  });
+
+  return (
+    <List
+      filtering={false}
+      isLoading={isLoading}
+      onSearchTextChange={setSearchText}
+      searchBarPlaceholder="Search notes or type a date..."
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
+          <List.Dropdown.Item title="All" value="all" />
+          {workspaces.map((workspaceName) => (
+            <List.Dropdown.Item key={workspaceName} title={workspaceName} value={workspaceName} />
+          ))}
+        </List.Dropdown>
+      }
+    >
+      {match(searchState, {
+        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
+        noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
+        noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
+        showByWorkspaceWithQuickCapture: () => (
+          <QuickCaptureWithWorkspaceSections
+            excludedDirectoryNames={excludedDirectoryNames}
+            hasConfiguredRoots={preferences.hasConfiguredRoots}
+            itemsByWorkspace={workspaceItems}
+            workspaceNames={workspaces}
+            workspaceSearchSignature={preferences.workspaceSearchSignature}
+          />
+        ),
+        showByWorkspace: () => <WorkspaceSections itemsByWorkspace={workspaceItems} workspaceNames={workspaces} />,
+        showFlatWithQuickCapture: () => (
+          <QuickCaptureWithNotes
+            excludedDirectoryNames={excludedDirectoryNames}
+            filteredItems={items}
+            hasConfiguredRoots={preferences.hasConfiguredRoots}
+            workspaceSearchSignature={preferences.workspaceSearchSignature}
+          />
+        ),
+        showFlat: () => <FlatItems filteredItems={items} />,
+      })}
+    </List>
+  );
+}
+
 function DailyDeskListItem({ item }: { item: DailyDeskItem }) {
   return (
     <List.Item
@@ -200,66 +259,5 @@ function QuickCaptureWithWorkspaceSections({
       />
       <WorkspaceSections itemsByWorkspace={itemsByWorkspace} workspaceNames={workspaceNames} />
     </>
-  );
-}
-
-export default function QuickCaptureCommand() {
-  const preferences = getExtensionPreferences();
-  const excludedDirectoryNames = useMemo(
-    () => preferences.excludedFoldersInWorkspaces,
-    [preferences.workspaceSearchSignature],
-  );
-  const [searchText, setSearchText] = useState("");
-  const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const { workspaces, items, workspaceItems, searchState, isLoading } = useQuickCapture({
-    search: searchText,
-    workspace: selectedWorkspace,
-    excludedFolders: excludedDirectoryNames,
-    workspacesSignature: preferences.workspaceSearchSignature,
-    hasWorkspaces: preferences.hasConfiguredRoots,
-  });
-
-  return (
-    <List
-      filtering={false}
-      isLoading={isLoading}
-      onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search notes or type a date..."
-      searchBarAccessory={
-        <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
-          <List.Dropdown.Item title="All" value="all" />
-          {workspaces.map((workspaceName) => (
-            <List.Dropdown.Item key={workspaceName} title={workspaceName} value={workspaceName} />
-          ))}
-        </List.Dropdown>
-      }
-    >
-      {match(searchState, {
-        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
-        noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
-        noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
-        showByWorkspaceWithQuickCapture: () => (
-          <QuickCaptureWithWorkspaceSections
-            excludedDirectoryNames={excludedDirectoryNames}
-            hasConfiguredRoots={preferences.hasConfiguredRoots}
-            itemsByWorkspace={workspaceItems}
-            workspaceNames={workspaces}
-            workspaceSearchSignature={preferences.workspaceSearchSignature}
-          />
-        ),
-        showByWorkspace: () => (
-          <WorkspaceSections itemsByWorkspace={workspaceItems} workspaceNames={workspaces} />
-        ),
-        showFlatWithQuickCapture: () => (
-          <QuickCaptureWithNotes
-            excludedDirectoryNames={excludedDirectoryNames}
-            filteredItems={items}
-            hasConfiguredRoots={preferences.hasConfiguredRoots}
-            workspaceSearchSignature={preferences.workspaceSearchSignature}
-          />
-        ),
-        showFlat: () => <FlatItems filteredItems={items} />,
-      })}
-    </List>
   );
 }
