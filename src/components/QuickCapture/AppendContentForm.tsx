@@ -23,42 +23,22 @@ type AppendFormValues = {
   content: string;
 };
 
+type AppendTargetConfig = {
+  navigationTitle: string;
+  submitTitle: string;
+  description: string;
+  placeholder: string;
+  append: (content: string) => Promise<void>;
+};
+
 export function AppendContentForm(props: AppendContentFormProps) {
-  if ("note" in props) {
-    const noteTarget = props;
+  const target = getAppendTargetConfig(props);
 
-    async function handleSubmit(values: AppendFormValues) {
-      if (isEmptyAppendContent(values)) {
-        await showCaptureFailureToast("Nothing to Append", "Enter some text before submitting.");
-        return;
-      }
-
-      await appendContentToNote(noteTarget.note, values.content, "Appending to Note…", "Content Appended");
-    }
-
-    return (
-      <Form
-        navigationTitle={`Append to ${noteTarget.note.title}`}
-        actions={
-          <ActionPanel>
-            <Action.SubmitForm
-              title="Append to Note"
-              onSubmit={(values: AppendFormValues) => void handleSubmit(values)}
-            />
-          </ActionPanel>
-        }
-      >
-        <Form.Description text={`${noteTarget.note.workspace.name} / ${noteTarget.note.path}`} />
-        <Form.TextArea id="content" title="Content" placeholder="Write something to append to this note..." />
-      </Form>
-    );
-  }
-
-  const dailyDeskTarget = props;
-
-  if (!isDailyDeskDate(dailyDeskTarget.date)) {
+  if (!target) {
     return <InvalidDailyDeskDateView />;
   }
+
+  const { append, description, navigationTitle, placeholder, submitTitle } = target;
 
   async function handleSubmit(values: AppendFormValues) {
     if (isEmptyAppendContent(values)) {
@@ -66,33 +46,51 @@ export function AppendContentForm(props: AppendContentFormProps) {
       return;
     }
 
-    await appendContentToDailyTarget(
-      dailyDeskTarget.workspace,
-      dailyDeskTarget.date,
-      values.content,
-      `Appending to ${dailyDeskTarget.title}…`,
-      `Content Appended to ${dailyDeskTarget.title}`,
-    );
+    await append(values.content);
   }
 
   return (
     <Form
-      navigationTitle={`Append to ${dailyDeskTarget.title}`}
+      navigationTitle={navigationTitle}
       actions={
         <ActionPanel>
-          <Action.SubmitForm
-            title={`Append to ${dailyDeskTarget.title}`}
-            onSubmit={(values: AppendFormValues) => void handleSubmit(values)}
-          />
+          <Action.SubmitForm title={submitTitle} onSubmit={(values: AppendFormValues) => void handleSubmit(values)} />
         </ActionPanel>
       }
     >
-      <Form.Description text={`${dailyDeskTarget.workspace} / ${dailyDeskTarget.title}`} />
-      <Form.TextArea
-        id="content"
-        title="Content"
-        placeholder={`Write something to append to ${dailyDeskTarget.title.toLowerCase()}...`}
-      />
+      <Form.Description text={description} />
+      <Form.TextArea id="content" title="Content" placeholder={placeholder} />
     </Form>
   );
+}
+
+function getAppendTargetConfig(props: AppendContentFormProps): AppendTargetConfig | null {
+  if ("note" in props) {
+    return {
+      navigationTitle: `Append to ${props.note.title}`,
+      submitTitle: "Append to Note",
+      description: `${props.note.workspace.name} / ${props.note.path}`,
+      placeholder: "Write something to append to this note...",
+      append: async (content) => appendContentToNote(props.note, content, "Appending to Note…", "Content Appended"),
+    };
+  }
+
+  if (!isDailyDeskDate(props.date)) {
+    return null;
+  }
+
+  return {
+    navigationTitle: `Append to ${props.title}`,
+    submitTitle: `Append to ${props.title}`,
+    description: `${props.workspace} / ${props.title}`,
+    placeholder: `Write something to append to ${props.title.toLowerCase()}...`,
+    append: async (content) =>
+      appendContentToDailyTarget(
+        props.workspace,
+        props.date,
+        content,
+        `Appending to ${props.title}…`,
+        `Content Appended to ${props.title}`,
+      ),
+  };
 }
