@@ -1,8 +1,13 @@
-import { useCachedPromise } from "@raycast/utils";
-import { useMemo } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { skippedRootsToast, viewsLoadToast } from "../components/Toasts";
 import { matchesSearchIndex } from "../lib/search";
-import { type IndexedView, type ViewsScanResult, scanViewsFromWorkspaces } from "../lib/views";
+import {
+  loadCachedViews,
+  saveCachedViews,
+  type IndexedView,
+  type WorkspaceViews,
+  scanViewsFromWorkspaces,
+} from "../lib/views";
 
 export type WorkspaceViewSection = {
   workspaceName: string;
@@ -37,39 +42,81 @@ export function useSearchViews({
   workspaceDiscoverySignature,
   hasConfiguredRoots,
 }: Options): Result {
-  const {
-    data: scanResult,
-    error,
-    isLoading,
-  } = useCachedPromise(
-    async (workspaceDiscoverySignature: string): Promise<ViewsScanResult> => {
-      // workspaceDiscoverySignature is used as a cache key only; changes trigger a re-fetch.
-      void workspaceDiscoverySignature;
-      return scanViewsFromWorkspaces();
-    },
-    [workspaceDiscoverySignature],
-    {
-      execute: hasConfiguredRoots,
-      onData: async (result) => {
-        if (!result.fromCache && result.invalidRoots.length > 0) {
-          await skippedRootsToast(result.invalidRoots.length);
+  const [workspaceCount, setWorkspaceCount] = useState(0);
+  const [workspaceViews, setWorkspaceViews] = useState<WorkspaceViews[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let canceled = false;
+
+    const loadViews = async () => {
+      setIsLoading(true);
+
+      try {
+        if (!hasConfiguredRoots) {
+          if (!canceled) {
+            startTransition(() => {
+              setWorkspaceCount(0);
+              setWorkspaceViews([]);
+            });
+          }
+          return;
         }
-      },
-      onError: async (error) => {
+
+        const cached = await loadCachedViews(workspaceDiscoverySignature);
+
+        if (cached && !canceled) {
+          startTransition(() => {
+            setWorkspaceCount(cached.workspaces.length);
+            setWorkspaceViews(cached.workspaceViews);
+          });
+        } else if (!canceled) {
+          startTransition(() => {
+            setWorkspaceCount(0);
+            setWorkspaceViews([]);
+          });
+        }
+
+        const refreshed = await scanViewsFromWorkspaces({ forceRefresh: true });
+        if (canceled) {
+          return;
+        }
+
+        await saveCachedViews(
+          refreshed.workspaceViews.map((entry) => entry.workspace),
+          refreshed.workspaceViews,
+          workspaceDiscoverySignature,
+        );
+
+        if (refreshed.invalidRoots.length > 0) {
+          await skippedRootsToast(refreshed.invalidRoots.length);
+        }
+
+        startTransition(() => {
+          setWorkspaceCount(refreshed.workspaceCount);
+          setWorkspaceViews(refreshed.workspaceViews);
+        });
+      } catch (error) {
         console.error("Failed to scan Octarine views", error);
         await viewsLoadToast();
-      },
-    },
-  );
+      } finally {
+        if (!canceled) {
+          setIsLoading(false);
+        }
+      }
+    };
 
-  const workspaceNames = useMemo(
-    () => scanResult?.workspaceViews.map((entry) => entry.workspace.name) ?? [],
-    [scanResult],
-  );
-  const hasValidWorkspaces = (scanResult?.workspaceCount ?? 0) > 0;
+    void loadViews();
+
+    return () => {
+      canceled = true;
+    };
+  }, [hasConfiguredRoots, workspaceDiscoverySignature]);
+
+  const workspaceNames = useMemo(() => workspaceViews.map((entry) => entry.workspace.name), [workspaceViews]);
+  const hasValidWorkspaces = workspaceCount > 0;
 
   const { availableViewCount, matchingViews, sections } = useMemo(() => {
-    const workspaceViews = scanResult?.workspaceViews ?? [];
     const matchingViews: IndexedView[] = [];
     const sections: WorkspaceViewSection[] = [];
     let availableViewCount = 0;
@@ -95,11 +142,10 @@ export function useSearchViews({
     }
 
     return { availableViewCount, matchingViews, sections };
-  }, [scanResult, searchText, selectedWorkspace]);
+  }, [workspaceViews, searchText, selectedWorkspace]);
 
   const searchState = getSearchState({
     isLoading,
-    error: error instanceof Error ? error : undefined,
     hasConfiguredRoots,
     hasValidWorkspaces,
     availableViewCount,
@@ -117,7 +163,6 @@ export function useSearchViews({
 
 function getSearchState({
   isLoading,
-  error,
   hasConfiguredRoots,
   hasValidWorkspaces,
   availableViewCount,
@@ -125,7 +170,6 @@ function getSearchState({
   selectedWorkspace,
 }: {
   isLoading: boolean;
-  error: Error | undefined;
   hasConfiguredRoots: boolean;
   hasValidWorkspaces: boolean;
   availableViewCount: number;
@@ -136,7 +180,7 @@ function getSearchState({
     return "loading";
   }
 
-  if (error || !hasConfiguredRoots || !hasValidWorkspaces) {
+  if (!hasConfiguredRoots || !hasValidWorkspaces) {
     return "noConfiguredWorkspaces";
   }
 

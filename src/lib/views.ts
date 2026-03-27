@@ -1,11 +1,14 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { View, Workspace } from "../types/octarine";
+import { isView, isWorkspace, type View, type Workspace } from "../types/octarine";
+import { loadStoredJson, saveStoredJson } from "./cache";
 import { buildSearchIndexText } from "./search";
 import { type WorkspaceLoadResult, loadWorkspaces } from "./workspaces";
 
 const VIEWS_FILE_NAME = "views.json";
 const OCTARINE_DIRECTORY_NAME = ".octarine";
+const VIEWS_CACHE_KEY = "octarine.views.v1";
+const VIEWS_CACHE_VERSION = 1;
 
 type RawView = {
   id?: unknown;
@@ -26,6 +29,53 @@ export type ViewsScanResult = Pick<WorkspaceLoadResult, "invalidRoots" | "fromCa
   workspaceCount: number;
   workspaceViews: WorkspaceViews[];
 };
+
+type ViewsCache = {
+  version: number;
+  workspaceDiscoverySignature: string;
+  scannedAt: string;
+  workspaces: Workspace[];
+  workspaceViews: WorkspaceViews[];
+};
+
+export type ViewsCacheResult = {
+  workspaces: Workspace[];
+  workspaceViews: WorkspaceViews[];
+};
+
+function isIndexedView(value: unknown): value is IndexedView {
+  return isView(value) && typeof (value as IndexedView).searchText === "string";
+}
+
+function isWorkspaceViews(value: unknown): value is WorkspaceViews {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const maybeWorkspaceViews = value as Partial<WorkspaceViews>;
+  return (
+    isWorkspace(maybeWorkspaceViews.workspace) &&
+    Array.isArray(maybeWorkspaceViews.views) &&
+    maybeWorkspaceViews.views.every(isIndexedView)
+  );
+}
+
+function isViewsCache(value: unknown): value is ViewsCache {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const maybeCache = value as Partial<ViewsCache>;
+  return (
+    maybeCache.version === VIEWS_CACHE_VERSION &&
+    typeof maybeCache.workspaceDiscoverySignature === "string" &&
+    typeof maybeCache.scannedAt === "string" &&
+    Array.isArray(maybeCache.workspaces) &&
+    maybeCache.workspaces.every(isWorkspace) &&
+    Array.isArray(maybeCache.workspaceViews) &&
+    maybeCache.workspaceViews.every(isWorkspaceViews)
+  );
+}
 
 function parseView(rawValue: unknown, workspace: Workspace, index: number): IndexedView | undefined {
   if (!rawValue || typeof rawValue !== "object") {
@@ -121,6 +171,33 @@ async function scanWorkspaceViews(workspace: Workspace): Promise<WorkspaceViews 
     workspace,
     views,
   };
+}
+
+export async function loadCachedViews(workspaceDiscoverySignature: string): Promise<ViewsCacheResult | undefined> {
+  const cached = await loadStoredJson(VIEWS_CACHE_KEY, isViewsCache);
+
+  if (!cached || cached.workspaceDiscoverySignature !== workspaceDiscoverySignature) {
+    return undefined;
+  }
+
+  return {
+    workspaces: cached.workspaces,
+    workspaceViews: cached.workspaceViews,
+  };
+}
+
+export async function saveCachedViews(
+  workspaces: Workspace[],
+  workspaceViews: WorkspaceViews[],
+  workspaceDiscoverySignature: string,
+): Promise<void> {
+  await saveStoredJson(VIEWS_CACHE_KEY, {
+    version: VIEWS_CACHE_VERSION,
+    workspaceDiscoverySignature,
+    scannedAt: new Date().toISOString(),
+    workspaces,
+    workspaceViews,
+  });
 }
 
 export async function scanViewsFromWorkspaces(options?: { forceRefresh?: boolean }): Promise<ViewsScanResult> {
