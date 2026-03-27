@@ -3,7 +3,7 @@ import { useState } from "react";
 import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
-import { type WorkspaceViewSection, useSearchViews } from "./hooks/useSearchViews";
+import { type WorkspaceViewSection, useViews } from "./hooks/useViews";
 import { openOctarineView } from "./lib/octarine";
 import { getSearchViewsPreferences } from "./lib/preferences";
 import { IndexedView } from "./lib/views";
@@ -13,7 +13,7 @@ export default function SearchViewsCommand() {
   const preferences = getSearchViewsPreferences();
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const { workspaceNames, matchingViews, sections, searchState } = useSearchViews({
+  const { workspaceNames, matchingViews, sections, renderState } = useViews({
     searchText,
     selectedWorkspace,
     workspaceDiscoverySignature: preferences.extension.workspaceDiscoverySignature,
@@ -23,7 +23,7 @@ export default function SearchViewsCommand() {
   return (
     <List
       filtering={false}
-      isLoading={searchState === "loading"}
+      isLoading={renderState === "loading"}
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search views..."
       searchBarAccessory={
@@ -35,7 +35,7 @@ export default function SearchViewsCommand() {
         </List.Dropdown>
       }
     >
-      {match(searchState, {
+      {match(renderState, {
         loading: () => null,
         noConfiguredWorkspaces: () => <WorkspaceNotFound />,
         noAvailableViews: () => <WorkspaceContentEmptyView resource="views" />,
@@ -58,8 +58,8 @@ function WorkspaceSectionList({
 }) {
   return sections.map((section) => (
     <List.Section
-      key={section.workspaceName}
-      title={showWorkspaceViewCount ? `${section.workspaceName} (${section.views.length})` : section.workspaceName}
+      key={section.workspace}
+      title={showWorkspaceViewCount ? `${section.workspace} (${section.views.length})` : section.workspace}
     >
       {section.views.map((view) => (
         <ViewItem key={view.id} view={view} />
