@@ -1,8 +1,10 @@
 # global
 .DS_Store
+AGENTS.md
 
 # dependencies
 /node_modules
+/coverage
 
 # raycast
 raycast-env.d.ts
