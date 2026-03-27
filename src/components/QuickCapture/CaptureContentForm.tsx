@@ -9,7 +9,7 @@ import {
   showCaptureFailureToast,
 } from "./shared";
 
-type AppendContentFormProps =
+type CaptureContentFormProps =
   | {
       note: IndexedNote;
     }
@@ -31,7 +31,7 @@ type AppendTargetConfig = {
   append: (content: string) => Promise<void>;
 };
 
-export function AppendContentForm(props: AppendContentFormProps) {
+export function CaptureContentForm(props: CaptureContentFormProps) {
   const target = getAppendTargetConfig(props);
 
   if (!target) {
@@ -64,7 +64,7 @@ export function AppendContentForm(props: AppendContentFormProps) {
   );
 }
 
-function getAppendTargetConfig(props: AppendContentFormProps): AppendTargetConfig | null {
+function getAppendTargetConfig(props: CaptureContentFormProps): AppendTargetConfig | null {
   if ("note" in props) {
     return {
       navigationTitle: `Append to ${props.note.title}`,

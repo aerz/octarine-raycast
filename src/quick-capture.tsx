@@ -1,6 +1,6 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
 import { useMemo, useState } from "react";
-import { AppendContentForm } from "./components/QuickCapture/AppendContentForm";
+import { CaptureContentForm } from "./components/QuickCapture/CaptureContentForm";
 import { CaptureClipboard } from "./components/QuickCapture/CaptureClipboard";
 import { CaptureSelectedText } from "./components/QuickCapture/CaptureSelectedText";
 import { CaptureWebsite } from "./components/QuickCapture/CaptureWebsite";
@@ -82,8 +82,8 @@ function DailyDeskListItem({ item }: { item: DailyDeskItem }) {
       actions={
         <ActionPanel>
           <Action.Push
-            title={item.title}
-            target={<AppendContentForm workspace={item.workspace} date={item.date} title={item.title} />}
+            title="Append to Daily Desk Note"
+            target={<CaptureContentForm workspace={item.workspace} date={item.date} title={item.title} />}
           />
         </ActionPanel>
       }
@@ -99,7 +99,7 @@ function NoteListItem({ note }: { note: IndexedNote }) {
       keywords={[note.path, note.workspace.name]}
       actions={
         <ActionPanel>
-          <Action.Push title="Append to Note" target={<AppendContentForm note={note} />} />
+          <Action.Push title="Append to Note" target={<CaptureContentForm note={note} />} />
           <Action
             title="Open Note in Octarine"
             icon={Icon.AppWindow}
