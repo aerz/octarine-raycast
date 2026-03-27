@@ -1,6 +1,6 @@
 import { LocalStorage } from "@raycast/api";
 import { describe, expect, it } from "vitest";
-import { loadStoredJson, saveStoredJson } from "./cache";
+import { loadStoredJson, saveStoredJson } from "../../src/lib/cache";
 
 describe("cache", () => {
   it("returns undefined when the key is missing", async () => {

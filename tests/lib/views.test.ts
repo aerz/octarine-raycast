@@ -1,12 +1,12 @@
 import path from "node:path";
 import { LocalStorage } from "@raycast/api";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { setMockPreferences } from "../../tests/__mocks__/@raycast/api";
-import { createTempDir, removeDir, writeTextFile } from "../../tests/helpers/fs";
-import { loadCachedViews, saveCachedViews, scanViewsFromWorkspaces } from "./views";
-import { loadWorkspaces } from "./workspaces";
+import { setMockPreferences } from "../__mocks__/@raycast/api";
+import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
+import { loadCachedViews, saveCachedViews, scanViewsFromWorkspaces } from "../../src/lib/views";
+import { loadWorkspaces } from "../../src/lib/workspaces";
 
-vi.mock("./workspaces", () => ({
+vi.mock("../../src/lib/workspaces", () => ({
   loadWorkspaces: vi.fn(),
 }));
 

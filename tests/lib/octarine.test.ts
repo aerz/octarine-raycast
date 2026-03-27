@@ -1,6 +1,6 @@
 import { Toast, closeMainWindow, open, popToRoot, showToast } from "@raycast/api";
 import { describe, expect, it, vi } from "vitest";
-import { buildCreateNoteUri, buildDailyNoteUri, buildSearchUri, openOctarineUri } from "./octarine";
+import { buildCreateNoteUri, buildDailyNoteUri, buildSearchUri, openOctarineUri } from "../../src/lib/octarine";
 
 function parseUri(uri: string) {
   const [schemeAndAction, query = ""] = uri.split("?");

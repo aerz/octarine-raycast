@@ -1,8 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTempDir, removeDir, writeTextFile } from "../../tests/helpers/fs";
-import { refreshPinnedNotesCache, scanWorkspaceForNotes } from "./notes";
+import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
+import { refreshPinnedNotesCache, scanWorkspaceForNotes } from "../../src/lib/notes";
 
 let tempDir: string | undefined;
 

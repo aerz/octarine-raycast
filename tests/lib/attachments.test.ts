@@ -1,10 +1,10 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTempDir, removeDir, writeTextFile } from "../../tests/helpers/fs";
-import { scanAttachments } from "./attachments";
-import { loadWorkspaces } from "./workspaces";
+import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
+import { scanAttachments } from "../../src/lib/attachments";
+import { loadWorkspaces } from "../../src/lib/workspaces";
 
-vi.mock("./workspaces", () => ({
+vi.mock("../../src/lib/workspaces", () => ({
   loadWorkspaces: vi.fn(),
 }));
 

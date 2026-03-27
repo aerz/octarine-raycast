@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDailyDeskDate } from "./daily-desk";
+import { isDailyDeskDate } from "../../src/lib/daily-desk";
 
 describe("isDailyDeskDate", () => {
   it.each([

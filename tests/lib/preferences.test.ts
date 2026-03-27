@@ -1,13 +1,13 @@
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { setMockPreferences } from "../../tests/__mocks__/@raycast/api";
+import { setMockPreferences } from "../__mocks__/@raycast/api";
 import {
   getExtensionPreferences,
   getOpenTodayNotePreferences,
   getSearchAttachmentsPreferences,
   getSearchNotesPreferences,
-} from "./preferences";
+} from "../../src/lib/preferences";
 
 describe("preferences", () => {
   it("parses extension preferences into normalized values and signatures", () => {

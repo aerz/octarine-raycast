@@ -6,7 +6,7 @@ import {
   matchesSearchIndex,
   normalize,
   tokenize,
-} from "./search";
+} from "../../src/lib/search";
 
 type SearchableItem = {
   searchText: string;

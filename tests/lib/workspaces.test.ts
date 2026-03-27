@@ -1,8 +1,8 @@
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createTempDir, ensureDir, removeDir } from "../../tests/helpers/fs";
-import { setMockPreferences } from "../../tests/__mocks__/@raycast/api";
-import { loadWorkspaces } from "./workspaces";
+import { createTempDir, ensureDir, removeDir } from "../helpers/fs";
+import { setMockPreferences } from "../__mocks__/@raycast/api";
+import { loadWorkspaces } from "../../src/lib/workspaces";
 
 const workspaceMarker = ".octarine";
 
