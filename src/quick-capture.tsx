@@ -7,15 +7,12 @@ import { CaptureWebsite } from "./components/QuickCapture/CaptureWebsite";
 import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
-import { useQuickCapture, type DailyDeskItem, type QuickCaptureItem } from "./hooks/useQuickCapture";
+import { useQuickCapture, type QuickCaptureItem } from "./hooks/useQuickCapture";
+import { isDailyDeskItem, type DailyDeskItem } from "./lib/daily-desk";
 import { type IndexedNote } from "./lib/notes";
 import { openNote } from "./lib/octarine";
 import { getExtensionPreferences } from "./lib/preferences";
 import { match } from "./utils/match";
-
-function isDailyDeskItem(item: QuickCaptureItem): item is DailyDeskItem {
-  return "kind" in item && item.kind === "daily-desk";
-}
 
 function DailyDeskListItem({ item }: { item: DailyDeskItem }) {
   return (

@@ -1,15 +1,7 @@
 import { useMemo } from "react";
 import { useNotes } from "./useNotes";
+import { buildDailyDeskItems, isDailyDeskItem, type DailyDeskItem } from "../lib/daily-desk";
 import { type IndexedNote } from "../lib/notes";
-import { matchQueryPrefix } from "../lib/search";
-
-export type DailyDeskItem = {
-  date: string;
-  id: string;
-  kind: "daily-desk";
-  title: string;
-  workspace: string;
-};
 
 export type QuickCaptureItem = IndexedNote | DailyDeskItem;
 
@@ -85,33 +77,6 @@ export function useQuickCapture({
   };
 }
 
-export function buildDailyDeskItems(workspaces: string[], text: string): DailyDeskItem[] {
-  const search = text.trim();
-
-  if (!search) {
-    return [];
-  }
-
-  const match = matchQueryPrefix(workspaces, search);
-  if (match) {
-    return match.matches.map((workspace) => ({
-      date: match.remainder,
-      id: `daily-desk::${workspace}::${match.remainder}`,
-      kind: "daily-desk",
-      title: `Use "${match.remainder}" in Daily Desk`,
-      workspace,
-    }));
-  }
-
-  return workspaces.map((workspace) => ({
-    date: search,
-    id: `daily-desk::${workspace}::${search}`,
-    kind: "daily-desk",
-    title: `Use "${search}" in Daily Desk`,
-    workspace,
-  }));
-}
-
 function getQuickCaptureRenderState({
   filteredItemCount,
   isLoading,
@@ -156,10 +121,6 @@ function getQuickCaptureRenderState({
   }
 
   return "showFlat";
-}
-
-function isDailyDeskItem(item: QuickCaptureItem): item is DailyDeskItem {
-  return "kind" in item && item.kind === "daily-desk";
 }
 
 function groupItemsByWorkspace(items: QuickCaptureItem[]): Map<string, QuickCaptureItem[]> {

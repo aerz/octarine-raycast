@@ -1,6 +1,6 @@
 import { Action, ActionPanel, Form } from "@raycast/api";
 import { type IndexedNote } from "../../lib/notes";
-import { isSupportedDailyDeskDate } from "../../lib/daily-desk";
+import { isDailyDeskDate } from "../../lib/daily-desk";
 import {
   appendContentToDailyTarget,
   appendContentToNote,
@@ -56,7 +56,7 @@ export function AppendContentForm(props: AppendContentFormProps) {
 
   const dailyDeskTarget = props;
 
-  if (!isSupportedDailyDeskDate(dailyDeskTarget.date)) {
+  if (!isDailyDeskDate(dailyDeskTarget.date)) {
     return <InvalidDailyDeskDateView />;
   }
 

@@ -1,4 +1,4 @@
-import { normalize } from "./search";
+import { matchQueryPrefix, normalize } from "./search";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_WEEK_PATTERN = /^\d{4}-W\d{2}$/i;
@@ -9,21 +9,15 @@ const WEEK_MODIFIER_PATTERN = /^(?:this|last|next)\s+week$/i;
 const PARTIAL_DATE_PATTERN =
   /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}$/i;
 
-export const DAILY_DESK_DATE_FORMATS_MARKDOWN = [
-  "# Invalid Date",
-  "",
-  "**Supported Date Formats**",
-  "",
-  "- ISO date: `2024-01-15`, `2024-12-25`",
-  "- ISO week: `2024-W03`, `2026-W01`",
-  "- Natural language dates: `today`, `yesterday`, `tomorrow`",
-  "- Relative dates: `2 days ago`, `next monday`, `last friday`",
-  "- Partial dates: `jan 15`, `december 25`, `nov 3`",
-  "- Natural language weeks: `this week`, `last week`, `next week`",
-  "- Relative weeks: `2 weeks ago`, `in 2 weeks`",
-].join("\n");
+export type DailyDeskItem = {
+  date: string;
+  id: string;
+  kind: "daily-desk";
+  title: string;
+  workspace: string;
+};
 
-export function isSupportedDailyDeskDate(value: string): boolean {
+export function isDailyDeskDate(value: string): boolean {
   const normalized = normalize(value);
 
   if (!normalized) {
@@ -39,4 +33,35 @@ export function isSupportedDailyDeskDate(value: string): boolean {
     WEEK_MODIFIER_PATTERN.test(normalized) ||
     PARTIAL_DATE_PATTERN.test(normalized)
   );
+}
+
+export function buildDailyDeskItems(workspaces: string[], text: string): DailyDeskItem[] {
+  const search = text.trim();
+
+  if (!search) {
+    return [];
+  }
+
+  const match = matchQueryPrefix(workspaces, search);
+  if (match) {
+    return match.matches.map((workspace) => ({
+      date: match.remainder,
+      id: `daily-desk::${workspace}::${match.remainder}`,
+      kind: "daily-desk",
+      title: `Use "${match.remainder}" in Daily Desk`,
+      workspace,
+    }));
+  }
+
+  return workspaces.map((workspace) => ({
+    date: search,
+    id: `daily-desk::${workspace}::${search}`,
+    kind: "daily-desk",
+    title: `Use "${search}" in Daily Desk`,
+    workspace,
+  }));
+}
+
+export function isDailyDeskItem(item: unknown): item is DailyDeskItem {
+  return typeof item === "object" && item !== null && "kind" in item && item.kind === "daily-desk";
 }

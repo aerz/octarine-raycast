@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { isSupportedDailyDeskDate } from "./daily-desk";
+import { isDailyDeskDate } from "./daily-desk";
 
-describe("isSupportedDailyDeskDate", () => {
+describe("isDailyDeskDate", () => {
   it.each([
     "2026-03-26",
     "2026-W13",
@@ -16,10 +16,10 @@ describe("isSupportedDailyDeskDate", () => {
     "jan 15",
     "december 25",
   ])("accepts %s", (value) => {
-    expect(isSupportedDailyDeskDate(value)).toBe(true);
+    expect(isDailyDeskDate(value)).toBe(true);
   });
 
   it.each(["", "2026/03/26", "monday", "next month", "3 months ago", "2026-W1"])("rejects %s", (value) => {
-    expect(isSupportedDailyDeskDate(value)).toBe(false);
+    expect(isDailyDeskDate(value)).toBe(false);
   });
 });

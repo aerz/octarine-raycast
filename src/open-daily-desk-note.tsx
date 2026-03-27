@@ -13,7 +13,7 @@ import { DateFormatsDetail } from "./components/Notifications/DateFormatsDetail"
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useOpenDailyDeskNote } from "./hooks/useOpenDailyDeskNote";
 import { useWorkspaces } from "./hooks/useWorkspaces";
-import { isSupportedDailyDeskDate } from "./lib/daily-desk";
+import { isDailyDeskDate } from "./lib/daily-desk";
 import { openOctarineDailyDeskNote } from "./lib/octarine";
 import type { Workspace } from "./types/octarine";
 
@@ -25,7 +25,7 @@ type Arguments = {
 export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const requestedDate = props.arguments.date?.trim() ?? "";
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
-  const isValidDate = isSupportedDailyDeskDate(requestedDate);
+  const isValidDate = isDailyDeskDate(requestedDate);
 
   const {
     workspaces,

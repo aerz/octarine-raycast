@@ -4,9 +4,8 @@ import { SearchResultsEmptyView } from "../EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "../EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "../EmptyViews/WorkspaceNotFound";
 import { DateFormatsDetail } from "../Notifications/DateFormatsDetail";
-import { buildDailyDeskItems, type DailyDeskItem } from "../../hooks/useQuickCapture";
 import { useNotes } from "../../hooks/useNotes";
-import { isSupportedDailyDeskDate } from "../../lib/daily-desk";
+import { buildDailyDeskItems, isDailyDeskDate, isDailyDeskItem, type DailyDeskItem } from "../../lib/daily-desk";
 import { type IndexedNote } from "../../lib/notes";
 import { appendDailyNoteContent, openNote, upsertOctarineNoteContent } from "../../lib/octarine";
 import { match } from "../../utils/match";
@@ -93,10 +92,6 @@ function groupItemsByWorkspace(items: SearchableNoteItem[]): Map<string, Searcha
   }
 
   return groupedItems;
-}
-
-function isDailyDeskItem(item: SearchableNoteItem): item is DailyDeskItem {
-  return "kind" in item && item.kind === "daily-desk";
 }
 
 export async function showCaptureFailureToast(title: string, message?: string): Promise<void> {
@@ -238,7 +233,7 @@ export function AutoCaptureToDailyDeskTarget({
 }) {
   const { pop } = useNavigation();
   const hasStartedCapture = useRef(false);
-  const isDateValid = isSupportedDailyDeskDate(date);
+  const isDateValid = isDailyDeskDate(date);
 
   useEffect(() => {
     if (!isDateValid || hasStartedCapture.current) {
