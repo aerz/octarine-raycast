@@ -1,5 +1,5 @@
 import { Action, Grid } from "@raycast/api";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AttachmentGridItem } from "./components/AttachmentGridItem";
 import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
@@ -10,11 +10,19 @@ import { match } from "./utils/match";
 
 export default function SearchAttachmentsCommand() {
   const preferences = getSearchAttachmentsPreferences();
+  const excludedExtensions = useMemo(
+    () => Array.from(preferences.excludedExtensions).sort((left, right) => left.localeCompare(right)),
+    [preferences.excludedExtensionsSignature],
+  );
+  const excludedDirectoryNames = useMemo(
+    () => Array.from(preferences.extension.excludedFoldersInWorkspaces).sort((left, right) => left.localeCompare(right)),
+    [preferences.extension.workspaceSearchSignature],
+  );
   const [selectedExtension, setSelectedExtension] = useState<string>("all");
   const [searchText, setSearchText] = useState("");
   const { visibleAttachments, sections, filters, searchState, isLoading } = useAttachments({
-    excludedExtensions: preferences.excludedExtensions,
-    excludedDirectoryNames: preferences.extension.excludedFoldersInWorkspaces,
+    excludedExtensions,
+    excludedDirectoryNames,
     workspaceSearchSignature: preferences.extension.workspaceSearchSignature,
     excludedExtensionsSignature: preferences.excludedExtensionsSignature,
     hasConfiguredRoots: preferences.extension.hasConfiguredRoots,

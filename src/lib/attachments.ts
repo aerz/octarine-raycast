@@ -1,11 +1,14 @@
 import { Dirent, Stats, promises as fs } from "node:fs";
 import path from "node:path";
+import { type IndexedAttachment, isIndexedAttachment } from "../types/attachment";
 import type { Workspace } from "../types/octarine";
+import { loadStoredJson, saveStoredJson } from "./cache";
 import { buildSearchIndexText } from "./search";
-import { IndexedAttachment } from "../types/attachment";
-import { loadWorkspaces } from "../lib/workspaces";
+import { loadWorkspaces } from "./workspaces";
 
 const ATTACHMENT_DIRECTORIES = [".attachments", ".files"] as const;
+const ATTACHMENTS_CACHE_KEY = "octarine.attachments.v1";
+const ATTACHMENTS_CACHE_VERSION = 1;
 const SYSTEM_GENERATED_FILE_NAMES = new Set([
   ".ds_store",
   "thumbs.db",
@@ -18,9 +21,40 @@ const SYSTEM_GENERATED_FILE_NAMES = new Set([
   "ehthumbs_vista.db",
 ]);
 
+type AttachmentsCache = {
+  version: number;
+  workspaceSearchSignature: string;
+  excludedExtensionsSignature: string;
+  workspaceCount: number;
+  attachments: IndexedAttachment[];
+};
+
+export type AttachmentsSnapshot = {
+  attachments: IndexedAttachment[];
+  workspaceCount: number;
+};
+
 function isSystemGeneratedFile(name: string): boolean {
   const normalizedName = name.toLowerCase();
   return normalizedName.startsWith("~$") || SYSTEM_GENERATED_FILE_NAMES.has(normalizedName);
+}
+
+function isAttachmentsCache(value: unknown): value is AttachmentsCache {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const maybeCache = value as Partial<AttachmentsCache>;
+  return (
+    maybeCache.version === ATTACHMENTS_CACHE_VERSION &&
+    typeof maybeCache.workspaceSearchSignature === "string" &&
+    typeof maybeCache.excludedExtensionsSignature === "string" &&
+    typeof maybeCache.workspaceCount === "number" &&
+    Number.isInteger(maybeCache.workspaceCount) &&
+    maybeCache.workspaceCount >= 0 &&
+    Array.isArray(maybeCache.attachments) &&
+    maybeCache.attachments.every(isIndexedAttachment)
+  );
 }
 
 async function collectIndexedAttachments(
@@ -168,16 +202,46 @@ async function scanWorkspaceAttachments(
   return attachmentsByDirectory.flat();
 }
 
-export type AttachmentScanResult = {
-  attachments: IndexedAttachment[];
-  workspaceCount: number;
-};
+export async function loadCachedAttachments(
+  workspaceSearchSignature: string,
+  excludedExtensionsSignature: string,
+): Promise<AttachmentsSnapshot | undefined> {
+  const cached = await loadStoredJson(ATTACHMENTS_CACHE_KEY, isAttachmentsCache);
+
+  if (
+    !cached ||
+    cached.workspaceSearchSignature !== workspaceSearchSignature ||
+    cached.excludedExtensionsSignature !== excludedExtensionsSignature
+  ) {
+    return undefined;
+  }
+
+  return {
+    workspaceCount: cached.workspaceCount,
+    attachments: cached.attachments,
+  };
+}
+
+export async function saveCachedAttachments(
+  snapshot: AttachmentsSnapshot,
+  workspaceSearchSignature: string,
+  excludedExtensionsSignature: string,
+): Promise<void> {
+  await saveStoredJson(ATTACHMENTS_CACHE_KEY, {
+    version: ATTACHMENTS_CACHE_VERSION,
+    workspaceSearchSignature,
+    excludedExtensionsSignature,
+    workspaceCount: snapshot.workspaceCount,
+    attachments: snapshot.attachments,
+  });
+}
 
 export async function scanAttachments(options?: {
+  forceRefresh?: boolean;
   excludedExtensions?: Set<string>;
   excludedDirectoryNames?: Set<string>;
-}): Promise<AttachmentScanResult> {
-  const workspaceResult = await loadWorkspaces();
+}): Promise<AttachmentsSnapshot> {
+  const workspaceResult = await loadWorkspaces({ forceRefresh: options?.forceRefresh });
   const excludedExtensions = options?.excludedExtensions ?? new Set<string>();
   const excludedDirectoryNames = options?.excludedDirectoryNames ?? new Set<string>();
 

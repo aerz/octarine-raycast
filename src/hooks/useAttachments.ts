@@ -1,9 +1,13 @@
 import { Toast, showToast } from "@raycast/api";
-import { useCachedPromise } from "@raycast/utils";
-import { useMemo } from "react";
-import { type AttachmentScanResult, scanAttachments } from "../lib/attachments";
+import { startTransition, useEffect, useMemo, useState } from "react";
+import {
+  type AttachmentsSnapshot,
+  loadCachedAttachments,
+  saveCachedAttachments,
+  scanAttachments,
+} from "../lib/attachments";
 import { matchesSearchIndex } from "../lib/search";
-import { isIndexedAttachment, type IndexedAttachment } from "../types/attachment";
+import type { IndexedAttachment } from "../types/attachment";
 import { useLoadingToast } from "./useLoadingToast";
 
 export type AttachmentSection = {
@@ -21,8 +25,8 @@ type SearchState =
   | "showFlat";
 
 type Options = {
-  excludedExtensions: Set<string>;
-  excludedDirectoryNames: Set<string>;
+  excludedExtensions: string[];
+  excludedDirectoryNames: string[];
   workspaceSearchSignature: string;
   excludedExtensionsSignature: string;
   hasConfiguredRoots: boolean;
@@ -38,6 +42,11 @@ type Result = {
   filters: string[];
   searchState: SearchState;
   isLoading: boolean;
+};
+
+const EMPTY_SCAN_RESULT: AttachmentsSnapshot = {
+  attachments: [],
+  workspaceCount: 0,
 };
 
 function getSearchState({
@@ -88,37 +97,88 @@ export function useAttachments({
   selectedExtension,
   flattenWorkspaceSections,
 }: Options): Result {
-  const { data: scanResult, isLoading } = useCachedPromise(
-    async (workspaceSearchSignature: string, excludedExtensionsSignature: string): Promise<AttachmentScanResult> => {
-      void workspaceSearchSignature;
-      void excludedExtensionsSignature;
-      return scanAttachments({
-        excludedExtensions,
-        excludedDirectoryNames,
-      });
-    },
-    [workspaceSearchSignature, excludedExtensionsSignature],
-    {
-      initialData: { attachments: [], workspaceCount: 0 } satisfies AttachmentScanResult,
-      onError: async (error) => {
+  const excludedExtensionsSet = useMemo(() => new Set(excludedExtensions), [excludedExtensionsSignature]);
+  const excludedDirectoryNamesSet = useMemo(() => new Set(excludedDirectoryNames), [workspaceSearchSignature]);
+  const [scanResult, setScanResult] = useState<AttachmentsSnapshot>(EMPTY_SCAN_RESULT);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let canceled = false;
+
+    const loadAttachments = async () => {
+      setIsLoading(true);
+
+      try {
+        if (!hasConfiguredRoots) {
+          if (!canceled) {
+            startTransition(() => {
+              setScanResult(EMPTY_SCAN_RESULT);
+            });
+          }
+          return;
+        }
+
+        const cached = await loadCachedAttachments(workspaceSearchSignature, excludedExtensionsSignature);
+
+        if (cached && !canceled) {
+          startTransition(() => {
+            setScanResult(cached);
+          });
+        } else if (!canceled) {
+          startTransition(() => {
+            setScanResult(EMPTY_SCAN_RESULT);
+          });
+        }
+
+        const refreshed = await scanAttachments({
+          forceRefresh: true,
+          excludedExtensions: excludedExtensionsSet,
+          excludedDirectoryNames: excludedDirectoryNamesSet,
+        });
+        if (canceled) {
+          return;
+        }
+
+        await saveCachedAttachments(refreshed, workspaceSearchSignature, excludedExtensionsSignature);
+
+        if (!canceled) {
+          startTransition(() => {
+            setScanResult(refreshed);
+          });
+        }
+      } catch (error) {
         await showToast({
           style: Toast.Style.Failure,
           title: "Failed to scan attachments",
-          message: error.message,
+          message: error instanceof Error ? error.message : undefined,
         });
-      },
-    },
-  );
+      } finally {
+        if (!canceled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadAttachments();
+
+    return () => {
+      canceled = true;
+    };
+  }, [
+    excludedDirectoryNamesSet,
+    excludedExtensionsSet,
+    excludedExtensionsSignature,
+    hasConfiguredRoots,
+    workspaceSearchSignature,
+  ]);
+
   useLoadingToast({
     isLoading,
     title: "Scanning attachments…",
   });
 
-  const attachments = useMemo(
-    () => (scanResult?.attachments ?? []).filter((file): file is IndexedAttachment => isIndexedAttachment(file)),
-    [scanResult],
-  );
-  const hasValidWorkspaces = (scanResult?.workspaceCount ?? 0) > 0;
+  const attachments = scanResult.attachments;
+  const hasValidWorkspaces = scanResult.workspaceCount > 0;
 
   const filters = useMemo(() => {
     const uniqueExtensions = new Set<string>();
