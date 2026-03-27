@@ -5,7 +5,7 @@ import { type IndexedNote } from "../lib/notes";
 
 export type QuickCaptureItem = IndexedNote | DailyDeskItem;
 
-export type QuickCaptureRenderState =
+export type SearchState =
   | "noConfiguredWorkspaces"
   | "noAvailableNotes"
   | "noMatchingNotes"
@@ -15,73 +15,72 @@ export type QuickCaptureRenderState =
   | "showFlatWithQuickCapture";
 
 type Options = {
-  searchText: string;
-  selectedWorkspace: string;
-  excludedDirectoryNames: Set<string>;
-  workspaceSearchSignature: string;
-  hasConfiguredRoots: boolean;
+  search: string;
+  workspace: string;
+  excludedFolders: Set<string>;
+  workspacesSignature: string;
+  hasWorkspaces: boolean;
 };
 
 type Result = {
-  workspaceNames: string[];
-  filteredItems: QuickCaptureItem[];
-  itemsByWorkspace: Map<string, QuickCaptureItem[]>;
-  renderState: QuickCaptureRenderState;
+  workspaces: string[];
+  items: QuickCaptureItem[];
+  workspaceItems: Map<string, QuickCaptureItem[]>;
+  searchState: SearchState;
   isLoading: boolean;
 };
 
 export function useQuickCapture({
-  searchText,
-  selectedWorkspace,
-  excludedDirectoryNames,
-  workspaceSearchSignature,
-  hasConfiguredRoots,
+  search,
+  workspace,
+  excludedFolders,
+  workspacesSignature,
+  hasWorkspaces,
 }: Options): Result {
-  const { workspaceNames, matchingNotes, searchState, isLoading } = useNotes({
-    searchText,
-    selectedWorkspace,
-    excludedDirectoryNames,
-    workspaceSearchSignature,
-    hasConfiguredRoots,
+  const { workspaceNames: workspaces, matchingNotes, searchState: notesSearchState, isLoading } = useNotes({
+    searchText: search,
+    selectedWorkspace: workspace,
+    excludedDirectoryNames: excludedFolders,
+    workspaceSearchSignature: workspacesSignature,
+    hasConfiguredRoots: hasWorkspaces,
     showPinnedNotesFirst: false,
   });
 
   const searchableItems = useMemo(
-    () => [...matchingNotes, ...buildDailyDeskItems(workspaceNames, searchText)],
-    [matchingNotes, searchText, workspaceNames],
+    () => [...matchingNotes, ...buildDailyDeskItems(workspaces, search)],
+    [matchingNotes, search, workspaces],
   );
-  const filteredItems = useMemo(
+  const items = useMemo(
     () =>
       searchableItems.filter(
-        (item) =>
-          selectedWorkspace === "all" || (isDailyDeskItem(item) ? item.workspace : item.workspace.name) === selectedWorkspace,
+        (item) => workspace === "all" || (isDailyDeskItem(item) ? item.workspace : item.workspace.name) === workspace,
       ),
-    [searchableItems, selectedWorkspace],
+    [searchableItems, workspace],
   );
-  const itemsByWorkspace = useMemo(() => groupItemsByWorkspace(filteredItems), [filteredItems]);
-  const showStaticActions = searchText.trim().length === 0;
-  const renderState = getQuickCaptureRenderState({
-    filteredItemCount: filteredItems.length,
+  const workspaceItems = useMemo(() => groupItemsByWorkspace(items), [items]);
+  const showStaticActions = search.trim().length === 0;
+  const searchState = getSearchState({
+    filteredItemCount: items.length,
     isLoading,
-    searchState,
-    selectedWorkspace,
+    searchState: notesSearchState,
+    workspace,
     showStaticActions,
   });
 
   return {
-    workspaceNames,
-    filteredItems,
-    itemsByWorkspace,
-    renderState,
+    workspaces,
+    items,
+    workspaceItems,
+    searchState,
     isLoading,
   };
 }
 
-function getQuickCaptureRenderState({
+function getSearchState({
   filteredItemCount,
   isLoading,
   searchState,
-  selectedWorkspace,
+  workspace,
   showStaticActions,
 }: {
   filteredItemCount: number;
@@ -93,9 +92,9 @@ function getQuickCaptureRenderState({
     | "noMatchingNotes"
     | "showByWorkspace"
     | "showFlat";
-  selectedWorkspace: string;
+  workspace: string;
   showStaticActions: boolean;
-}): QuickCaptureRenderState {
+}): SearchState {
   if (searchState === "noConfiguredWorkspaces") {
     return "noConfiguredWorkspaces";
   }
@@ -108,7 +107,7 @@ function getQuickCaptureRenderState({
     return "noMatchingNotes";
   }
 
-  if (showStaticActions && selectedWorkspace === "all") {
+  if (showStaticActions && workspace === "all") {
     return "showByWorkspaceWithQuickCapture";
   }
 
@@ -116,7 +115,7 @@ function getQuickCaptureRenderState({
     return "showFlatWithQuickCapture";
   }
 
-  if (selectedWorkspace === "all") {
+  if (workspace === "all") {
     return "showByWorkspace";
   }
 

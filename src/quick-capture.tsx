@@ -211,12 +211,12 @@ export default function QuickCaptureCommand() {
   );
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const { workspaceNames, filteredItems, itemsByWorkspace, renderState, isLoading } = useQuickCapture({
-    searchText,
-    selectedWorkspace,
-    excludedDirectoryNames,
-    workspaceSearchSignature: preferences.workspaceSearchSignature,
-    hasConfiguredRoots: preferences.hasConfiguredRoots,
+  const { workspaces, items, workspaceItems, searchState, isLoading } = useQuickCapture({
+    search: searchText,
+    workspace: selectedWorkspace,
+    excludedFolders: excludedDirectoryNames,
+    workspacesSignature: preferences.workspaceSearchSignature,
+    hasWorkspaces: preferences.hasConfiguredRoots,
   });
 
   return (
@@ -228,13 +228,13 @@ export default function QuickCaptureCommand() {
       searchBarAccessory={
         <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
           <List.Dropdown.Item title="All" value="all" />
-          {workspaceNames.map((workspaceName) => (
+          {workspaces.map((workspaceName) => (
             <List.Dropdown.Item key={workspaceName} title={workspaceName} value={workspaceName} />
           ))}
         </List.Dropdown>
       }
     >
-      {match(renderState, {
+      {match(searchState, {
         noConfiguredWorkspaces: () => <WorkspaceNotFound />,
         noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
         noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
@@ -242,23 +242,23 @@ export default function QuickCaptureCommand() {
           <QuickCaptureWithWorkspaceSections
             excludedDirectoryNames={excludedDirectoryNames}
             hasConfiguredRoots={preferences.hasConfiguredRoots}
-            itemsByWorkspace={itemsByWorkspace}
-            workspaceNames={workspaceNames}
+            itemsByWorkspace={workspaceItems}
+            workspaceNames={workspaces}
             workspaceSearchSignature={preferences.workspaceSearchSignature}
           />
         ),
         showByWorkspace: () => (
-          <WorkspaceSections itemsByWorkspace={itemsByWorkspace} workspaceNames={workspaceNames} />
+          <WorkspaceSections itemsByWorkspace={workspaceItems} workspaceNames={workspaces} />
         ),
         showFlatWithQuickCapture: () => (
           <QuickCaptureWithNotes
             excludedDirectoryNames={excludedDirectoryNames}
-            filteredItems={filteredItems}
+            filteredItems={items}
             hasConfiguredRoots={preferences.hasConfiguredRoots}
             workspaceSearchSignature={preferences.workspaceSearchSignature}
           />
         ),
-        showFlat: () => <FlatItems filteredItems={filteredItems} />,
+        showFlat: () => <FlatItems filteredItems={items} />,
       })}
     </List>
   );
