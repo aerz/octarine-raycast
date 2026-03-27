@@ -15,12 +15,13 @@ export default function SearchAttachmentsCommand() {
     [preferences.excludedExtensionsSignature],
   );
   const excludedDirectoryNames = useMemo(
-    () => Array.from(preferences.extension.excludedFoldersInWorkspaces).sort((left, right) => left.localeCompare(right)),
+    () =>
+      Array.from(preferences.extension.excludedFoldersInWorkspaces).sort((left, right) => left.localeCompare(right)),
     [preferences.extension.workspaceSearchSignature],
   );
   const [selectedExtension, setSelectedExtension] = useState<string>("all");
   const [searchText, setSearchText] = useState("");
-  const { visibleAttachments, sections, filters, searchState, isLoading } = useAttachments({
+  const { visibleAttachments, sections, filters, renderState, isLoading } = useAttachments({
     excludedExtensions,
     excludedDirectoryNames,
     workspaceSearchSignature: preferences.extension.workspaceSearchSignature,
@@ -48,7 +49,7 @@ export default function SearchAttachmentsCommand() {
         </Grid.Dropdown>
       }
     >
-      {match(searchState, {
+      {match(renderState, {
         loading: () => null,
         noConfiguredWorkspaces: () => <WorkspaceNotFound display="grid" />,
         noAvailableAttachments: () => <WorkspaceContentEmptyView resource="attachments" display="grid" />,
@@ -62,7 +63,10 @@ export default function SearchAttachmentsCommand() {
         ),
         showFlat: () => visibleAttachments.map((file) => <AttachmentGridItem key={file.path} file={file} />),
         showByWorkspace: () => (
-          <WorkspaceSectionGrid sections={sections} showWorkspaceAttachmentCount={preferences.showWorkspaceAttachmentCount} />
+          <WorkspaceSectionGrid
+            sections={sections}
+            showWorkspaceAttachmentCount={preferences.showWorkspaceAttachmentCount}
+          />
         ),
       })}
     </Grid>

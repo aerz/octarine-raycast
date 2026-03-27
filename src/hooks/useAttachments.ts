@@ -16,7 +16,7 @@ export type AttachmentSection = {
   files: IndexedAttachment[];
 };
 
-type SearchState =
+type RenderState =
   | "loading"
   | "noConfiguredWorkspaces"
   | "noAvailableAttachments"
@@ -40,7 +40,7 @@ type Result = {
   visibleAttachments: IndexedAttachment[];
   sections: AttachmentSection[];
   filters: string[];
-  searchState: SearchState;
+  renderState: RenderState;
   isLoading: boolean;
 };
 
@@ -163,7 +163,7 @@ function useAttachmentsEffects({ isLoading, loadError }: { isLoading: boolean; l
   }, [loadError]);
 }
 
-function getAttachmentSearchState({
+function getRenderState({
   isLoading,
   hasConfiguredRoots,
   hasValidWorkspaces,
@@ -177,7 +177,7 @@ function getAttachmentSearchState({
   attachmentCount: number;
   visibleAttachmentCount: number;
   flattenWorkspaceSections: boolean;
-}): SearchState {
+}): RenderState {
   if (isLoading && attachmentCount === 0) {
     return "loading";
   }
@@ -310,7 +310,7 @@ export function useAttachments({
       }),
     [attachments, searchText, selectedExtension],
   );
-  const searchState = getAttachmentSearchState({
+  const renderState = getRenderState({
     isLoading,
     hasConfiguredRoots,
     hasValidWorkspaces,
@@ -324,7 +324,7 @@ export function useAttachments({
     visibleAttachments,
     sections,
     filters,
-    searchState,
+    renderState,
     isLoading,
   };
 }
