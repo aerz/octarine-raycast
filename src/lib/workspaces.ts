@@ -1,7 +1,7 @@
-import { LocalStorage } from "@raycast/api";
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { isWorkspace, type Workspace } from "../types/octarine";
+import { loadStoredJson, saveStoredJson } from "./cache";
 import { getExtensionPreferences } from "./preferences";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
@@ -34,24 +34,6 @@ function isWorkspaceCache(value: unknown): value is WorkspaceCache {
     Array.isArray(maybeCache.workspaces) &&
     maybeCache.workspaces.every(isWorkspace)
   );
-}
-
-async function loadCache(): Promise<WorkspaceCache | undefined> {
-  const cachedValue = await LocalStorage.getItem<string>(WORKSPACES_CACHE_KEY);
-  if (!cachedValue) {
-    return undefined;
-  }
-
-  try {
-    const parsed = JSON.parse(cachedValue) as unknown;
-    return isWorkspaceCache(parsed) ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-async function saveCache(cache: WorkspaceCache): Promise<void> {
-  await LocalStorage.setItem(WORKSPACES_CACHE_KEY, JSON.stringify(cache));
 }
 
 async function discoverWorkspacesInRoot(rootPath: string, excludedWorkspaces: Set<string>): Promise<Workspace[]> {
@@ -156,7 +138,7 @@ export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Prom
   const forceRefresh = options?.forceRefresh ?? false;
 
   if (!forceRefresh) {
-    const cached = await loadCache();
+    const cached = await loadStoredJson(WORKSPACES_CACHE_KEY, isWorkspaceCache);
     if (cached && cached.rootsDiscoverySignature === preferences.workspaceDiscoverySignature) {
       return {
         workspaces: cached.workspaces,
@@ -167,7 +149,7 @@ export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Prom
   }
 
   const discoveryResult = await discoverWorkspaces(preferences.workspaceRoots, preferences.excludedWorkspaces);
-  await saveCache({
+  await saveStoredJson(WORKSPACES_CACHE_KEY, {
     version: CACHE_VERSION,
     rootsDiscoverySignature: preferences.workspaceDiscoverySignature,
     scannedAt: new Date().toISOString(),

@@ -1,7 +1,7 @@
-import { LocalStorage } from "@raycast/api";
 import { Dirent, Stats, promises as fs } from "node:fs";
 import path from "node:path";
 import { isNote, isWorkspace, type Note, type Workspace } from "../types/octarine";
+import { loadStoredJson, saveStoredJson } from "./cache";
 import { buildSearchIndexText } from "./search";
 
 const NOTES_CACHE_KEY = "octarine.notes.v1";
@@ -177,44 +177,8 @@ function isPinnedNotesCache(value: unknown): value is PinnedNotesCache {
   );
 }
 
-async function loadCache(): Promise<NotesCache | undefined> {
-  const cachedValue = await LocalStorage.getItem<string>(NOTES_CACHE_KEY);
-  if (!cachedValue) {
-    return undefined;
-  }
-
-  try {
-    const parsed = JSON.parse(cachedValue) as unknown;
-    return isNotesCache(parsed) ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-async function saveCache(cache: NotesCache): Promise<void> {
-  await LocalStorage.setItem(NOTES_CACHE_KEY, JSON.stringify(cache));
-}
-
-async function loadPinnedNotesCache(): Promise<PinnedNotesCache | undefined> {
-  const cachedValue = await LocalStorage.getItem<string>(PINNED_NOTES_CACHE_KEY);
-  if (!cachedValue) {
-    return undefined;
-  }
-
-  try {
-    const parsed = JSON.parse(cachedValue) as unknown;
-    return isPinnedNotesCache(parsed) ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-async function savePinnedNotesCache(cache: PinnedNotesCache): Promise<void> {
-  await LocalStorage.setItem(PINNED_NOTES_CACHE_KEY, JSON.stringify(cache));
-}
-
 export async function loadCachedNotes(workspaceSearchSignature: string): Promise<NotesCacheResult | undefined> {
-  const cached = await loadCache();
+  const cached = await loadStoredJson(NOTES_CACHE_KEY, isNotesCache);
 
   if (!cached || cached.workspaceSearchSignature !== workspaceSearchSignature) {
     return undefined;
@@ -231,7 +195,7 @@ export async function saveCachedNotes(
   notes: IndexedNote[],
   workspaceSearchSignature: string,
 ): Promise<void> {
-  await saveCache({
+  await saveStoredJson(NOTES_CACHE_KEY, {
     version: NOTES_CACHE_VERSION,
     workspaceSearchSignature,
     scannedAt: new Date().toISOString(),
@@ -243,7 +207,7 @@ export async function saveCachedNotes(
 export async function loadCachedPinnedNotes(
   workspaceSearchSignature: string,
 ): Promise<PinnedNotesCacheResult | undefined> {
-  const cached = await loadPinnedNotesCache();
+  const cached = await loadStoredJson(PINNED_NOTES_CACHE_KEY, isPinnedNotesCache);
 
   if (!cached || cached.workspaceSearchSignature !== workspaceSearchSignature) {
     return undefined;
@@ -511,7 +475,7 @@ export async function refreshPinnedNotesCache(
   workspaceSearchSignature: string,
   onError: (error: unknown) => Promise<void>,
 ): Promise<IndexedNote[]> {
-  const cached = await loadPinnedNotesCache();
+  const cached = await loadStoredJson(PINNED_NOTES_CACHE_KEY, isPinnedNotesCache);
   const cachedEntriesByKey = new Map<string, PinnedNoteFileCacheEntry>();
 
   if (cached && cached.workspaceSearchSignature === workspaceSearchSignature) {
@@ -544,7 +508,7 @@ export async function refreshPinnedNotesCache(
 
   sortNotes(discoveredNotes);
 
-  await savePinnedNotesCache({
+  await saveStoredJson(PINNED_NOTES_CACHE_KEY, {
     version: PINNED_NOTES_CACHE_VERSION,
     workspaceSearchSignature,
     scannedAt: new Date().toISOString(),
