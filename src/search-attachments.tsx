@@ -1,12 +1,15 @@
-import { Action, Grid } from "@raycast/api";
+import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import { useMemo, useState } from "react";
-import { AttachmentGridItem } from "./components/AttachmentGridItem";
 import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { type AttachmentSection, useAttachments } from "./hooks/useAttachments";
+import { openOctarineAttachment } from "./lib/octarine";
 import { getSearchAttachmentsPreferences } from "./lib/preferences";
+import type { IndexedAttachment } from "./types/attachment";
 import { match } from "./utils/match";
+
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
 
 export default function SearchAttachmentsCommand() {
   const preferences = getSearchAttachmentsPreferences();
@@ -100,4 +103,40 @@ function WorkspaceSectionGrid({
       ))}
     </Grid.Section>
   ));
+}
+
+function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
+  return (
+    <Grid.Item
+      title={file.name}
+      subtitle={file.extension.toUpperCase()}
+      content={attachmentContent(file)}
+      quickLook={{ name: file.name, path: file.path }}
+      keywords={[file.workspace.name, file.extension]}
+      actions={
+        <ActionPanel>
+          <Action
+            title="Search Attachment"
+            icon={Icon.Globe}
+            onAction={() => openOctarineAttachment(file.name, file.workspace.name)}
+          />
+          <Action.Open title="Open File" target={file.path} shortcut={{ modifiers: ["cmd"], key: "return" }} />
+          <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />
+          <Action.CopyToClipboard
+            title="Copy File Path"
+            content={file.path}
+            shortcut={{ modifiers: ["cmd"], key: "." }}
+          />
+        </ActionPanel>
+      }
+    />
+  );
+}
+
+function attachmentContent(file: IndexedAttachment): Grid.Item.Props["content"] {
+  if (IMAGE_EXTENSIONS.has(file.extension)) {
+    return file.path;
+  }
+
+  return { fileIcon: file.path };
 }
