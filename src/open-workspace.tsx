@@ -12,9 +12,7 @@ type Arguments = {
 export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
 
-  const { workspaces, status, revalidate } = useWorkspaces({
-    refresh: true,
-  });
+  const { workspaces, status, revalidate } = useWorkspaces();
   const { shouldHideMenu } = useOpenWorkspace({
     requestedWorkspace,
     workspaces,
@@ -29,7 +27,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
     <WorkspaceMenu
       isLoading={status.isLoading}
       workspaces={workspaces}
-      searchBarPlaceholder="Search Octarine workspaces..."
+      searchBarPlaceholder="Search workspaces..."
       emptyView={
         <WorkspaceNotFound>
           <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => revalidate()} />
