@@ -46,7 +46,7 @@ describe("views", () => {
     loadWorkspacesMock.mockResolvedValue({
       workspaces: [validWorkspace, malformedWorkspace, invalidWorkspace, missingWorkspace],
       invalidRoots: [],
-      fromCache: false,
+      cached: false,
     });
 
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -185,7 +185,7 @@ describe("views", () => {
     loadWorkspacesMock.mockResolvedValue({
       workspaces: [workspace],
       invalidRoots: [],
-      fromCache: false,
+      cached: false,
     });
 
     await writeTextFile(
@@ -227,7 +227,7 @@ describe("views", () => {
     loadWorkspacesMock.mockResolvedValue({
       workspaces: [workspace],
       invalidRoots: [],
-      fromCache: false,
+      cached: false,
     });
 
     await writeTextFile(

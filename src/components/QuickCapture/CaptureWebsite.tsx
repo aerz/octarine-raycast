@@ -152,7 +152,7 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
           return;
         }
 
-        const workspaceResult = await loadWorkspaces({ forceRefresh: true });
+        const workspaceResult = await loadWorkspaces({ refresh: true });
         if (!canceled) {
           setWorkspaces(workspaceResult.workspaces);
         }

@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { isView, isWorkspace, type View, type Workspace } from "../types/octarine";
-import { loadStoredJson, saveStoredJson } from "./cache";
+import { loadStoredJson, saveStoredJson } from "./localstorage";
 import { buildSearchIndexText } from "./search";
 import { type LoadWorkspacesResult, loadWorkspaces } from "./workspaces";
 
@@ -201,7 +201,7 @@ export async function saveCachedViews(
 }
 
 export async function scanViewsFromWorkspaces(options?: { forceRefresh?: boolean }): Promise<ViewsScanResult> {
-  const workspaceResult = await loadWorkspaces(options);
+  const workspaceResult = await loadWorkspaces({ refresh: options?.forceRefresh });
   const workspaceViews = (
     await Promise.all(workspaceResult.workspaces.map((workspace) => scanWorkspaceViews(workspace)))
   ).filter((value): value is WorkspaceViews => value !== undefined);
@@ -210,6 +210,6 @@ export async function scanViewsFromWorkspaces(options?: { forceRefresh?: boolean
     workspaceCount: workspaceResult.workspaces.length,
     workspaceViews,
     invalidRoots: workspaceResult.invalidRoots,
-    fromCache: workspaceResult.fromCache,
+    fromCache: workspaceResult.cached,
   };
 }

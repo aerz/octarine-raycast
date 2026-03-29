@@ -1,22 +1,28 @@
-import { LocalStorage } from "@raycast/api";
+import { Cache } from "@raycast/api";
+import { isWorkspace, type Workspace } from "../types/octarine";
 
-export async function loadStoredJson<T>(
-  key: string,
-  isValid: (value: unknown) => value is T,
-): Promise<T | undefined> {
-  const cachedValue = await LocalStorage.getItem<string>(key);
-  if (!cachedValue) {
+const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
+
+const cache = new Cache();
+
+function isWorkspacesCache(value: unknown): value is Workspace[] {
+  return Array.isArray(value) && value.every(isWorkspace);
+}
+
+export function getWorkspacesCache(): Workspace[] | undefined {
+  const value = cache.get(WORKSPACES_CACHE_KEY);
+  if (!value) {
     return undefined;
   }
 
   try {
-    const parsed = JSON.parse(cachedValue) as unknown;
-    return isValid(parsed) ? parsed : undefined;
+    const parsed = JSON.parse(value) as unknown;
+    return isWorkspacesCache(parsed) ? parsed : undefined;
   } catch {
     return undefined;
   }
 }
 
-export async function saveStoredJson<T>(key: string, value: T): Promise<void> {
-  await LocalStorage.setItem(key, JSON.stringify(value));
+export function setWorkspacesCache(workspaces: Workspace[]): void {
+  cache.set(WORKSPACES_CACHE_KEY, JSON.stringify(workspaces));
 }

@@ -1,7 +1,7 @@
 import { Dirent, Stats, promises as fs } from "node:fs";
 import path from "node:path";
 import { isNote, isWorkspace, type Note, type Workspace } from "../types/octarine";
-import { loadStoredJson, saveStoredJson } from "./cache";
+import { loadStoredJson, saveStoredJson } from "./localstorage";
 import { buildSearchIndexText } from "./search";
 
 const NOTES_CACHE_KEY = "octarine.notes.v1";

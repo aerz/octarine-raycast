@@ -2,7 +2,7 @@ import { Dirent, Stats, promises as fs } from "node:fs";
 import path from "node:path";
 import { type IndexedAttachment, isIndexedAttachment } from "../types/attachment";
 import type { Workspace } from "../types/octarine";
-import { loadStoredJson, saveStoredJson } from "./cache";
+import { loadStoredJson, saveStoredJson } from "./localstorage";
 import { buildSearchIndexText } from "./search";
 import { loadWorkspaces } from "./workspaces";
 
@@ -241,7 +241,7 @@ export async function scanAttachments(options?: {
   excludedExtensions?: Set<string>;
   excludedDirectoryNames?: Set<string>;
 }): Promise<AttachmentsSnapshot> {
-  const workspaceResult = await loadWorkspaces({ forceRefresh: options?.forceRefresh });
+  const workspaceResult = await loadWorkspaces({ refresh: options?.forceRefresh });
   const excludedExtensions = options?.excludedExtensions ?? new Set<string>();
   const excludedDirectoryNames = options?.excludedDirectoryNames ?? new Set<string>();
 

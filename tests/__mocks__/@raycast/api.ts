@@ -3,6 +3,7 @@ import { vi } from "vitest";
 type PreferenceValues = Record<string, unknown>;
 
 const localStorageState = new Map<string, unknown>();
+const cacheState = new Map<string, string>();
 
 let preferenceValues: PreferenceValues = {};
 
@@ -34,8 +35,30 @@ export const LocalStorage = {
   },
 };
 
+export class Cache {
+  get(key: string): string | undefined {
+    return cacheState.get(key);
+  }
+
+  set(key: string, data: string): void {
+    cacheState.set(key, data);
+  }
+
+  remove(key: string): boolean {
+    return cacheState.delete(key);
+  }
+
+  clear(): void {
+    cacheState.clear();
+  }
+}
+
 export function getPreferenceValues<T>(): T {
   return preferenceValues as T;
+}
+
+export function setMockCacheValue(key: string, value: string): void {
+  cacheState.set(key, value);
 }
 
 export function setMockPreferences(values: PreferenceValues): void {
@@ -45,6 +68,7 @@ export function setMockPreferences(values: PreferenceValues): void {
 export function resetRaycastApiMock(): void {
   preferenceValues = {};
   localStorageState.clear();
+  cacheState.clear();
 
   open.mockReset();
   open.mockResolvedValue(undefined);

@@ -151,8 +151,8 @@ describe("attachments", () => {
       workspaceCount: 1,
       attachments: refreshed.attachments,
     });
-    expect(loadWorkspacesMock).toHaveBeenNthCalledWith(1, { forceRefresh: undefined });
-    expect(loadWorkspacesMock).toHaveBeenNthCalledWith(2, { forceRefresh: true });
+    expect(loadWorkspacesMock).toHaveBeenNthCalledWith(1, { refresh: undefined });
+    expect(loadWorkspacesMock).toHaveBeenNthCalledWith(2, { refresh: true });
   });
 });
 

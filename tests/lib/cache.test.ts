@@ -1,54 +1,52 @@
-import { LocalStorage } from "@raycast/api";
 import { describe, expect, it } from "vitest";
-import { loadStoredJson, saveStoredJson } from "../../src/lib/cache";
+import { getWorkspacesCache, setWorkspacesCache } from "../../src/lib/cache";
+import { setMockCacheValue } from "../__mocks__/@raycast/api";
 
-describe("cache", () => {
-  it("returns undefined when the key is missing", async () => {
-    const result = await loadStoredJson("missing", isTestCache);
+const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
 
-    expect(result).toBeUndefined();
-  });
-
-  it("returns parsed data when the JSON is valid and passes validation", async () => {
-    await LocalStorage.setItem("test", JSON.stringify({ value: "cached" }));
-
-    const result = await loadStoredJson("test", isTestCache);
-
-    expect(result).toEqual({ value: "cached" });
-  });
-
-  it("returns undefined when the JSON is malformed", async () => {
-    await LocalStorage.setItem("test", "{");
-
-    const result = await loadStoredJson("test", isTestCache);
+describe("workspace cache", () => {
+  it("returns undefined when the key is missing", () => {
+    const result = getWorkspacesCache();
 
     expect(result).toBeUndefined();
   });
 
-  it("returns undefined when validation fails", async () => {
-    await LocalStorage.setItem("test", JSON.stringify({ value: 1 }));
+  it("returns cached workspaces when the cached value is valid", () => {
+    setMockCacheValue(
+      WORKSPACES_CACHE_KEY,
+      JSON.stringify([
+        { name: "Alpha", path: "/workspaces/alpha" },
+        { name: "Beta", path: "/workspaces/beta" },
+      ]),
+    );
 
-    const result = await loadStoredJson("test", isTestCache);
+    const result = getWorkspacesCache();
+
+    expect(result).toEqual([
+      { name: "Alpha", path: "/workspaces/alpha" },
+      { name: "Beta", path: "/workspaces/beta" },
+    ]);
+  });
+
+  it("returns undefined when the cached value is malformed", () => {
+    setMockCacheValue(WORKSPACES_CACHE_KEY, "{");
+
+    const result = getWorkspacesCache();
 
     expect(result).toBeUndefined();
   });
 
-  it("stores JSON strings via saveStoredJson", async () => {
-    await saveStoredJson("test", { value: "saved" });
+  it("returns undefined when the cached value is not a valid workspace list", () => {
+    setMockCacheValue(WORKSPACES_CACHE_KEY, JSON.stringify([{ name: "Alpha", path: 1 }]));
 
-    expect(await LocalStorage.getItem("test")).toBe(JSON.stringify({ value: "saved" }));
+    const result = getWorkspacesCache();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("stores workspaces as cacheable data", () => {
+    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }]);
+
+    expect(getWorkspacesCache()).toEqual([{ name: "Alpha", path: "/workspaces/alpha" }]);
   });
 });
-
-type TestCache = {
-  value: string;
-};
-
-function isTestCache(value: unknown): value is TestCache {
-  return (
-    !!value &&
-    typeof value === "object" &&
-    "value" in value &&
-    typeof (value as Record<string, unknown>).value === "string"
-  );
-}

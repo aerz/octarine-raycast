@@ -189,7 +189,7 @@ function useNotesSource({
           return;
         }
 
-        const workspaceResultPromise = loadWorkspaces({ forceRefresh: true });
+        const workspaceResultPromise = loadWorkspaces({ refresh: true });
         const [cachedResult, cachedPinnedResult] = await Promise.all([
           loadCachedNotes(workspaceSearchSignature),
           loadCachedPinnedNotes(workspaceSearchSignature),

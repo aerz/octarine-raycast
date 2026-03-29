@@ -25,9 +25,9 @@ export function useWorkspaces(options: Options = {}): Result {
 
   const { data, error, isLoading, revalidate } = usePromise(
     async (refresh: boolean) => {
-      const workspaces = await loadWorkspaces({ forceRefresh: refresh });
+      const workspaces = await loadWorkspaces({ refresh });
 
-      if (!workspaces.fromCache && workspaces.invalidRoots.length > 0) {
+      if (!workspaces.cached && workspaces.invalidRoots.length > 0) {
         await showToast({
           style: Toast.Style.Failure,
           title: "Workspaces were skipped",

@@ -124,7 +124,7 @@ export function usePinnedNotes({
       void workspaceSearchSignature;
       const showScanFailureToast = createScanFailureToast();
 
-      const workspaceResult = await loadWorkspaces({ forceRefresh: true });
+      const workspaceResult = await loadWorkspaces({ refresh: true });
       const notes = await refreshPinnedNotesCache(
         workspaceResult.workspaces,
         excludedDirectoryNames,

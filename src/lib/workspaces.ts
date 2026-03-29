@@ -1,107 +1,70 @@
 import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
-import { isWorkspace, type Workspace } from "../types/octarine";
-import { loadStoredJson, saveStoredJson } from "./cache";
+import type { Workspace } from "../types/octarine";
+import { getWorkspacesCache, setWorkspacesCache } from "./cache";
 import { getExtensionPreferences } from "./preferences";
 
-const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
-const WORKSPACE_MARKER = ".octarine";
-const CACHE_VERSION = 3;
+const WORKSPACE_DIR_NAME = ".octarine";
 
-type WorkspaceCache = {
-  version: number;
-  rootsDiscoverySignature: string;
-  scannedAt: string;
-  workspaces: Workspace[];
-};
-
-export type LoadWorkspacesResult = {
+type ScanWorkspacesResult = {
   workspaces: Workspace[];
   invalidRoots: string[];
-  fromCache: boolean;
 };
 
-function isWorkspaceCache(value: unknown): value is WorkspaceCache {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
+export type LoadWorkspacesResult = ScanWorkspacesResult & {
+  cached: boolean;
+};
 
-  const maybeCache = value as Partial<WorkspaceCache>;
-  return (
-    maybeCache.version === CACHE_VERSION &&
-    typeof maybeCache.rootsDiscoverySignature === "string" &&
-    typeof maybeCache.scannedAt === "string" &&
-    Array.isArray(maybeCache.workspaces) &&
-    maybeCache.workspaces.every(isWorkspace)
-  );
-}
-
-async function discoverWorkspacesInRoot(rootPath: string, excludedWorkspaces: Set<string>): Promise<Workspace[]> {
+async function scanWorkspacesRoot(root: string, excludedWorkspaces: Set<string>): Promise<Workspace[]> {
   const discovered: Workspace[] = [];
-  const pendingDirectories: string[] = [rootPath];
-
-  while (pendingDirectories.length > 0) {
-    const currentDirectory = pendingDirectories.pop();
-    if (!currentDirectory) {
-      continue;
-    }
-
+  const walk = async (current: string): Promise<void> => {
     let entries: Dirent[];
     try {
-      entries = await fs.readdir(currentDirectory, { withFileTypes: true });
+      entries = await fs.readdir(current, { withFileTypes: true });
     } catch {
-      continue;
+      return;
     }
 
-    const hasWorkspaceMarker = entries.some((entry) => entry.isDirectory() && entry.name === WORKSPACE_MARKER);
-    if (hasWorkspaceMarker) {
-      const absoluteWorkspacePath = path.normalize(path.resolve(currentDirectory));
-      const workspaceName = path.basename(absoluteWorkspacePath);
+    const isOctarineWorkspace = entries.some((entry) => entry.isDirectory() && entry.name === WORKSPACE_DIR_NAME);
+    if (isOctarineWorkspace) {
+      const workspacePath = path.normalize(path.resolve(current));
+      const workspaceName = path.basename(workspacePath);
 
       if (excludedWorkspaces.has(workspaceName.toLowerCase())) {
-        continue;
+        return;
       }
 
       discovered.push({
         name: workspaceName,
-        path: absoluteWorkspacePath,
+        path: workspacePath,
       });
-      continue;
+      return;
     }
 
-    for (const entry of entries) {
-      if (entry.name === WORKSPACE_MARKER) {
-        continue;
-      }
+    await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink() && entry.name !== WORKSPACE_DIR_NAME)
+        .map((entry) => walk(path.join(current, entry.name))),
+    );
+  };
 
-      if (!entry.isDirectory() || entry.isSymbolicLink()) {
-        continue;
-      }
-
-      pendingDirectories.push(path.join(currentDirectory, entry.name));
-    }
-  }
-
-  return discovered;
+  return walk(root).then(() => discovered);
 }
 
-async function discoverWorkspaces(
-  roots: string[],
-  excludedWorkspaces: Set<string>,
-): Promise<{ workspaces: Workspace[]; invalidRoots: string[] }> {
-  const rootResults = await Promise.all(
-    roots.map(async (rootPath) => {
+async function scanWorkspaces(roots: string[], excludedWorkspaces: Set<string>): Promise<ScanWorkspacesResult> {
+  const results = await Promise.all(
+    roots.map(async (path) => {
       try {
-        const rootStats = await fs.stat(rootPath);
-        if (!rootStats.isDirectory()) {
-          return { rootPath, invalid: true, workspaces: [] as Workspace[] };
+        const stat = await fs.stat(path);
+        if (!stat.isDirectory()) {
+          return { path, invalid: true, workspaces: [] as Workspace[] };
         }
       } catch {
-        return { rootPath, invalid: true, workspaces: [] as Workspace[] };
+        return { path, invalid: true, workspaces: [] as Workspace[] };
       }
 
-      const workspaces = await discoverWorkspacesInRoot(rootPath, excludedWorkspaces);
-      return { rootPath, invalid: false, workspaces };
+      const workspaces = await scanWorkspacesRoot(path, excludedWorkspaces);
+      return { path, invalid: false, workspaces };
     }),
   );
 
@@ -109,9 +72,9 @@ async function discoverWorkspaces(
   const dedupedPaths = new Set<string>();
   const workspaces: Workspace[] = [];
 
-  for (const result of rootResults) {
+  for (const result of results) {
     if (result.invalid) {
-      invalidRoots.push(result.rootPath);
+      invalidRoots.push(result.path);
       continue;
     }
 
@@ -133,32 +96,27 @@ async function discoverWorkspaces(
   return { workspaces, invalidRoots };
 }
 
-export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Promise<LoadWorkspacesResult> {
-  const preferences = getExtensionPreferences();
-  const forceRefresh = options?.forceRefresh ?? false;
+export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<LoadWorkspacesResult> {
+  const { workspaceRoots, excludedWorkspaces } = getExtensionPreferences();
+  const refresh = options?.refresh ?? false;
 
-  if (!forceRefresh) {
-    const cached = await loadStoredJson(WORKSPACES_CACHE_KEY, isWorkspaceCache);
-    if (cached && cached.rootsDiscoverySignature === preferences.workspaceDiscoverySignature) {
+  if (!refresh) {
+    const cache = getWorkspacesCache();
+    if (cache) {
       return {
-        workspaces: cached.workspaces,
+        workspaces: cache,
         invalidRoots: [],
-        fromCache: true,
+        cached: true,
       };
     }
   }
 
-  const discoveryResult = await discoverWorkspaces(preferences.workspaceRoots, preferences.excludedWorkspaces);
-  await saveStoredJson(WORKSPACES_CACHE_KEY, {
-    version: CACHE_VERSION,
-    rootsDiscoverySignature: preferences.workspaceDiscoverySignature,
-    scannedAt: new Date().toISOString(),
-    workspaces: discoveryResult.workspaces,
-  });
+  const scan = await scanWorkspaces(workspaceRoots, excludedWorkspaces);
+  setWorkspacesCache(scan.workspaces);
 
   return {
-    workspaces: discoveryResult.workspaces,
-    invalidRoots: discoveryResult.invalidRoots,
-    fromCache: false,
+    workspaces: scan.workspaces,
+    invalidRoots: scan.invalidRoots,
+    cached: false,
   };
 }

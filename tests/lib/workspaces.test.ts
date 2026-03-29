@@ -35,7 +35,7 @@ describe("loadWorkspaces", () => {
 
     const result = await loadWorkspaces();
 
-    expect(result.fromCache).toBe(false);
+    expect(result.cached).toBe(false);
     expect(result.invalidRoots).toEqual([invalidRoot]);
     expect(result.workspaces).toEqual([
       { name: "Alpha", path: path.join(root, "Alpha") },
@@ -60,15 +60,15 @@ describe("loadWorkspaces", () => {
     await ensureDir(path.join(root, "Beta", workspaceMarker));
 
     const cached = await loadWorkspaces();
-    const refreshed = await loadWorkspaces({ forceRefresh: true });
+    const refreshed = await loadWorkspaces({ refresh: true });
 
-    expect(initial.fromCache).toBe(false);
+    expect(initial.cached).toBe(false);
     expect(cached).toEqual({
       workspaces: [{ name: "Alpha", path: path.join(root, "Alpha") }],
       invalidRoots: [],
-      fromCache: true,
+      cached: true,
     });
-    expect(refreshed.fromCache).toBe(false);
+    expect(refreshed.cached).toBe(false);
     expect(refreshed.workspaces).toEqual([
       { name: "Alpha", path: path.join(root, "Alpha") },
       { name: "Beta", path: path.join(root, "Beta") },
