@@ -1,23 +1,22 @@
+import { Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { skippedWorkspacesToast, workspacesLoadToast } from "../components/Toasts";
 import { loadWorkspaces, type LoadWorkspacesResult } from "../lib/workspaces";
 import type { Workspace } from "../types/octarine";
+
+export type LoadStatus = {
+  isLoading: boolean;
+  failed: boolean;
+};
 
 type Options = {
   refresh?: boolean;
   enabled?: boolean;
 };
 
-export type LoadStatus = {
-  isLoading: boolean;
-  hasFailed: boolean;
-};
-
 type Result = {
   workspaces: Workspace[];
   status: LoadStatus;
   revalidate: () => Promise<LoadWorkspacesResult>;
-  error: Error | undefined;
 };
 
 export function useWorkspaces(options: Options = {}): Result {
@@ -26,17 +25,27 @@ export function useWorkspaces(options: Options = {}): Result {
 
   const { data, error, isLoading, revalidate } = usePromise(
     async (refresh: boolean) => {
-      const result = await loadWorkspaces({ forceRefresh: refresh });
-      if (!result.fromCache && result.invalidRoots.length > 0) {
-        await skippedWorkspacesToast(result.invalidRoots.length);
+      const workspaces = await loadWorkspaces({ forceRefresh: refresh });
+
+      if (!workspaces.fromCache && workspaces.invalidRoots.length > 0) {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Workspaces were skipped",
+          message: `${workspaces.invalidRoots.length} workspace roots could not be read`,
+        });
       }
 
-      return result;
+      return workspaces;
     },
     [refresh],
     {
       execute: enabled,
-      onError: workspacesLoadToast,
+      onError: async () => {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Failed to load workspaces",
+        });
+      },
     },
   );
 
@@ -44,9 +53,8 @@ export function useWorkspaces(options: Options = {}): Result {
     workspaces: data?.workspaces ?? [],
     status: {
       isLoading,
-      hasFailed: Boolean(error),
+      failed: Boolean(error),
     },
     revalidate,
-    error: error instanceof Error ? error : undefined,
   };
 }

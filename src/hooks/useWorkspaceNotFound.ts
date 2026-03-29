@@ -21,7 +21,7 @@ export function useWorkspaceNotFound({
   const lastWorkspaceNotFoundToast = useRef<string | undefined>(undefined);
 
   const isWorkspaceNotFound = useMemo(
-    () => enabled && Boolean(requestedWorkspace) && !status.isLoading && !status.hasFailed && !hasMatchedWorkspace,
+    () => enabled && Boolean(requestedWorkspace) && !status.isLoading && !status.failed && !hasMatchedWorkspace,
     [enabled, requestedWorkspace, status, hasMatchedWorkspace],
   );
 
