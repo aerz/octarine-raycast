@@ -1,5 +1,5 @@
 <p align="center">
-  <img width=180 src="./assets/extension-icon.png">
+  <img width=180 src="./assets/icon.png">
 </p>
 
 # Octarine for Raycast

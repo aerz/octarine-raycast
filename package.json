@@ -3,7 +3,7 @@
   "name": "octarine",
   "title": "Octarine",
   "description": "Control Octarine from Raycast",
-  "icon": "extension-icon.png",
+  "icon": "icon.png",
   "author": "aerz",
   "platforms": [
     "macOS",
