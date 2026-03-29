@@ -1,4 +1,5 @@
 import { Action, ActionPanel, Clipboard, Icon, LaunchProps, openExtensionPreferences } from "@raycast/api";
+import { useState } from "react";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useOpenWorkspace } from "./hooks/useOpenWorkspace";
@@ -11,8 +12,9 @@ type Arguments = {
 
 export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
+  const [refresh, setRefresh] = useState(false);
 
-  const { workspaces, status, revalidate } = useWorkspaces();
+  const { workspaces, status } = useWorkspaces({ refresh });
   const { shouldHideMenu } = useOpenWorkspace({
     requestedWorkspace,
     workspaces,
@@ -30,13 +32,13 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
       searchBarPlaceholder="Search workspaces..."
       emptyView={
         <WorkspaceNotFound>
-          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => revalidate()} />
+          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => setRefresh((prev) => !prev)} />
         </WorkspaceNotFound>
       }
       renderActions={(workspace) => (
         <ActionPanel>
           <Action title="Open Workspace" icon={Icon.AppWindow} onAction={() => openOctarineWorkspace(workspace.name)} />
-          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => revalidate()} />
+          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => setRefresh((prev) => !prev)} />
           <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
           <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
         </ActionPanel>
