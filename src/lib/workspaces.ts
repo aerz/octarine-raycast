@@ -15,7 +15,7 @@ type WorkspaceCache = {
   workspaces: Workspace[];
 };
 
-export type WorkspaceLoadResult = {
+export type LoadWorkspacesResult = {
   workspaces: Workspace[];
   invalidRoots: string[];
   fromCache: boolean;
@@ -133,7 +133,7 @@ async function discoverWorkspaces(
   return { workspaces, invalidRoots };
 }
 
-export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Promise<WorkspaceLoadResult> {
+export async function loadWorkspaces(options?: { forceRefresh?: boolean }): Promise<LoadWorkspacesResult> {
   const preferences = getExtensionPreferences();
   const forceRefresh = options?.forceRefresh ?? false;
 

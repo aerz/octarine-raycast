@@ -1,6 +1,6 @@
 import { usePromise } from "@raycast/utils";
 import { skippedWorkspacesToast, workspacesLoadToast } from "../components/Toasts";
-import { loadWorkspaces, type WorkspaceLoadResult } from "../lib/workspaces";
+import { loadWorkspaces, type LoadWorkspacesResult } from "../lib/workspaces";
 import type { Workspace } from "../types/octarine";
 
 type Options = {
@@ -16,7 +16,7 @@ export type LoadStatus = {
 type Result = {
   workspaces: Workspace[];
   status: LoadStatus;
-  revalidate: () => Promise<WorkspaceLoadResult>;
+  revalidate: () => Promise<LoadWorkspacesResult>;
   error: Error | undefined;
 };
 

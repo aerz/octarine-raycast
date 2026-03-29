@@ -3,7 +3,7 @@ import path from "node:path";
 import { isView, isWorkspace, type View, type Workspace } from "../types/octarine";
 import { loadStoredJson, saveStoredJson } from "./cache";
 import { buildSearchIndexText } from "./search";
-import { type WorkspaceLoadResult, loadWorkspaces } from "./workspaces";
+import { type LoadWorkspacesResult, loadWorkspaces } from "./workspaces";
 
 const VIEWS_FILE_NAME = "views.json";
 const OCTARINE_DIRECTORY_NAME = ".octarine";
@@ -25,7 +25,7 @@ export type WorkspaceViews = {
   views: IndexedView[];
 };
 
-export type ViewsScanResult = Pick<WorkspaceLoadResult, "invalidRoots" | "fromCache"> & {
+export type ViewsScanResult = Pick<LoadWorkspacesResult, "invalidRoots" | "fromCache"> & {
   workspaceCount: number;
   workspaceViews: WorkspaceViews[];
 };
