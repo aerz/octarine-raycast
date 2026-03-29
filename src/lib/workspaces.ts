@@ -68,25 +68,30 @@ async function scanWorkspaces(roots: string[], excludedWorkspaces: Set<string>):
     }),
   );
 
-  const invalidRoots: string[] = [];
-  const dedupedPaths = new Set<string>();
-  const workspaces: Workspace[] = [];
-
-  for (const result of results) {
-    if (result.invalid) {
-      invalidRoots.push(result.path);
-      continue;
-    }
-
-    for (const workspace of result.workspaces) {
-      if (dedupedPaths.has(workspace.path)) {
-        continue;
+  const { invalidRoots, workspaces } = results.reduce(
+    (acc, result) => {
+      if (result.invalid) {
+        acc.invalidRoots.push(result.path);
+        return acc;
       }
 
-      dedupedPaths.add(workspace.path);
-      workspaces.push(workspace);
-    }
-  }
+      for (const workspace of result.workspaces) {
+        if (acc.workspacePaths.has(workspace.path)) {
+          continue;
+        }
+
+        acc.workspacePaths.add(workspace.path);
+        acc.workspaces.push(workspace);
+      }
+
+      return acc;
+    },
+    {
+      invalidRoots: [] as string[],
+      workspacePaths: new Set<string>(),
+      workspaces: [] as Workspace[],
+    },
+  );
 
   workspaces.sort((a, b) => {
     const byName = a.name.localeCompare(b.name);
