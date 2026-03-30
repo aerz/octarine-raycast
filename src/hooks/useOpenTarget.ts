@@ -1,5 +1,5 @@
 import { Toast, showToast } from "@raycast/api";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Workspace } from "../types/octarine";
 import type { LoadStatus } from "./useWorkspaces";
 
@@ -10,19 +10,17 @@ type Options = {
   open: (workspaceName: string) => Promise<boolean>;
 };
 
-type Result = {
-  shouldClose: boolean;
-};
-
-export function useOpenTarget({ requestedWorkspace, workspaces, status, open }: Options): Result {
+export function useOpenTarget({ requestedWorkspace, workspaces, status, open }: Options) {
   const workspace = findWorkspaceByName(requestedWorkspace, workspaces);
   const workspaceNotFound = Boolean(requestedWorkspace) && !status.isLoading && !status.failed && !workspace;
+  const lastToast = useRef("");
 
   useEffect(() => {
-    if (!workspaceNotFound) {
+    if (!workspaceNotFound || lastToast.current === requestedWorkspace) {
       return;
     }
 
+    lastToast.current = requestedWorkspace;
     void showToast({
       style: Toast.Style.Failure,
       title: `Workspace “${requestedWorkspace}” not found`,
@@ -36,10 +34,6 @@ export function useOpenTarget({ requestedWorkspace, workspaces, status, open }: 
 
     void open(workspace.name);
   }, [workspace, open, requestedWorkspace]);
-
-  return {
-    shouldClose: Boolean(workspace && !workspaceNotFound),
-  };
 }
 
 function findWorkspaceByName(workspace: string, workspaces: Workspace[]): Workspace | undefined {

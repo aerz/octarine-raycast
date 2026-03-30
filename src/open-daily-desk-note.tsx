@@ -34,7 +34,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   } = useWorkspaces({
     enabled: isValidDate,
   });
-  const { shouldClose } = useOpenTarget({
+  useOpenTarget({
     requestedWorkspace,
     workspaces,
     status: workspaceStatus,
@@ -53,10 +53,6 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
 
   if (!isValidDate) {
     return <DateFormatsDetail />;
-  }
-
-  if (shouldClose) {
-    return null;
   }
 
   return (

@@ -15,16 +15,12 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
   const [refresh, setRefresh] = useState(false);
 
   const { workspaces, status, revalidate } = useWorkspaces({ refresh });
-  const { shouldClose } = useOpenTarget({
+  useOpenTarget({
     requestedWorkspace,
     workspaces,
     status,
     open: openWorkspace,
   });
-
-  if (shouldClose) {
-    return null;
-  }
 
   return (
     <WorkspaceMenu

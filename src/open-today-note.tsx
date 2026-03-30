@@ -16,16 +16,12 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arg
   const targetWorkspace = requestedWorkspace ? requestedWorkspace : defaultWorkspace;
 
   const { workspaces, status, revalidate } = useWorkspaces();
-  const { shouldClose } = useOpenTarget({
+  useOpenTarget({
     requestedWorkspace: targetWorkspace,
     workspaces,
     status,
     open: openTodayNote,
   });
-
-  if (shouldClose) {
-    return null;
-  }
 
   return (
     <WorkspaceMenu
