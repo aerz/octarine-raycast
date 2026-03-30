@@ -182,17 +182,6 @@ describe("useOpenTarget", () => {
     });
 
     expect(open).toHaveBeenCalledTimes(1);
-
-    const nextOpen = vi.fn(async () => true);
-
-    await renderHook({
-      requestedWorkspace: "Alpha",
-      workspaces,
-      status: { isLoading: false, failed: false },
-      open: nextOpen,
-    });
-
-    expect(nextOpen).not.toHaveBeenCalled();
   });
 
   it("keeps the menu visible when the direct open fails", async () => {
@@ -225,13 +214,6 @@ describe("useOpenTarget", () => {
     expect(showToast).toHaveBeenCalledWith({
       style: Toast.Style.Failure,
       title: "Workspace “Missing” not found",
-    });
-
-    await renderHook({
-      requestedWorkspace: "Missing",
-      workspaces,
-      status: { isLoading: true, failed: false },
-      open,
     });
 
     await renderHook({
