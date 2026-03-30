@@ -3,23 +3,16 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Workspace } from "../../src/types/octarine";
 
 class HookRuntime {
-  private stateSlots: unknown[] = [];
   private refSlots: unknown[] = [];
   private effectSlots: Array<readonly unknown[] | undefined> = [];
   private queuedEffects: Array<() => void> = [];
   private hookIndex = 0;
   private effectIndex = 0;
-  private stateUpdated = false;
 
   beginRender(): void {
     this.hookIndex = 0;
     this.effectIndex = 0;
     this.queuedEffects = [];
-    this.stateUpdated = false;
-  }
-
-  didStateUpdate(): boolean {
-    return this.stateUpdated;
   }
 
   useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void {
@@ -36,10 +29,6 @@ class HookRuntime {
     });
   }
 
-  useMemo<T>(factory: () => T): T {
-    return factory();
-  }
-
   useRef<T>(initialValue: T): { current: T } {
     const index = this.hookIndex++;
 
@@ -48,28 +37,6 @@ class HookRuntime {
     }
 
     return this.refSlots[index] as { current: T };
-  }
-
-  useState<T>(initialValue: T | (() => T)): [T, (value: T | ((previousValue: T) => T)) => void] {
-    const index = this.hookIndex++;
-
-    if (this.stateSlots[index] === undefined) {
-      this.stateSlots[index] = typeof initialValue === "function" ? (initialValue as () => T)() : initialValue;
-    }
-
-    const setState = (value: T | ((previousValue: T) => T)) => {
-      const previousValue = this.stateSlots[index] as T;
-      const nextValue = typeof value === "function" ? (value as (previousValue: T) => T)(previousValue) : value;
-
-      if (Object.is(previousValue, nextValue)) {
-        return;
-      }
-
-      this.stateSlots[index] = nextValue;
-      this.stateUpdated = true;
-    };
-
-    return [this.stateSlots[index] as T, setState];
   }
 
   flushEffects(): void {
@@ -101,9 +68,7 @@ let activeRuntime = new HookRuntime();
 
 vi.mock("react", () => ({
   useEffect: (effect: () => void | (() => void), deps?: readonly unknown[]) => activeRuntime.useEffect(effect, deps),
-  useMemo: <T>(factory: () => T) => activeRuntime.useMemo(factory),
   useRef: <T>(initialValue: T) => activeRuntime.useRef(initialValue),
-  useState: <T>(initialValue: T | (() => T)) => activeRuntime.useState(initialValue),
 }));
 
 type UseOpenTarget = (typeof import("../../src/hooks/useOpenTarget"))["useOpenTarget"];
@@ -123,56 +88,30 @@ const workspaces: Workspace[] = [
   { name: "Beta", path: "/tmp/beta" },
 ];
 
-async function renderHook(options: Parameters<UseOpenTarget>[0]): Promise<ReturnType<UseOpenTarget>> {
-  let result: ReturnType<UseOpenTarget> | undefined;
-
-  for (let renderCount = 0; renderCount < 10; renderCount++) {
-    activeRuntime.beginRender();
-    result = useOpenTarget(options);
-    activeRuntime.flushEffects();
-    await Promise.resolve();
-
-    if (!activeRuntime.didStateUpdate()) {
-      break;
-    }
-  }
-
-  if (result === undefined) {
-    throw new Error("Hook did not return a result");
-  }
-
-  return result;
+async function renderHook(options: Parameters<UseOpenTarget>[0]): Promise<void> {
+  activeRuntime.beginRender();
+  useOpenTarget(options);
+  activeRuntime.flushEffects();
+  await Promise.resolve();
 }
 
 describe("useOpenTarget", () => {
-  it("keeps the menu visible when no workspace was requested", async () => {
+  it("does nothing when no workspace was requested", async () => {
     const open = vi.fn(async () => true);
 
-    const result = await renderHook({
+    await renderHook({
       requestedWorkspace: "",
       workspaces,
       status: { isLoading: false, failed: false },
       open,
     });
 
-    expect(result.shouldClose).toBe(false);
     expect(open).not.toHaveBeenCalled();
     expect(showToast).not.toHaveBeenCalled();
   });
 
-  it("opens a matched workspace once and hides the menu", async () => {
+  it("opens the matched workspace", async () => {
     const open = vi.fn(async () => true);
-
-    const result = await renderHook({
-      requestedWorkspace: "Alpha",
-      workspaces,
-      status: { isLoading: false, failed: false },
-      open,
-    });
-
-    expect(result.shouldClose).toBe(true);
-    expect(open).toHaveBeenCalledTimes(1);
-    expect(open).toHaveBeenCalledWith("Alpha");
 
     await renderHook({
       requestedWorkspace: "Alpha",
@@ -182,33 +121,36 @@ describe("useOpenTarget", () => {
     });
 
     expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith("Alpha");
+    expect(showToast).not.toHaveBeenCalled();
   });
 
-  it("keeps the menu visible when the direct open fails", async () => {
-    const open = vi.fn(async () => false);
-
-    const result = await renderHook({
+  it("does not reopen on a rerender when dependencies are unchanged", async () => {
+    const open = vi.fn(async () => true);
+    const options = {
       requestedWorkspace: "Alpha",
       workspaces,
       status: { isLoading: false, failed: false },
       open,
-    });
+    };
 
-    expect(result.shouldClose).toBe(false);
+    await renderHook(options);
+    await renderHook(options);
+
     expect(open).toHaveBeenCalledTimes(1);
+    expect(showToast).not.toHaveBeenCalled();
   });
 
   it("shows the workspace-not-found toast once per missing workspace", async () => {
     const open = vi.fn(async () => true);
 
-    const result = await renderHook({
+    await renderHook({
       requestedWorkspace: "Missing",
       workspaces,
       status: { isLoading: false, failed: false },
       open,
     });
 
-    expect(result.shouldClose).toBe(false);
     expect(open).not.toHaveBeenCalled();
     expect(showToast).toHaveBeenCalledTimes(1);
     expect(showToast).toHaveBeenCalledWith({
