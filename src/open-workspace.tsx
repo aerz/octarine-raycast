@@ -14,7 +14,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const [refresh, setRefresh] = useState(false);
 
-  const { workspaces, status } = useWorkspaces({ refresh });
+  const { workspaces, status, revalidate } = useWorkspaces({ refresh });
   const { shouldHideMenu } = useOpenWorkspace({
     requestedWorkspace,
     workspaces,
@@ -32,13 +32,21 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
       searchBarPlaceholder="Search workspaces..."
       emptyView={
         <WorkspaceNotFound>
-          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => setRefresh((prev) => !prev)} />
+          <Action
+            title="Rescan Workspaces"
+            icon={Icon.ArrowClockwise}
+            onAction={() => (refresh ? revalidate() : setRefresh(true))}
+          />
         </WorkspaceNotFound>
       }
       renderActions={(workspace) => (
         <ActionPanel>
           <Action title="Open Workspace" icon={Icon.AppWindow} onAction={() => openOctarineWorkspace(workspace.name)} />
-          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => setRefresh((prev) => !prev)} />
+          <Action
+            title="Rescan Workspaces"
+            icon={Icon.ArrowClockwise}
+            onAction={() => (refresh ? revalidate() : setRefresh(true))}
+          />
           <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
           <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
         </ActionPanel>
