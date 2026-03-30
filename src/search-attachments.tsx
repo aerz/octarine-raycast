@@ -4,7 +4,7 @@ import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmp
 import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { type AttachmentSection, useAttachments } from "./hooks/useAttachments";
-import { openOctarineAttachment } from "./lib/octarine";
+import { openAttachment } from "./lib/octarine";
 import { getSearchAttachmentsPreferences } from "./lib/preferences";
 import type { IndexedAttachment } from "./types/attachment";
 import { match } from "./utils/match";
@@ -118,7 +118,7 @@ function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
           <Action
             title="Search Attachment"
             icon={Icon.Globe}
-            onAction={() => openOctarineAttachment(file.name, file.workspace.name)}
+            onAction={() => openAttachment(file.name, file.workspace.name)}
           />
           <Action.Open title="Open File" target={file.path} shortcut={{ modifiers: ["cmd"], key: "return" }} />
           <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />

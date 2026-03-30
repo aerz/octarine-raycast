@@ -4,7 +4,7 @@ import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
-import { openOctarineWorkspace } from "./lib/octarine";
+import { openWorkspace } from "./lib/octarine";
 
 type Arguments = {
   workspace?: string;
@@ -19,7 +19,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
     requestedWorkspace,
     workspaces,
     status,
-    open: openOctarineWorkspace,
+    open: openWorkspace,
   });
 
   if (shouldClose) {
@@ -42,7 +42,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
       }
       renderActions={(workspace) => (
         <ActionPanel>
-          <Action title="Open Workspace" icon={Icon.AppWindow} onAction={() => openOctarineWorkspace(workspace.name)} />
+          <Action title="Open Workspace" icon={Icon.AppWindow} onAction={() => openWorkspace(workspace.name)} />
           <Action
             title="Rescan Workspaces"
             icon={Icon.ArrowClockwise}

@@ -2,7 +2,7 @@ import { Action, ActionPanel, LaunchProps, Clipboard, Icon, openExtensionPrefere
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
-import { openOctarineTodayNote } from "./lib/octarine";
+import { openTodayNote } from "./lib/octarine";
 import { getOpenTodayNotePreferences } from "./lib/preferences";
 
 type Arguments = {
@@ -20,7 +20,7 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arg
     requestedWorkspace: targetWorkspace,
     workspaces,
     status,
-    open: openOctarineTodayNote,
+    open: openTodayNote,
   });
 
   if (shouldClose) {
@@ -34,7 +34,7 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arg
       searchBarPlaceholder="Search Octarine workspaces..."
       renderActions={(workspace) => (
         <ActionPanel>
-          <Action title="Open Today's Note" onAction={() => openOctarineTodayNote(workspace.name)} />
+          <Action title="Open Today's Note" onAction={() => openTodayNote(workspace.name)} />
           <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => revalidate()} />
           <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
           <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />

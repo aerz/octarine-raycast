@@ -181,11 +181,11 @@ export function buildOpenWorkspaceUri(workspaceName: string): string {
   return buildDailyNoteUri("today", workspaceName);
 }
 
-export function openOctarineWorkspace(name: string): Promise<boolean> {
+export function openWorkspace(name: string): Promise<boolean> {
   return openOctarineUri(buildOpenWorkspaceUri(name));
 }
 
-export function openOctarineAttachment(name: string, workspaceName?: string): Promise<boolean> {
+export function openAttachment(name: string, workspaceName?: string): Promise<boolean> {
   return openOctarineUri(buildSearchUri(name, workspaceName));
 }
 
@@ -197,12 +197,12 @@ export function openPinnedNote(path: string, workspace?: string): Promise<boolea
   return openNote(path, workspace);
 }
 
-export function openOctarineDailyDeskNote(date: string, workspace: string): Promise<boolean> {
+export function openDailyDeskNote(date: string, workspace: string): Promise<boolean> {
   return openOctarineUri(buildDailyNoteUri(date, workspace));
 }
 
-export function openOctarineTodayNote(workspace: string): Promise<boolean> {
-  return openOctarineDailyDeskNote("today", workspace);
+export function openTodayNote(workspace: string): Promise<boolean> {
+  return openDailyDeskNote("today", workspace);
 }
 
 export function buildCreateNoteUri(path: string, workspaceName?: string): string;

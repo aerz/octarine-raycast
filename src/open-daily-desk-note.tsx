@@ -14,7 +14,7 @@ import { WorkspaceMenu } from "./components/WorkspaceMenu";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { isDailyDeskDate } from "./lib/daily-desk";
-import { openOctarineDailyDeskNote } from "./lib/octarine";
+import { openDailyDeskNote } from "./lib/octarine";
 import type { Workspace } from "./types/octarine";
 
 type Arguments = {
@@ -38,7 +38,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
     requestedWorkspace,
     workspaces,
     status: workspaceStatus,
-    open: (workspaceName) => openOctarineDailyDeskNote(requestedDate, workspaceName),
+    open: (workspaceName) => openDailyDeskNote(requestedDate, workspaceName),
   });
 
   useEffect(() => {
@@ -66,10 +66,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
       searchBarPlaceholder="Search Octarine workspaces..."
       renderActions={(workspace: Workspace) => (
         <ActionPanel>
-          <Action
-            title="Open Daily Desk Note"
-            onAction={() => openOctarineDailyDeskNote(requestedDate, workspace.name)}
-          />
+          <Action title="Open Daily Desk Note" onAction={() => openDailyDeskNote(requestedDate, workspace.name)} />
           <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => revalidate()} />
           <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
           <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
