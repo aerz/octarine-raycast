@@ -2,7 +2,7 @@ import { Action, ActionPanel, Clipboard, Icon, LaunchProps, openExtensionPrefere
 import { useState } from "react";
 import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
-import { useOpenWorkspace } from "./hooks/useOpenWorkspace";
+import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { openOctarineWorkspace } from "./lib/octarine";
 
@@ -15,13 +15,14 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
   const [refresh, setRefresh] = useState(false);
 
   const { workspaces, status, revalidate } = useWorkspaces({ refresh });
-  const { shouldHideMenu } = useOpenWorkspace({
+  const { shouldClose } = useOpenTarget({
     requestedWorkspace,
     workspaces,
     status,
+    open: openOctarineWorkspace,
   });
 
-  if (shouldHideMenu) {
+  if (shouldClose) {
     return null;
   }
 

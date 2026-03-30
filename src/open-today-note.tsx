@@ -1,7 +1,6 @@
-import { useMemo } from "react";
 import { Action, ActionPanel, LaunchProps, Clipboard, Icon, openExtensionPreferences } from "@raycast/api";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
-import { useOpenTodayNote } from "./hooks/useOpenTodayNote";
+import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { openOctarineTodayNote } from "./lib/octarine";
 import { getOpenTodayNotePreferences } from "./lib/preferences";
@@ -11,19 +10,20 @@ type Arguments = {
 };
 
 export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arguments }>) {
-  const preferences = useMemo(() => getOpenTodayNotePreferences(), []);
+  const preferences = getOpenTodayNotePreferences();
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const defaultWorkspace = preferences.workspace;
   const targetWorkspace = requestedWorkspace ? requestedWorkspace : defaultWorkspace;
 
   const { workspaces, status, revalidate } = useWorkspaces();
-  const { shouldHideMenu } = useOpenTodayNote({
-    workspace: targetWorkspace,
+  const { shouldClose } = useOpenTarget({
+    requestedWorkspace: targetWorkspace,
     workspaces,
     status,
+    open: openOctarineTodayNote,
   });
 
-  if (shouldHideMenu) {
+  if (shouldClose) {
     return null;
   }
 

@@ -11,7 +11,7 @@ import {
 import { useEffect } from "react";
 import { DateFormatsDetail } from "./components/Notifications/DateFormatsDetail";
 import { WorkspaceMenu } from "./components/WorkspaceMenu";
-import { useOpenDailyDeskNote } from "./hooks/useOpenDailyDeskNote";
+import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { isDailyDeskDate } from "./lib/daily-desk";
 import { openOctarineDailyDeskNote } from "./lib/octarine";
@@ -34,12 +34,11 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   } = useWorkspaces({
     enabled: isValidDate,
   });
-  const { shouldHideMenu } = useOpenDailyDeskNote({
-    date: requestedDate,
+  const { shouldClose } = useOpenTarget({
     requestedWorkspace,
     workspaces,
     status: workspaceStatus,
-    enabled: isValidDate,
+    open: (workspaceName) => openOctarineDailyDeskNote(requestedDate, workspaceName),
   });
 
   useEffect(() => {
@@ -56,7 +55,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
     return <DateFormatsDetail />;
   }
 
-  if (shouldHideMenu) {
+  if (shouldClose) {
     return null;
   }
 
