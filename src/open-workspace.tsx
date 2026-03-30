@@ -1,7 +1,6 @@
-import { Action, ActionPanel, Clipboard, Icon, LaunchProps, openExtensionPreferences } from "@raycast/api";
+import { Action, Icon, LaunchProps } from "@raycast/api";
 import { useState } from "react";
-import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
-import { WorkspaceMenu } from "./components/WorkspaceMenu";
+import { WorkspaceList } from "./components/workspace-list";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { openWorkspace } from "./lib/octarine";
@@ -14,6 +13,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const [refresh, setRefresh] = useState(false);
 
+  const onRescan = () => (refresh ? revalidate() : setRefresh(true));
   const { workspaces, status, revalidate } = useWorkspaces({ refresh });
   useOpenTarget({
     requestedWorkspace,
@@ -23,31 +23,10 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
   });
 
   return (
-    <WorkspaceMenu
-      isLoading={status.isLoading}
-      workspaces={workspaces}
-      searchBarPlaceholder="Search workspaces..."
-      emptyView={
-        <WorkspaceNotFound>
-          <Action
-            title="Rescan Workspaces"
-            icon={Icon.ArrowClockwise}
-            onAction={() => (refresh ? revalidate() : setRefresh(true))}
-          />
-        </WorkspaceNotFound>
-      }
-      renderActions={(workspace) => (
-        <ActionPanel>
-          <Action title="Open Workspace" icon={Icon.AppWindow} onAction={() => openWorkspace(workspace.name)} />
-          <Action
-            title="Rescan Workspaces"
-            icon={Icon.ArrowClockwise}
-            onAction={() => (refresh ? revalidate() : setRefresh(true))}
-          />
-          <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
-          <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-        </ActionPanel>
+    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRescan={onRescan}>
+      {(workspace) => (
+        <Action title="Open Workspace" icon={Icon.AppWindow} onAction={() => openWorkspace(workspace.name)} />
       )}
-    />
+    </WorkspaceList>
   );
 }

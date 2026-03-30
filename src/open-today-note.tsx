@@ -1,5 +1,5 @@
-import { Action, ActionPanel, LaunchProps, Clipboard, Icon, openExtensionPreferences } from "@raycast/api";
-import { WorkspaceMenu } from "./components/WorkspaceMenu";
+import { Action, LaunchProps } from "@raycast/api";
+import { WorkspaceList } from "./components/workspace-list";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { openTodayNote } from "./lib/octarine";
@@ -24,18 +24,8 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arg
   });
 
   return (
-    <WorkspaceMenu
-      isLoading={status.isLoading}
-      workspaces={workspaces}
-      searchBarPlaceholder="Search Octarine workspaces..."
-      renderActions={(workspace) => (
-        <ActionPanel>
-          <Action title="Open Today's Note" onAction={() => openTodayNote(workspace.name)} />
-          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={() => revalidate()} />
-          <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
-          <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-        </ActionPanel>
-      )}
-    />
+    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRescan={revalidate}>
+      {(workspace) => <Action title="Open Today's Note" onAction={() => openTodayNote(workspace.name)} />}
+    </WorkspaceList>
   );
 }
