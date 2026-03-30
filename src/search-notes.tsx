@@ -1,8 +1,8 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
 import { useState } from "react";
-import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
+import { SearchNotesEmptyView } from "./components/empty-views/search-results";
+import { WorkspaceNotesEmptyView } from "./components/empty-views/workspace-missing-files";
+import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
 import { type NoteWorkspaceSection, useNotes } from "./hooks/useNotes";
 import { openNote } from "./lib/octarine";
 import { type IndexedNote } from "./lib/notes";
@@ -27,7 +27,7 @@ export default function SearchNotesCommand() {
       filtering={false}
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search notes..."
+      searchBarPlaceholder="Search notes"
       searchBarAccessory={
         <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
           <List.Dropdown.Item title="All" value="all" />
@@ -39,9 +39,9 @@ export default function SearchNotesCommand() {
     >
       {match(searchState, {
         loading: () => null,
-        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
-        noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
-        noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
+        noConfiguredWorkspaces: () => <WorkspaceListEmptyView />,
+        noAvailableNotes: () => <WorkspaceNotesEmptyView />,
+        noMatchingNotes: () => <SearchNotesEmptyView />,
         showByWorkspace: () => (
           <WorkspaceSectionList
             sections={sections}

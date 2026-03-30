@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { skippedRootsToast, viewsLoadToast } from "../components/Toasts";
+import { skippedRootsToast, viewsLoadToast } from "../components/toasts";
 import { matchesSearchIndex } from "../lib/search";
 import {
   loadCachedViews,

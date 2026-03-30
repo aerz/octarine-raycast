@@ -1,12 +1,12 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
 import { useMemo, useState } from "react";
-import { CaptureContentForm } from "./components/QuickCapture/CaptureContentForm";
-import { CaptureClipboard } from "./components/QuickCapture/CaptureClipboard";
-import { CaptureSelectedText } from "./components/QuickCapture/CaptureSelectedText";
-import { CaptureWebsite } from "./components/QuickCapture/CaptureWebsite";
-import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
+import { SearchNotesEmptyView } from "./components/empty-views/search-results";
+import { WorkspaceNotesEmptyView } from "./components/empty-views/workspace-missing-files";
+import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
+import { CaptureClipboard } from "./components/quick-capture/capture-clipboard";
+import { CaptureContentForm } from "./components/quick-capture/capture-content-form";
+import { CaptureSelectedText } from "./components/quick-capture/capture-selected-text";
+import { CaptureWebsite } from "./components/quick-capture/capture-website";
 import { useQuickCapture, type QuickCaptureItem } from "./hooks/useQuickCapture";
 import { isDailyDeskItem, type DailyDeskItem } from "./lib/daily-desk";
 import { type IndexedNote } from "./lib/notes";
@@ -35,7 +35,7 @@ export default function QuickCaptureCommand() {
       filtering={false}
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search notes or type a date..."
+      searchBarPlaceholder="Search notes or type a date"
       searchBarAccessory={
         <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
           <List.Dropdown.Item title="All" value="all" />
@@ -46,9 +46,9 @@ export default function QuickCaptureCommand() {
       }
     >
       {match(searchState, {
-        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
-        noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
-        noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
+        noConfiguredWorkspaces: () => <WorkspaceListEmptyView />,
+        noAvailableNotes: () => <WorkspaceNotesEmptyView />,
+        noMatchingNotes: () => <SearchNotesEmptyView />,
         showByWorkspaceWithQuickCapture: () => (
           <QuickCaptureWithWorkspaceSections
             excludedDirectoryNames={excludedDirectoryNames}

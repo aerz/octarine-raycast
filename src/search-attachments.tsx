@@ -1,8 +1,8 @@
 import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import { useMemo, useState } from "react";
-import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
+import { SearchAttachmentsEmptyView } from "./components/empty-views/search-results";
+import { WorkspaceAttachmentsEmptyView } from "./components/empty-views/workspace-missing-files";
+import { WorkspaceGridEmptyView } from "./components/empty-views/workspace";
 import { type AttachmentSection, useAttachments } from "./hooks/useAttachments";
 import { openAttachment } from "./lib/octarine";
 import { getSearchAttachmentsPreferences } from "./lib/preferences";
@@ -54,8 +54,8 @@ export default function SearchAttachmentsCommand() {
     >
       {match(renderState, {
         loading: () => null,
-        noConfiguredWorkspaces: () => <WorkspaceNotFound display="grid" />,
-        noAvailableAttachments: () => <WorkspaceContentEmptyView resource="attachments" display="grid" />,
+        noConfiguredWorkspaces: () => <WorkspaceGridEmptyView />,
+        noAvailableAttachments: () => <WorkspaceAttachmentsEmptyView />,
         noMatchingAttachments: () => (
           <NoMatchingResultsView
             onClear={() => {
@@ -78,9 +78,9 @@ export default function SearchAttachmentsCommand() {
 
 function NoMatchingResultsView({ onClear }: { onClear: () => void }) {
   return (
-    <SearchResultsEmptyView resource="attachments" display="grid">
+    <SearchAttachmentsEmptyView>
       <Action title="Clear Extension Filter" onAction={onClear} />
-    </SearchResultsEmptyView>
+    </SearchAttachmentsEmptyView>
   );
 }
 
@@ -116,7 +116,7 @@ function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
       actions={
         <ActionPanel>
           <Action
-            title="Search Attachment"
+            title="Search Attachments"
             icon={Icon.Globe}
             onAction={() => openAttachment(file.name, file.workspace.name)}
           />

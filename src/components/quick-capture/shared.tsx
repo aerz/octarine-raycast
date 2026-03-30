@@ -1,9 +1,9 @@
 import { Action, ActionPanel, Detail, Icon, List, Toast, showToast, useNavigation } from "@raycast/api";
 import { useEffect, useRef, useState, type ReactElement } from "react";
-import { SearchResultsEmptyView } from "../EmptyViews/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "../EmptyViews/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "../EmptyViews/WorkspaceNotFound";
-import { DateFormatsDetail } from "../Notifications/DateFormatsDetail";
+import { SearchNotesEmptyView } from "../empty-views/search-results";
+import { WorkspaceNotesEmptyView } from "../empty-views/workspace-missing-files";
+import { WorkspaceListEmptyView } from "../empty-views/workspace";
+import { DateFormatsDetail } from "../notifications/date-formats-detail";
 import { useNotes } from "../../hooks/useNotes";
 import { buildDailyDeskItems, isDailyDeskDate, isDailyDeskItem, type DailyDeskItem } from "../../lib/daily-desk";
 import { type IndexedNote } from "../../lib/notes";
@@ -355,7 +355,8 @@ export function NotePicker({
   const searchableItems = [...matchingNotes, ...buildDailyDeskItems(workspaceNames, searchText)];
   const filteredItems = searchableItems.filter(
     (item) =>
-      selectedWorkspace === "all" || (isDailyDeskItem(item) ? item.workspace : item.workspace.name) === selectedWorkspace,
+      selectedWorkspace === "all" ||
+      (isDailyDeskItem(item) ? item.workspace : item.workspace.name) === selectedWorkspace,
   );
   const itemsByWorkspace = groupItemsByWorkspace(filteredItems);
   const renderState = getNotePickerRenderState({
@@ -382,9 +383,9 @@ export function NotePicker({
       }
     >
       {match(renderState, {
-        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
-        noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
-        noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
+        noConfiguredWorkspaces: () => <WorkspaceListEmptyView />,
+        noAvailableNotes: () => <WorkspaceNotesEmptyView />,
+        noMatchingNotes: () => <SearchNotesEmptyView />,
         showByWorkspace: () => (
           <NotePickerWorkspaceSections
             actionTitle={actionTitle}

@@ -1,9 +1,9 @@
 import { List } from "@raycast/api";
 import { useState } from "react";
-import { PinnedNoteActions } from "./components/PinnedNoteActions";
-import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
+import { SearchNotesEmptyView } from "./components/empty-views/search-results";
+import { WorkspaceNotesEmptyView } from "./components/empty-views/workspace-missing-files";
+import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
+import { PinnedNoteActions } from "./components/pinned-notes-action";
 import { type PinnedNoteWorkspaceSection, usePinnedNotes } from "./hooks/usePinnedNotes";
 import { getSearchPinnedNotesPreferences } from "./lib/preferences";
 import { IndexedNote } from "./lib/notes";
@@ -26,7 +26,7 @@ export default function SearchPinnedNotesCommand() {
       filtering={false}
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search pinned notes..."
+      searchBarPlaceholder="Search pinned notes"
       searchBarAccessory={
         <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
           <List.Dropdown.Item title="All" value="all" />
@@ -42,9 +42,9 @@ export default function SearchPinnedNotesCommand() {
     >
       {match(searchState, {
         loading: () => null,
-        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
-        noAvailableNotes: () => <WorkspaceContentEmptyView resource="notes" />,
-        noMatchingNotes: () => <SearchResultsEmptyView resource="notes" />,
+        noConfiguredWorkspaces: () => <WorkspaceListEmptyView />,
+        noAvailableNotes: () => <WorkspaceNotesEmptyView />,
+        noMatchingNotes: () => <SearchNotesEmptyView />,
         showByWorkspace: () => (
           <WorkspaceSectionList
             sections={filteredWorkspaceSections}

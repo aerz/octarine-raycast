@@ -1,8 +1,8 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
 import { useState } from "react";
-import { SearchResultsEmptyView } from "./components/EmptyViews/SearchResultsEmptyView";
-import { WorkspaceContentEmptyView } from "./components/EmptyViews/WorkspaceContentEmptyView";
-import { WorkspaceNotFound } from "./components/EmptyViews/WorkspaceNotFound";
+import { SearchViewsEmptyView } from "./components/empty-views/search-results";
+import { WorkspaceViewsEmptyView } from "./components/empty-views/workspace-missing-files";
+import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
 import { type WorkspaceViewSection, useViews } from "./hooks/useViews";
 import { openOctarineView } from "./lib/octarine";
 import { getSearchViewsPreferences } from "./lib/preferences";
@@ -25,7 +25,7 @@ export default function SearchViewsCommand() {
       filtering={false}
       isLoading={renderState === "loading"}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search views..."
+      searchBarPlaceholder="Search views"
       searchBarAccessory={
         <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
           <List.Dropdown.Item title="All" value="all" />
@@ -37,9 +37,9 @@ export default function SearchViewsCommand() {
     >
       {match(renderState, {
         loading: () => null,
-        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
-        noAvailableViews: () => <WorkspaceContentEmptyView resource="views" />,
-        noMatchingViews: () => <SearchResultsEmptyView resource="views" />,
+        noConfiguredWorkspaces: () => <WorkspaceListEmptyView />,
+        noAvailableViews: () => <WorkspaceViewsEmptyView />,
+        noMatchingViews: () => <SearchViewsEmptyView />,
         showByWorkspace: () => (
           <WorkspaceSectionList sections={sections} showWorkspaceViewCount={preferences.showWorkspaceViewCount} />
         ),

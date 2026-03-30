@@ -1,8 +1,7 @@
 import { Action, ActionPanel, BrowserExtension, Icon, List, Toast, environment, showToast } from "@raycast/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import path from "node:path";
-import { CollectionEmptyView } from "../EmptyViews/CollectionEmptyView";
-import { WorkspaceNotFound } from "../EmptyViews/WorkspaceNotFound";
+import { WorkspaceListEmptyView } from "../empty-views/workspace";
 import { type IndexedNoteFolder, scanNoteFoldersFromWorkspaces } from "../../lib/notes";
 import { upsertOctarineNoteContent } from "../../lib/octarine";
 import { matchesSearchIndex } from "../../lib/search";
@@ -282,12 +281,9 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
       }
     >
       {match(renderState, {
-        noConfiguredWorkspaces: () => <WorkspaceNotFound />,
+        noConfiguredWorkspaces: () => <WorkspaceListEmptyView />,
         noMatchingFolders: () => (
-          <CollectionEmptyView
-            title="No Matching Folders"
-            description="Try a different workspace filter or search text."
-          />
+          <List.EmptyView title="No Matching Folders" description="Try a different workspace filter or search text." />
         ),
         showByWorkspace: () =>
           workspaceNames.map((workspaceName) => {
