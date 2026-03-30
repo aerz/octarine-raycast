@@ -17,44 +17,37 @@ type Result = {
 export function useOpenWorkspace({ requestedWorkspace, workspaces, status }: Options): Result {
   const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
   const hasAttemptedDirectOpen = useRef(false);
-
-  const matchedWorkspace = useMemo(() => {
-    if (!requestedWorkspace) {
-      return undefined;
-    }
-
+  const match = useMemo(() => {
+    if (!requestedWorkspace) return undefined;
     return workspaces.find((workspace) => workspace.name === requestedWorkspace);
   }, [requestedWorkspace, workspaces]);
-
   const isWorkspaceNotFound = useWorkspaceNotFound({
     requestedWorkspace,
     status,
-    hasMatchedWorkspace: matchedWorkspace !== undefined,
+    matched: match !== undefined,
   });
 
   useEffect(() => {
-    if (!requestedWorkspace || !matchedWorkspace || hasAttemptedDirectOpen.current) {
+    if (!requestedWorkspace || !match || hasAttemptedDirectOpen.current) {
       return;
     }
 
     hasAttemptedDirectOpen.current = true;
     void (async () => {
-      const isWorkspaceOpened = await openOctarineWorkspace(matchedWorkspace.name);
+      const isWorkspaceOpened = await openOctarineWorkspace(match.name);
 
       if (!isWorkspaceOpened) {
         setHasDirectOpenFailed(true);
       }
     })();
-  }, [requestedWorkspace, matchedWorkspace]);
+  }, [requestedWorkspace, match]);
 
   useEffect(() => {
     hasAttemptedDirectOpen.current = false;
     setHasDirectOpenFailed(false);
   }, [requestedWorkspace]);
 
-  const shouldHideMenu = Boolean(
-    requestedWorkspace && matchedWorkspace && !hasDirectOpenFailed && !isWorkspaceNotFound,
-  );
+  const shouldHideMenu = Boolean(requestedWorkspace && match && !hasDirectOpenFailed && !isWorkspaceNotFound);
 
   return {
     shouldHideMenu,

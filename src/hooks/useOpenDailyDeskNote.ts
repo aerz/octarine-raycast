@@ -37,7 +37,7 @@ export function useOpenDailyDeskNote({
   const isWorkspaceNotFound = useWorkspaceNotFound({
     requestedWorkspace,
     status,
-    hasMatchedWorkspace: matchedWorkspace !== undefined,
+    matched: matchedWorkspace !== undefined,
     enabled,
   });
 

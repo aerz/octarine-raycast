@@ -5,7 +5,7 @@ import { useWorkspaceNotFound } from "./useWorkspaceNotFound";
 import type { LoadStatus } from "./useWorkspaces";
 
 type Options = {
-  workspace: string;
+  requestedWorkspace: string;
   workspaces: Workspace[];
   status: LoadStatus;
 };
@@ -14,26 +14,22 @@ type Result = {
   shouldHideMenu: boolean;
 };
 
-export function useOpenTodayNote({ workspace, workspaces, status }: Options): Result {
+export function useOpenTodayNote({ requestedWorkspace, workspaces, status }: Options): Result {
   const [hasDirectOpenFailed, setHasDirectOpenFailed] = useState(false);
   const hasAttemptedDirectOpen = useRef(false);
-
   const matchedWorkspace = useMemo(() => {
-    if (!workspace) {
-      return undefined;
-    }
-
-    return workspaces.find((candidate) => candidate.name === workspace);
-  }, [workspace, workspaces]);
+    if (!requestedWorkspace) return undefined;
+    return workspaces.find((candidate) => candidate.name === requestedWorkspace);
+  }, [requestedWorkspace, workspaces]);
 
   const isWorkspaceNotFound = useWorkspaceNotFound({
-    requestedWorkspace: workspace,
+    requestedWorkspace,
     status,
-    hasMatchedWorkspace: matchedWorkspace !== undefined,
+    matched: matchedWorkspace !== undefined,
   });
 
   useEffect(() => {
-    if (!workspace || !matchedWorkspace || hasAttemptedDirectOpen.current) {
+    if (!requestedWorkspace || !matchedWorkspace || hasAttemptedDirectOpen.current) {
       return;
     }
 
@@ -45,14 +41,16 @@ export function useOpenTodayNote({ workspace, workspaces, status }: Options): Re
         setHasDirectOpenFailed(true);
       }
     })();
-  }, [workspace, matchedWorkspace]);
+  }, [requestedWorkspace, matchedWorkspace]);
 
   useEffect(() => {
     hasAttemptedDirectOpen.current = false;
     setHasDirectOpenFailed(false);
-  }, [workspace]);
+  }, [requestedWorkspace]);
 
-  const shouldHideMenu = Boolean(workspace && matchedWorkspace && !hasDirectOpenFailed && !isWorkspaceNotFound);
+  const shouldHideMenu = Boolean(
+    requestedWorkspace && matchedWorkspace && !hasDirectOpenFailed && !isWorkspaceNotFound,
+  );
 
   return {
     shouldHideMenu,

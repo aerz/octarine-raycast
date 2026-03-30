@@ -6,36 +6,28 @@ import type { LoadStatus } from "./useWorkspaces";
 type Options = {
   requestedWorkspace: string;
   status: LoadStatus;
-  hasMatchedWorkspace: boolean;
+  matched: boolean;
   enabled?: boolean;
-  toastTitle?: (workspaceName: string) => string;
 };
 
-export function useWorkspaceNotFound({
-  requestedWorkspace,
-  status,
-  hasMatchedWorkspace,
-  enabled = true,
-  toastTitle,
-}: Options): boolean {
-  const lastWorkspaceNotFoundToast = useRef<string | undefined>(undefined);
-
-  const isWorkspaceNotFound = useMemo(
-    () => enabled && Boolean(requestedWorkspace) && !status.isLoading && !status.failed && !hasMatchedWorkspace,
-    [enabled, requestedWorkspace, status, hasMatchedWorkspace],
+export function useWorkspaceNotFound({ requestedWorkspace, status, matched, enabled = true }: Options): boolean {
+  const notFound = useMemo(
+    () => enabled && Boolean(requestedWorkspace) && !status.isLoading && !status.failed && !matched,
+    [enabled, requestedWorkspace, status, matched],
   );
+  const lastNotFound = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!isWorkspaceNotFound || lastWorkspaceNotFoundToast.current === requestedWorkspace) {
+    if (!notFound || lastNotFound.current === requestedWorkspace) {
       return;
     }
 
-    lastWorkspaceNotFoundToast.current = requestedWorkspace;
+    lastNotFound.current = requestedWorkspace;
     void showToast({
       style: Toast.Style.Failure,
-      title: toastTitle?.(requestedWorkspace) ?? `Workspace ${requestedWorkspace} not found`,
+      title: `Workspace “${requestedWorkspace}” not found`,
     });
-  }, [isWorkspaceNotFound, requestedWorkspace, toastTitle]);
+  }, [notFound, requestedWorkspace]);
 
-  return isWorkspaceNotFound;
+  return notFound;
 }
