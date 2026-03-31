@@ -1,4 +1,4 @@
-import { Action, LaunchProps } from "@raycast/api";
+import { Action, LaunchProps, Icon } from "@raycast/api";
 import { useState } from "react";
 import { WorkspaceList } from "./components/workspace-list";
 import { useOpenTarget } from "./hooks/useOpenTarget";
@@ -27,7 +27,9 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arg
 
   return (
     <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRefresh={onRefresh}>
-      {(workspace) => <Action title="Open Today's Note" onAction={() => openTodayNote(workspace.name)} />}
+      {(workspace) => (
+        <Action title="Open Today's Note" icon={Icon.AppWindow} onAction={() => openTodayNote(workspace.name)} />
+      )}
     </WorkspaceList>
   );
 }

@@ -1,4 +1,4 @@
-import { Action, LaunchProps, Toast, showToast } from "@raycast/api";
+import { Action, LaunchProps, Toast, showToast, Icon } from "@raycast/api";
 import { useEffect } from "react";
 import { DateFormatsDetail } from "./components/notifications/date-formats-detail";
 import { WorkspaceList } from "./components/workspace-list";
@@ -48,7 +48,11 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   return (
     <WorkspaceList isLoading={workspaceStatus.isLoading} workspaces={workspaces} onRefresh={revalidate}>
       {(workspace) => (
-        <Action title="Open Daily Desk Note" onAction={() => openDailyDeskNote(requestedDate, workspace.name)} />
+        <Action
+          title="Open Daily Desk Note"
+          icon={Icon.AppWindow}
+          onAction={() => openDailyDeskNote(requestedDate, workspace.name)}
+        />
       )}
     </WorkspaceList>
   );
