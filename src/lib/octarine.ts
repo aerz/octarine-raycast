@@ -12,11 +12,8 @@ enum Action {
 
 type InsertPosition = "top" | "bottom";
 
-type WorkspaceParams = {
+type WriteParams = {
   workspace?: string;
-};
-
-type WriteParams = WorkspaceParams & {
   content?: string;
   template?: string;
   fresh?: boolean;
@@ -25,23 +22,27 @@ type WriteParams = WorkspaceParams & {
   openAfter?: boolean;
 };
 
-type OpenScheme = WorkspaceParams & {
+type OpenScheme = {
   action: Action.Open;
+  workspace?: string;
   path: string;
 };
 
-type SearchScheme = WorkspaceParams & {
+type SearchScheme = {
   action: Action.Search;
+  workspace?: string;
   query: string;
 };
 
 type DailyScheme = WriteParams & {
   action: Action.Daily;
+  workspace?: string;
   date: string;
 };
 
 type CreateScheme = WriteParams & {
   action: Action.Create;
+  workspace?: string;
   path: string;
   contentReference?: string;
   compressedContent?: string;
