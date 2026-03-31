@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import { SearchNotesEmptyView } from "../empty-views/search-results";
 import { WorkspaceNotesEmptyView } from "../empty-views/workspace-missing-files";
 import { WorkspaceListEmptyView } from "../empty-views/workspace";
-import { DateFormatsDetail } from "../notifications/date-formats-detail";
+import { DateFormatsDetail } from "../notifications/date-formats";
 import { useNotes } from "../../hooks/useNotes";
 import { buildDailyDeskItems, isDailyDeskItem, isSupportedDate, type DailyDeskItem } from "../../lib/daily-desk";
 import { type IndexedNote } from "../../lib/notes";
@@ -208,17 +208,6 @@ function DailyDeskListItem({
 }
 
 export function InvalidDailyDeskDateView() {
-  const hasShownDateErrorToast = useRef(false);
-
-  useEffect(() => {
-    if (hasShownDateErrorToast.current) {
-      return;
-    }
-
-    hasShownDateErrorToast.current = true;
-    void showCaptureFailureToast("Invalid date", "Use a supported Octarine date format");
-  }, []);
-
   return <DateFormatsDetail />;
 }
 

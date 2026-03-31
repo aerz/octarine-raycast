@@ -1,12 +1,19 @@
-import { Detail } from "@raycast/api";
+import { Detail, Toast, showToast } from "@raycast/api";
+import { useEffect } from "react";
 
 export function DateFormatsDetail() {
+  useEffect(() => {
+    showToast({
+      style: Toast.Style.Failure,
+      title: "Invalid date",
+      message: "Use a supported Octarine date format",
+    });
+  }, []);
+
   return (
     <Detail
       markdown={[
-        "# Invalid Date",
-        "",
-        "**Supported Date Formats**",
+        "# Supported Date Formats",
         "",
         "- ISO date: `2024-01-15`, `2024-12-25`",
         "- ISO week: `2024-W03`, `2026-W01`",

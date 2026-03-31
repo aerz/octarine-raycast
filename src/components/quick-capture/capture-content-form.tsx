@@ -4,10 +4,10 @@ import { isSupportedDate } from "../../lib/daily-desk";
 import {
   appendContentToDailyTarget,
   appendContentToNote,
-  InvalidDailyDeskDateView,
   isEmptyAppendContent,
   showCaptureFailureToast,
 } from "./shared";
+import { DateFormatsDetail } from "../notifications/date-formats";
 
 type CaptureContentFormProps =
   | {
@@ -35,7 +35,7 @@ export function CaptureContentForm(props: CaptureContentFormProps) {
   const target = getAppendTargetConfig(props);
 
   if (!target) {
-    return <InvalidDailyDeskDateView />;
+    return <DateFormatsDetail />;
   }
 
   const { append, description, navigationTitle, placeholder, submitTitle } = target;

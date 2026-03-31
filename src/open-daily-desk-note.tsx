@@ -1,6 +1,5 @@
-import { Action, LaunchProps, Toast, showToast, Icon } from "@raycast/api";
-import { useEffect } from "react";
-import { DateFormatsDetail } from "./components/notifications/date-formats-detail";
+import { Action, LaunchProps, Icon } from "@raycast/api";
+import { DateFormatsDetail } from "./components/notifications/date-formats";
 import { WorkspaceList } from "./components/workspace-list";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
@@ -30,16 +29,6 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
     status: workspaceStatus,
     open: (workspaceName) => openDailyDeskNote(requestedDate, workspaceName),
   });
-
-  useEffect(() => {
-    if (!isValidDate) {
-      showToast({
-        style: Toast.Style.Failure,
-        title: "Invalid date",
-        message: "Use a supported Octarine date format",
-      });
-    }
-  }, []);
 
   if (!isValidDate) {
     return <DateFormatsDetail />;
