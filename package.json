@@ -6,8 +6,7 @@
   "icon": "icon.png",
   "author": "aerz",
   "platforms": [
-    "macOS",
-    "Windows"
+    "macOS"
   ],
   "categories": [
     "Productivity"
