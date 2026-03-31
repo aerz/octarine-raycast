@@ -66,19 +66,11 @@ type AppendDailyOptions = {
 };
 
 function buildUri({ action, ...params }: Scheme): string {
-  const searchParams = new URLSearchParams(
-    Object.entries(params)
-      .filter((entry): entry is [string, string | boolean] => entry[1] !== undefined)
-      .reduce(
-        (acc, [key, value]) => {
-          acc[key] = String(value);
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-  );
+  const entries = Object.entries(params)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => [key, String(value)]);
 
-  const query = searchParams.toString();
+  const query = new URLSearchParams(Object.fromEntries(entries)).toString();
   return `octarine://${action}${query ? `?${query}` : ""}`;
 }
 
