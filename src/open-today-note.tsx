@@ -24,7 +24,7 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arg
   });
 
   return (
-    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRescan={revalidate}>
+    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRefresh={revalidate}>
       {(workspace) => <Action title="Open Today's Note" onAction={() => openTodayNote(workspace.name)} />}
     </WorkspaceList>
   );
