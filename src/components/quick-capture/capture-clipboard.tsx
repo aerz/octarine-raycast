@@ -1,8 +1,7 @@
 import { Clipboard } from "@raycast/api";
+import { appendDailyNoteContent, appendNoteContent } from "../../lib/octarine";
 import { type IndexedNote } from "../../lib/notes";
 import {
-  appendContentToDailyTarget,
-  appendContentToNote,
   AutoCaptureToDailyDeskTarget,
   NotePicker,
   showCaptureFailureToast,
@@ -22,7 +21,15 @@ export function CaptureClipboard({
       return;
     }
 
-    await appendContentToNote(note, clipboardText, "Capturing Clipboard…", "Clipboard Captured");
+    try {
+      await appendNoteContent({
+        path: note.path,
+        workspace: note.workspace.name,
+        content: clipboardText,
+      });
+    } catch (error) {
+      await showCaptureFailureToast("Failed to Capture Clipboard", error instanceof Error ? error.message : "Try again.");
+    }
   }
 
   return (
@@ -40,13 +47,18 @@ export function CaptureClipboard({
               return;
             }
 
-            await appendContentToDailyTarget(
-              workspaceName,
-              date,
-              clipboardText,
-              `Capturing Clipboard to ${date}…`,
-              `Clipboard Captured to ${date}`,
-            );
+            try {
+              await appendDailyNoteContent({
+                workspace: workspaceName,
+                date,
+                content: clipboardText,
+              });
+            } catch (error) {
+              await showCaptureFailureToast(
+                "Failed to Capture Clipboard",
+                error instanceof Error ? error.message : "Try again.",
+              );
+            }
           }}
         />
       )}

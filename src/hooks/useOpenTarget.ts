@@ -7,7 +7,7 @@ type Options = {
   requestedWorkspace: string;
   workspaces: Workspace[];
   status: LoadStatus;
-  open: (workspaceName: string) => Promise<boolean>;
+  open: (workspaceName: string) => Promise<void>;
 };
 
 export function useOpenTarget({ requestedWorkspace, workspaces, status, open }: Options) {

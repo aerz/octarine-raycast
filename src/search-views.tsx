@@ -4,7 +4,7 @@ import { SearchViewsEmptyView } from "./components/empty-views/search-results";
 import { WorkspaceViewsEmptyView } from "./components/empty-views/workspace-missing-files";
 import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
 import { type WorkspaceViewSection, useViews } from "./hooks/useViews";
-import { openOctarineView } from "./lib/octarine";
+import { openView } from "./lib/octarine";
 import { searchViewsPreferences } from "./lib/preferences";
 import { IndexedView } from "./lib/views";
 import { match } from "./utils/match";
@@ -79,7 +79,7 @@ function ViewItem({ view }: { view: IndexedView }) {
           <Action
             title="Open View in Octarine"
             icon={Icon.AppWindow}
-            onAction={() => void openOctarineView(view.workspace.name, view.name)}
+            onAction={() => void openView(view.workspace.name, view.name)}
           />
         </ActionPanel>
       }

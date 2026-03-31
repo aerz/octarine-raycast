@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import path from "node:path";
 import { WorkspaceListEmptyView } from "../empty-views/workspace";
 import { type IndexedNoteFolder, scanNoteFoldersFromWorkspaces } from "../../lib/notes";
-import { upsertOctarineNoteContent } from "../../lib/octarine";
+import { appendNoteContent } from "../../lib/octarine";
 import { matchesSearchIndex } from "../../lib/search";
 import { loadWorkspaces } from "../../lib/workspaces";
 import type { Workspace } from "../../types/octarine";
@@ -245,16 +245,11 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
       }
 
       const notePath = buildNotePath(folder.path, buildWebsiteCaptureFileName(activeTab?.title, activeTab?.url));
-      const didOpen = await upsertOctarineNoteContent({
+      await appendNoteContent({
         path: notePath,
-        workspaceName: folder.workspace.name,
+        workspace: folder.workspace.name,
         content,
       });
-
-      if (!didOpen) {
-        await loadingToast.hide();
-        return;
-      }
 
       loadingToast.style = Toast.Style.Success;
       loadingToast.title = "Website Captured";

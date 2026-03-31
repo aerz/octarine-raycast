@@ -1,12 +1,8 @@
 import { Action, ActionPanel, Form } from "@raycast/api";
 import { type IndexedNote } from "../../lib/notes";
 import { isSupportedDate } from "../../lib/daily-desk";
-import {
-  appendContentToDailyTarget,
-  appendContentToNote,
-  isEmptyAppendContent,
-  showCaptureFailureToast,
-} from "./shared";
+import { appendDailyNoteContent, appendNoteContent } from "../../lib/octarine";
+import { isEmptyAppendContent, showCaptureFailureToast } from "./shared";
 import { DateFormatsDetail } from "../notifications/date-formats";
 
 type CaptureContentFormProps =
@@ -46,7 +42,14 @@ export function CaptureContentForm(props: CaptureContentFormProps) {
       return;
     }
 
-    await append(values.content);
+    try {
+      await append(values.content);
+    } catch (error) {
+      await showCaptureFailureToast(
+        "Failed to Append Content",
+        error instanceof Error ? error.message : "Try again.",
+      );
+    }
   }
 
   return (
@@ -71,7 +74,12 @@ function getAppendTargetConfig(props: CaptureContentFormProps): AppendTargetConf
       submitTitle: "Append to Note",
       description: `${props.note.workspace.name} / ${props.note.path}`,
       placeholder: "Write something to append to this note...",
-      append: async (content) => appendContentToNote(props.note, content, "Appending to Note…", "Content Appended"),
+      append: async (content) =>
+        appendNoteContent({
+          path: props.note.path,
+          workspace: props.note.workspace.name,
+          content,
+        }),
     };
   }
 
@@ -85,12 +93,10 @@ function getAppendTargetConfig(props: CaptureContentFormProps): AppendTargetConf
     description: `${props.workspace} / ${props.title}`,
     placeholder: `Write something to append to ${props.title.toLowerCase()}...`,
     append: async (content) =>
-      appendContentToDailyTarget(
-        props.workspace,
-        props.date,
+      appendDailyNoteContent({
+        workspace: props.workspace,
+        date: props.date,
         content,
-        `Appending to ${props.title}…`,
-        `Content Appended to ${props.title}`,
-      ),
+      }),
   };
 }

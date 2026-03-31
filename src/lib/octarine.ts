@@ -1,298 +1,173 @@
-import { Toast, closeMainWindow, open, popToRoot, showToast } from "@raycast/api";
+import { closeMainWindow, open, popToRoot } from "@raycast/api";
 import { compressToBase64 } from "lz-string";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-const execFileAsync = promisify(execFile);
-
-export enum OctarineAction {
+enum Action {
   Open = "open",
   Search = "search",
   Daily = "daily",
   Create = "create",
 }
 
-export enum OctarineParam {
-  Path = "path",
-  Query = "query",
-  Date = "date",
-  Workspace = "workspace",
-  Content = "content",
-  Template = "template",
-  Fresh = "fresh",
-  Position = "position",
-  Separator = "separator",
-  OpenAfter = "openAfter",
-  ContentReference = "contentReference",
-  CompressedContent = "compressedContent",
-}
+type InsertPosition = "top" | "bottom";
 
-type OctarinePosition = "top" | "bottom";
-
-type OctarineWorkspaceParams = {
+type WorkspaceParams = {
   workspace?: string;
 };
 
-type OctarineWriteParams = OctarineWorkspaceParams & {
+type WriteParams = WorkspaceParams & {
   content?: string;
   template?: string;
   fresh?: boolean;
-  position?: OctarinePosition;
+  position?: InsertPosition;
   separator?: string;
   openAfter?: boolean;
 };
 
-type OctarineOpenUriRequest = OctarineWorkspaceParams & {
-  action: OctarineAction.Open;
+type OpenScheme = WorkspaceParams & {
+  action: Action.Open;
   path: string;
 };
 
-type OctarineSearchUriRequest = OctarineWorkspaceParams & {
-  action: OctarineAction.Search;
+type SearchScheme = WorkspaceParams & {
+  action: Action.Search;
   query: string;
 };
 
-type OctarineDailyUriRequest = OctarineWriteParams & {
-  action: OctarineAction.Daily;
+type DailyScheme = WriteParams & {
+  action: Action.Daily;
   date: string;
 };
 
-type OctarineCreateUriRequest = OctarineWriteParams & {
-  action: OctarineAction.Create;
+type CreateScheme = WriteParams & {
+  action: Action.Create;
   path: string;
   contentReference?: string;
   compressedContent?: string;
 };
 
-type OctarineUriRequest =
-  | OctarineOpenUriRequest
-  | OctarineSearchUriRequest
-  | OctarineDailyUriRequest
-  | OctarineCreateUriRequest;
+type Scheme = OpenScheme | SearchScheme | DailyScheme | CreateScheme;
 
-type BuildCreateNoteUriOptions = Omit<OctarineCreateUriRequest, "action" | "path" | "workspace"> & {
-  workspaceName?: string;
-};
-
-type BuildDailyNoteUriOptions = Omit<OctarineDailyUriRequest, "action" | "date" | "workspace"> & {
-  workspaceName?: string;
-};
-
-type UpsertOctarineNoteContentOptions = {
+type AppendNoteOptions = {
   path: string;
-  workspaceName?: string;
+  workspace?: string;
   content: string;
   openAfter?: boolean;
-  position?: OctarinePosition;
+  position?: InsertPosition;
   separator?: string;
 };
 
-type AppendDailyNoteContentOptions = {
+type AppendDailyOptions = {
   date: string;
-  workspaceName?: string;
+  workspace?: string;
   content: string;
 };
 
-function appendParam(params: URLSearchParams, key: OctarineParam, value: string | boolean | undefined): void {
-  if (value === undefined) {
-    return;
-  }
-
-  params.append(key, typeof value === "boolean" ? String(value) : value);
-}
-
-function buildOctarineUri(request: OctarineUriRequest): string {
-  const params = new URLSearchParams();
-
-  switch (request.action) {
-    case OctarineAction.Open:
-      appendParam(params, OctarineParam.Path, request.path);
-      appendParam(params, OctarineParam.Workspace, request.workspace);
-      break;
-    case OctarineAction.Search:
-      appendParam(params, OctarineParam.Query, request.query);
-      appendParam(params, OctarineParam.Workspace, request.workspace);
-      break;
-    case OctarineAction.Daily:
-      appendParam(params, OctarineParam.Date, request.date);
-      appendParam(params, OctarineParam.Workspace, request.workspace);
-      appendParam(params, OctarineParam.Content, request.content);
-      appendParam(params, OctarineParam.Template, request.template);
-      appendParam(params, OctarineParam.Fresh, request.fresh);
-      appendParam(params, OctarineParam.Position, request.position);
-      appendParam(params, OctarineParam.Separator, request.separator);
-      appendParam(params, OctarineParam.OpenAfter, request.openAfter);
-      break;
-    case OctarineAction.Create:
-      appendParam(params, OctarineParam.Path, request.path);
-      appendParam(params, OctarineParam.Workspace, request.workspace);
-      appendParam(params, OctarineParam.Content, request.content);
-      appendParam(params, OctarineParam.Template, request.template);
-      appendParam(params, OctarineParam.Fresh, request.fresh);
-      appendParam(params, OctarineParam.Position, request.position);
-      appendParam(params, OctarineParam.Separator, request.separator);
-      appendParam(params, OctarineParam.OpenAfter, request.openAfter);
-      appendParam(params, OctarineParam.ContentReference, request.contentReference);
-      appendParam(params, OctarineParam.CompressedContent, request.compressedContent);
-      break;
-  }
-
-  return `octarine://${request.action}?${params.toString()}`;
-}
-
-function buildOpenNoteUri(path: string, workspaceName?: string): string {
-  return buildOctarineUri({
-    action: OctarineAction.Open,
-    path,
-    workspace: workspaceName,
-  });
-}
-
-export function buildSearchUri(query: string, workspaceName?: string): string {
-  return buildOctarineUri({
-    action: OctarineAction.Search,
-    query,
-    workspace: workspaceName,
-  });
-}
-
-export function buildDailyNoteUri(date: string, workspaceName?: string): string;
-export function buildDailyNoteUri(date: string, options?: BuildDailyNoteUriOptions): string;
-export function buildDailyNoteUri(date: string, workspaceNameOrOptions?: string | BuildDailyNoteUriOptions): string {
-  const options =
-    typeof workspaceNameOrOptions === "string"
-      ? { workspaceName: workspaceNameOrOptions }
-      : (workspaceNameOrOptions ?? {});
-
-  return buildOctarineUri({
-    action: OctarineAction.Daily,
-    date,
-    workspace: options.workspaceName,
-    content: options.content,
-    template: options.template,
-    fresh: options.fresh,
-    position: options.position,
-    separator: options.separator,
-    openAfter: options.openAfter,
-  });
-}
-
-export function buildOpenWorkspaceUri(workspaceName: string): string {
-  return buildDailyNoteUri("today", workspaceName);
-}
-
-export function openWorkspace(name: string): Promise<boolean> {
-  return openOctarineUri(buildOpenWorkspaceUri(name));
-}
-
-export function openAttachment(name: string, workspaceName?: string): Promise<boolean> {
-  return openOctarineUri(buildSearchUri(name, workspaceName));
-}
-
-export function openNote(path: string, workspace?: string): Promise<boolean> {
-  return openOctarineUri(buildOpenNoteUri(path, workspace));
-}
-
-export function openPinnedNote(path: string, workspace?: string): Promise<boolean> {
-  return openNote(path, workspace);
-}
-
-export function openDailyDeskNote(date: string, workspace: string): Promise<boolean> {
-  return openOctarineUri(buildDailyNoteUri(date, workspace));
-}
-
-export function openTodayNote(workspace: string): Promise<boolean> {
-  return openDailyDeskNote("today", workspace);
-}
-
-export function buildCreateNoteUri(path: string, workspaceName?: string): string;
-export function buildCreateNoteUri(path: string, options?: BuildCreateNoteUriOptions): string;
-export function buildCreateNoteUri(path: string, workspaceNameOrOptions?: string | BuildCreateNoteUriOptions): string {
-  const options =
-    typeof workspaceNameOrOptions === "string"
-      ? { workspaceName: workspaceNameOrOptions }
-      : (workspaceNameOrOptions ?? {});
-
-  return buildOctarineUri({
-    action: OctarineAction.Create,
-    path,
-    workspace: options.workspaceName,
-    content: options.content,
-    template: options.template,
-    fresh: options.fresh,
-    position: options.position,
-    separator: options.separator,
-    openAfter: options.openAfter,
-    contentReference: options.contentReference,
-    compressedContent: options.compressedContent,
-  });
-}
-
-export async function upsertOctarineNoteContent({
-  path,
-  workspaceName,
-  content,
-  openAfter = true,
-  position = "bottom",
-  separator = "\n\n",
-}: UpsertOctarineNoteContentOptions): Promise<boolean> {
-  const compressedContent = compressToBase64(content);
-
-  return openOctarineUri(
-    buildCreateNoteUri(path, {
-      workspaceName,
-      compressedContent,
-      openAfter,
-      position,
-      separator,
-    }),
+function buildUri({ action, ...params }: Scheme): string {
+  const searchParams = new URLSearchParams(
+    Object.entries(params)
+      .filter((entry): entry is [string, string | boolean] => entry[1] !== undefined)
+      .reduce(
+        (acc, [key, value]) => {
+          acc[key] = String(value);
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
   );
+
+  const query = searchParams.toString();
+  return `octarine://${action}${query ? `?${query}` : ""}`;
 }
 
-export async function appendDailyNoteContent({
-  date,
-  workspaceName,
-  content,
-}: AppendDailyNoteContentOptions): Promise<boolean> {
-  return openOctarineUri(
-    buildDailyNoteUri(date, {
-      workspaceName,
-      content,
-    }),
-  );
+function buildOpenWorkspaceUri(workspace: string): string {
+  return buildUri({
+    action: Action.Daily,
+    date: "today",
+    workspace,
+  });
 }
 
-export async function popToRootAndClose(): Promise<void> {
+async function openUri(uri: string): Promise<void> {
+  await open(uri);
   await popToRoot({ clearSearchBar: true });
   await closeMainWindow({ clearRootSearch: true });
 }
 
-export async function showOpenOctarineFailureToast(message?: string): Promise<void> {
-  await showToast({
-    style: Toast.Style.Failure,
-    title: "Failed to Open in Octarine",
-    message,
+export function openWorkspace(name: string): Promise<void> {
+  return openUri(buildOpenWorkspaceUri(name));
+}
+
+export function openAttachment(name: string, workspace?: string): Promise<void> {
+  const uri = buildUri({
+    action: Action.Search,
+    query: name,
+    workspace,
   });
+  return openUri(uri);
 }
 
-export async function openOctarineUri(uri: string): Promise<boolean> {
-  try {
-    await open(uri);
-    await popToRootAndClose();
-    return true;
-  } catch (error) {
-    console.error("Failed to open Octarine URI", { uri, error });
-    await showOpenOctarineFailureToast();
-    return false;
-  }
+export function openNote(path: string, workspace?: string): Promise<void> {
+  const uri = buildUri({
+    action: Action.Open,
+    path,
+    workspace,
+  });
+  return openUri(uri);
 }
 
-export async function openOctarineView(workspaceName: string, viewName: string): Promise<boolean> {
-  if (process.platform !== "darwin") {
-    await showOpenOctarineFailureToast("Opening Octarine views is only supported on macOS.");
-    return false;
-  }
+export function openPinnedNote(path: string, workspace?: string): Promise<void> {
+  return openNote(path, workspace);
+}
 
+export function openDailyDeskNote(date: string, workspace: string): Promise<void> {
+  return openUri(
+    buildUri({
+      action: Action.Daily,
+      date,
+      workspace,
+    }),
+  );
+}
+
+export function openTodayNote(workspace: string): Promise<void> {
+  return openDailyDeskNote("today", workspace);
+}
+
+export async function appendNoteContent({
+  path,
+  workspace,
+  content,
+  openAfter = true,
+  position = "bottom",
+  separator = "\n\n",
+}: AppendNoteOptions): Promise<void> {
+  const compressedContent = compressToBase64(content);
+  const uri = buildUri({
+    action: Action.Create,
+    path,
+    workspace,
+    compressedContent,
+    position,
+    separator,
+    openAfter,
+  });
+  return openUri(uri);
+}
+
+export async function appendDailyNoteContent({ date, workspace, content }: AppendDailyOptions): Promise<void> {
+  const uri = buildUri({
+    action: Action.Daily,
+    date,
+    workspace,
+    content,
+  });
+  return openUri(uri);
+}
+
+export async function openView(workspace: string, view: string): Promise<void> {
+  const execAsync = promisify(execFile);
   const OPEN_VIEW_APPLE_SCRIPT = `
   on run argv
     set targetViewName to item 1 of argv
@@ -319,14 +194,8 @@ export async function openOctarineView(workspaceName: string, viewName: string):
   end run
   `;
 
-  try {
-    await open(buildOpenWorkspaceUri(workspaceName));
-    await execFileAsync("osascript", ["-e", OPEN_VIEW_APPLE_SCRIPT, viewName]);
-    await popToRootAndClose();
-    return true;
-  } catch (error) {
-    console.error("Failed to open Octarine view", { workspaceName, viewName, error });
-    await showOpenOctarineFailureToast(error instanceof Error ? error.message : undefined);
-    return false;
-  }
+  await open(buildOpenWorkspaceUri(workspace));
+  await execAsync("osascript", ["-e", OPEN_VIEW_APPLE_SCRIPT, view]);
+  await popToRoot({ clearSearchBar: true });
+  await closeMainWindow({ clearRootSearch: true });
 }

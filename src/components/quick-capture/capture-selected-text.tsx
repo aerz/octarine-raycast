@@ -1,8 +1,7 @@
 import { getSelectedText } from "@raycast/api";
+import { appendDailyNoteContent, appendNoteContent } from "../../lib/octarine";
 import { type IndexedNote } from "../../lib/notes";
 import {
-  appendContentToDailyTarget,
-  appendContentToNote,
   AutoCaptureToDailyDeskTarget,
   NotePicker,
   showCaptureFailureToast,
@@ -32,7 +31,18 @@ export function CaptureSelectedText({
       return;
     }
 
-    await appendContentToNote(note, selectedText, "Capturing Selected Text…", "Selected Text Captured");
+    try {
+      await appendNoteContent({
+        path: note.path,
+        workspace: note.workspace.name,
+        content: selectedText,
+      });
+    } catch (error) {
+      await showCaptureFailureToast(
+        "Failed to Capture Selected Text",
+        error instanceof Error ? error.message : "Try again.",
+      );
+    }
   }
 
   return (
@@ -60,13 +70,18 @@ export function CaptureSelectedText({
               return;
             }
 
-            await appendContentToDailyTarget(
-              workspaceName,
-              date,
-              selectedText,
-              `Capturing Selected Text to ${date}…`,
-              `Selected Text Captured to ${date}`,
-            );
+            try {
+              await appendDailyNoteContent({
+                workspace: workspaceName,
+                date,
+                content: selectedText,
+              });
+            } catch (error) {
+              await showCaptureFailureToast(
+                "Failed to Capture Selected Text",
+                error instanceof Error ? error.message : "Try again.",
+              );
+            }
           }}
         />
       )}

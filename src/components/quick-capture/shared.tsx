@@ -7,7 +7,7 @@ import { DateFormatsDetail } from "../notifications/date-formats";
 import { useNotes } from "../../hooks/useNotes";
 import { buildDailyDeskItems, isDailyDeskItem, isSupportedDate, type DailyDeskItem } from "../../lib/daily-desk";
 import { type IndexedNote } from "../../lib/notes";
-import { appendDailyNoteContent, openNote, upsertOctarineNoteContent } from "../../lib/octarine";
+import { openNote } from "../../lib/octarine";
 import { match } from "../../utils/match";
 
 type AppendFormValues = {
@@ -100,59 +100,6 @@ export async function showCaptureFailureToast(title: string, message?: string): 
     title,
     message,
   });
-}
-
-export async function appendContentToNote(
-  note: IndexedNote,
-  content: string,
-  loadingTitle: string,
-  successTitle: string,
-): Promise<void> {
-  const loadingToast = await showToast({
-    style: Toast.Style.Animated,
-    title: loadingTitle,
-  });
-
-  const didOpen = await upsertOctarineNoteContent({
-    path: note.path,
-    workspaceName: note.workspace.name,
-    content,
-  });
-
-  if (!didOpen) {
-    await loadingToast.hide();
-    return;
-  }
-
-  loadingToast.style = Toast.Style.Success;
-  loadingToast.title = successTitle;
-}
-
-export async function appendContentToDailyTarget(
-  workspaceName: string,
-  date: string,
-  content: string,
-  loadingTitle: string,
-  successTitle: string,
-): Promise<void> {
-  const loadingToast = await showToast({
-    style: Toast.Style.Animated,
-    title: loadingTitle,
-  });
-
-  const didOpen = await appendDailyNoteContent({
-    date,
-    workspaceName,
-    content,
-  });
-
-  if (!didOpen) {
-    await loadingToast.hide();
-    return;
-  }
-
-  loadingToast.style = Toast.Style.Success;
-  loadingToast.title = successTitle;
 }
 
 function NoteListItem({
