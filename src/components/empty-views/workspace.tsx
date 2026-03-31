@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Icon, openExtensionPreferences, List, Grid } from "@raycast/api";
 import type { ReactNode } from "react";
 
-function emptyViewProps(children?: ReactNode) {
+function props(children?: ReactNode) {
   return {
     title: "No Octarine Workspaces Found",
     description:
@@ -16,9 +16,9 @@ function emptyViewProps(children?: ReactNode) {
 }
 
 export function WorkspaceListEmptyView({ children }: { children?: ReactNode }) {
-  return <List.EmptyView {...emptyViewProps(children)} />;
+  return <List.EmptyView {...props(children)} />;
 }
 
 export function WorkspaceGridEmptyView({ children }: { children?: ReactNode }) {
-  return <Grid.EmptyView {...emptyViewProps(children)} />;
+  return <Grid.EmptyView {...props(children)} />;
 }
