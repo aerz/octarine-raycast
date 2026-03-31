@@ -2,11 +2,18 @@ import { Cache } from "@raycast/api";
 import { isWorkspace, type Workspace } from "../types/octarine";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
+const WORKSPACES_CACHE_TTL = 15 * 60 * 1000;
 
 const cache = new Cache();
 
-function isWorkspacesCache(value: unknown): value is Workspace[] {
-  return Array.isArray(value) && value.every(isWorkspace);
+type WorkspacesCache = {
+  cachedAt: number;
+  workspaces: Workspace[];
+};
+
+function isWorkspacesCache(value: unknown): value is WorkspacesCache {
+  const v = value as WorkspacesCache;
+  return typeof v?.cachedAt === "number" && Array.isArray(v?.workspaces) && v.workspaces.every(isWorkspace);
 }
 
 function sortWorkspaceRoots(workspaceRoots: string[]): string[] {
@@ -24,13 +31,23 @@ export function getWorkspacesCache(workspaceRoots: string[]): Workspace[] | unde
   }
 
   try {
-    const parsed = JSON.parse(value);
-    return isWorkspacesCache(parsed) ? parsed : undefined;
+    const parsed: unknown = JSON.parse(value);
+    if (!isWorkspacesCache(parsed)) {
+      return undefined;
+    }
+
+    return Date.now() - parsed.cachedAt <= WORKSPACES_CACHE_TTL ? parsed.workspaces : undefined;
   } catch {
     return undefined;
   }
 }
 
 export function setWorkspacesCache(workspaces: Workspace[], workspaceRoots: string[]): void {
-  cache.set(workspaceRootsKey(sortWorkspaceRoots(workspaceRoots)), JSON.stringify(workspaces));
+  cache.set(
+    workspaceRootsKey(workspaceRoots),
+    JSON.stringify({
+      cachedAt: Date.now(),
+      workspaces,
+    }),
+  );
 }

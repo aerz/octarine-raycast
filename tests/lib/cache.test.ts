@@ -4,9 +4,12 @@ import { getWorkspacesCache, setWorkspacesCache } from "../../src/lib/cache";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("workspace cache", () => {
+  const staleOffsetMs = 24 * 60 * 60 * 1000;
+
   it("returns undefined when the key is missing", () => {
     const result = getWorkspacesCache(["/workspaces"]);
 
@@ -14,6 +17,9 @@ describe("workspace cache", () => {
   });
 
   it("returns cached workspaces when the cached value is valid", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-31T10:00:00.000Z"));
+
     setWorkspacesCache(
       [
         { name: "Alpha", path: "/workspaces/alpha" },
@@ -30,6 +36,17 @@ describe("workspace cache", () => {
     ]);
   });
 
+  it("returns undefined when the cached value is stale", () => {
+    const now = new Date("2026-03-31T10:00:00.000Z").valueOf();
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValue(now);
+
+    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces"]);
+    nowSpy.mockReturnValue(now + staleOffsetMs);
+
+    expect(getWorkspacesCache(["/workspaces"])).toBeUndefined();
+  });
+
   it("returns undefined when the cached value is malformed", () => {
     vi.spyOn(Cache.prototype, "get").mockReturnValue("{");
 
@@ -39,7 +56,7 @@ describe("workspace cache", () => {
   });
 
   it("returns undefined when the cached value is not a valid workspace list", () => {
-    vi.spyOn(Cache.prototype, "get").mockReturnValue(JSON.stringify([{ name: "Alpha", path: 1 }]));
+    vi.spyOn(Cache.prototype, "get").mockReturnValue(JSON.stringify({ cachedAt: Date.now(), workspaces: [{ name: "Alpha", path: 1 }] }));
 
     const result = getWorkspacesCache(["/workspaces"]);
 
