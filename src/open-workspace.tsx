@@ -12,9 +12,9 @@ type Arguments = {
 export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const [refresh, setRefresh] = useState(false);
-
-  const onRefresh = () => (refresh ? revalidate() : setRefresh(true));
   const { workspaces, status, revalidate } = useWorkspaces({ refresh });
+  const onRefresh = () => (refresh ? revalidate() : setRefresh(true));
+
   useOpenTarget({
     requestedWorkspace,
     workspaces,
