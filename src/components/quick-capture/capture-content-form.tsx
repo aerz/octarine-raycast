@@ -1,6 +1,6 @@
 import { Action, ActionPanel, Form } from "@raycast/api";
 import { type IndexedNote } from "../../lib/notes";
-import { isDailyDeskDate } from "../../lib/daily-desk";
+import { isSupportedDate } from "../../lib/daily-desk";
 import {
   appendContentToDailyTarget,
   appendContentToNote,
@@ -75,7 +75,7 @@ function getAppendTargetConfig(props: CaptureContentFormProps): AppendTargetConf
     };
   }
 
-  if (!isDailyDeskDate(props.date)) {
+  if (!isSupportedDate(props.date)) {
     return null;
   }
 

@@ -5,7 +5,7 @@ import { WorkspaceNotesEmptyView } from "../empty-views/workspace-missing-files"
 import { WorkspaceListEmptyView } from "../empty-views/workspace";
 import { DateFormatsDetail } from "../notifications/date-formats-detail";
 import { useNotes } from "../../hooks/useNotes";
-import { buildDailyDeskItems, isDailyDeskDate, isDailyDeskItem, type DailyDeskItem } from "../../lib/daily-desk";
+import { buildDailyDeskItems, isDailyDeskItem, isSupportedDate, type DailyDeskItem } from "../../lib/daily-desk";
 import { type IndexedNote } from "../../lib/notes";
 import { appendDailyNoteContent, openNote, upsertOctarineNoteContent } from "../../lib/octarine";
 import { match } from "../../utils/match";
@@ -233,7 +233,7 @@ export function AutoCaptureToDailyDeskTarget({
 }) {
   const { pop } = useNavigation();
   const hasStartedCapture = useRef(false);
-  const isDateValid = isDailyDeskDate(date);
+  const isDateValid = isSupportedDate(date);
 
   useEffect(() => {
     if (!isDateValid || hasStartedCapture.current) {
