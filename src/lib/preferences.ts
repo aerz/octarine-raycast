@@ -37,7 +37,7 @@ export type SearchViewsPreferences = {
 
 export type OpenTodayNotePreferences = {
   extension: ExtensionPreferences;
-  workspace: string;
+  defaultWorkspace: string;
 };
 
 function normalizeOptionalString(value?: string): string {
@@ -170,6 +170,6 @@ export function getOpenTodayNotePreferences(): OpenTodayNotePreferences {
 
   return {
     extension: buildExtensionPreferences(preferences),
-    workspace: normalizeOptionalString(preferences.workspace),
+    defaultWorkspace: normalizeOptionalString(preferences.defaultWorkspace),
   };
 }

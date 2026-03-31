@@ -1,4 +1,5 @@
 import { Action, LaunchProps } from "@raycast/api";
+import { useState } from "react";
 import { WorkspaceList } from "./components/workspace-list";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
@@ -12,10 +13,11 @@ type Arguments = {
 export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const preferences = getOpenTodayNotePreferences();
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
-  const defaultWorkspace = preferences.workspace;
-  const targetWorkspace = requestedWorkspace ? requestedWorkspace : defaultWorkspace;
+  const targetWorkspace = requestedWorkspace ? requestedWorkspace : preferences.defaultWorkspace;
+  const [refresh, setRefresh] = useState(false);
+  const { workspaces, status, revalidate } = useWorkspaces({ refresh });
+  const onRefresh = () => (refresh ? revalidate() : setRefresh(true));
 
-  const { workspaces, status, revalidate } = useWorkspaces();
   useOpenTarget({
     requestedWorkspace: targetWorkspace,
     workspaces,
@@ -24,7 +26,7 @@ export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arg
   });
 
   return (
-    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRefresh={revalidate}>
+    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRefresh={onRefresh}>
       {(workspace) => <Action title="Open Today's Note" onAction={() => openTodayNote(workspace.name)} />}
     </WorkspaceList>
   );

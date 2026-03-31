@@ -56,6 +56,29 @@
       ]
     },
     {
+      "name": "open-today-note",
+      "title": "Open Today's Note",
+      "description": "Opens today's note in Daily Desk",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "workspace",
+          "type": "text",
+          "required": false,
+          "placeholder": "Workspace name"
+        }
+      ],
+      "preferences": [
+        {
+          "name": "defaultWorkspace",
+          "type": "textfield",
+          "title": "Default Workspace",
+          "required": false,
+          "description": "Set default workspace. If empty, a selector will be shown."
+        }
+      ]
+    },
+    {
       "name": "search-notes",
       "title": "Search Notes",
       "description": "Search notes across Octarine workspaces",
@@ -153,29 +176,6 @@
           "label": "Show view count in workspace section titles",
           "default": false,
           "required": false
-        }
-      ]
-    },
-    {
-      "name": "open-today-note",
-      "title": "Open Today's Note",
-      "description": "Opens today's note in Daily Desk",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "workspace",
-          "type": "text",
-          "required": false,
-          "placeholder": "Workspace name"
-        }
-      ],
-      "preferences": [
-        {
-          "name": "workspace",
-          "type": "textfield",
-          "title": "Default Workspace",
-          "required": false,
-          "description": "Set default workspace. If empty, a selector will be shown."
         }
       ]
     },
