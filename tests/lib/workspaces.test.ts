@@ -74,4 +74,40 @@ describe("loadWorkspaces", () => {
       { name: "Beta", path: path.join(root, "Beta") },
     ]);
   });
+
+  it("ignores cached workspaces when workspaceRoots changes", async () => {
+    tempDir = await createTempDir("octarine-workspaces-root-change");
+
+    const firstRoot = path.join(tempDir, "first-root");
+    const secondRoot = path.join(tempDir, "second-root");
+    await ensureDir(path.join(firstRoot, "Alpha", workspaceMarker));
+    await ensureDir(path.join(secondRoot, "Beta", workspaceMarker));
+
+    setMockPreferences({
+      workspaceRoots: firstRoot,
+      excludedWorkspaces: "",
+      excludedFoldersInWorkspaces: "",
+    });
+
+    const initial = await loadWorkspaces();
+
+    setMockPreferences({
+      workspaceRoots: secondRoot,
+      excludedWorkspaces: "",
+      excludedFoldersInWorkspaces: "",
+    });
+
+    const changedRoots = await loadWorkspaces();
+
+    expect(initial).toEqual({
+      workspaces: [{ name: "Alpha", path: path.join(firstRoot, "Alpha") }],
+      invalidRoots: [],
+      cached: false,
+    });
+    expect(changedRoots).toEqual({
+      workspaces: [{ name: "Beta", path: path.join(secondRoot, "Beta") }],
+      invalidRoots: [],
+      cached: false,
+    });
+  });
 });

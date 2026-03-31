@@ -9,20 +9,28 @@ function isWorkspacesCache(value: unknown): value is Workspace[] {
   return Array.isArray(value) && value.every(isWorkspace);
 }
 
-export function getWorkspacesCache(): Workspace[] | undefined {
-  const value = cache.get(WORKSPACES_CACHE_KEY);
+function sortWorkspaceRoots(workspaceRoots: string[]): string[] {
+  return [...workspaceRoots].sort();
+}
+
+function workspaceRootsKey(workspaceRoots: string[]): string {
+  return `${WORKSPACES_CACHE_KEY}.${JSON.stringify(sortWorkspaceRoots(workspaceRoots))}`;
+}
+
+export function getWorkspacesCache(workspaceRoots: string[]): Workspace[] | undefined {
+  const value = cache.get(workspaceRootsKey(workspaceRoots));
   if (!value) {
     return undefined;
   }
 
   try {
-    const parsed = JSON.parse(value) as unknown;
+    const parsed = JSON.parse(value);
     return isWorkspacesCache(parsed) ? parsed : undefined;
   } catch {
     return undefined;
   }
 }
 
-export function setWorkspacesCache(workspaces: Workspace[]): void {
-  cache.set(WORKSPACES_CACHE_KEY, JSON.stringify(workspaces));
+export function setWorkspacesCache(workspaces: Workspace[], workspaceRoots: string[]): void {
+  cache.set(workspaceRootsKey(sortWorkspaceRoots(workspaceRoots)), JSON.stringify(workspaces));
 }

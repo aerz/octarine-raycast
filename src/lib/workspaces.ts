@@ -106,7 +106,7 @@ export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<L
   const refresh = options?.refresh ?? false;
 
   if (!refresh) {
-    const cache = getWorkspacesCache();
+    const cache = getWorkspacesCache(workspaceRoots);
     if (cache) {
       return {
         workspaces: cache,
@@ -117,7 +117,7 @@ export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<L
   }
 
   const scan = await scanWorkspaces(workspaceRoots, excludedWorkspaces);
-  setWorkspacesCache(scan.workspaces);
+  setWorkspacesCache(scan.workspaces, workspaceRoots);
 
   return {
     workspaces: scan.workspaces,

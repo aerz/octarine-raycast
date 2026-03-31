@@ -1,26 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { Cache } from "@raycast/api";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getWorkspacesCache, setWorkspacesCache } from "../../src/lib/cache";
-import { setMockCacheValue } from "../__mocks__/@raycast/api";
 
-const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("workspace cache", () => {
   it("returns undefined when the key is missing", () => {
-    const result = getWorkspacesCache();
+    const result = getWorkspacesCache(["/workspaces"]);
 
     expect(result).toBeUndefined();
   });
 
   it("returns cached workspaces when the cached value is valid", () => {
-    setMockCacheValue(
-      WORKSPACES_CACHE_KEY,
-      JSON.stringify([
+    setWorkspacesCache(
+      [
         { name: "Alpha", path: "/workspaces/alpha" },
         { name: "Beta", path: "/workspaces/beta" },
-      ]),
+      ],
+      ["/workspaces"],
     );
 
-    const result = getWorkspacesCache();
+    const result = getWorkspacesCache(["/workspaces"]);
 
     expect(result).toEqual([
       { name: "Alpha", path: "/workspaces/alpha" },
@@ -29,24 +31,43 @@ describe("workspace cache", () => {
   });
 
   it("returns undefined when the cached value is malformed", () => {
-    setMockCacheValue(WORKSPACES_CACHE_KEY, "{");
+    vi.spyOn(Cache.prototype, "get").mockReturnValue("{");
 
-    const result = getWorkspacesCache();
+    const result = getWorkspacesCache(["/workspaces"]);
 
     expect(result).toBeUndefined();
   });
 
   it("returns undefined when the cached value is not a valid workspace list", () => {
-    setMockCacheValue(WORKSPACES_CACHE_KEY, JSON.stringify([{ name: "Alpha", path: 1 }]));
+    vi.spyOn(Cache.prototype, "get").mockReturnValue(JSON.stringify([{ name: "Alpha", path: 1 }]));
 
-    const result = getWorkspacesCache();
+    const result = getWorkspacesCache(["/workspaces"]);
 
     expect(result).toBeUndefined();
   });
 
-  it("stores workspaces as cacheable data", () => {
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }]);
+  it("stores workspaces under a roots-specific cache key", () => {
+    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces"]);
 
-    expect(getWorkspacesCache()).toEqual([{ name: "Alpha", path: "/workspaces/alpha" }]);
+    expect(getWorkspacesCache(["/workspaces"])).toEqual([{ name: "Alpha", path: "/workspaces/alpha" }]);
+  });
+
+  it("keeps caches for different workspace roots separate", () => {
+    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces-a"]);
+    setWorkspacesCache([{ name: "Beta", path: "/workspaces/beta" }], ["/workspaces-b"]);
+
+    expect(getWorkspacesCache(["/workspaces-a"])).toEqual([{ name: "Alpha", path: "/workspaces/alpha" }]);
+    expect(getWorkspacesCache(["/workspaces-b"])).toEqual([{ name: "Beta", path: "/workspaces/beta" }]);
+  });
+
+  it("treats the same workspace roots in different orders as the same cache entry", () => {
+    setWorkspacesCache(
+      [{ name: "Alpha", path: "/workspaces/alpha" }],
+      ["/workspaces-b", "/workspaces-a"],
+    );
+
+    expect(getWorkspacesCache(["/workspaces-a", "/workspaces-b"])).toEqual([
+      { name: "Alpha", path: "/workspaces/alpha" },
+    ]);
   });
 });
