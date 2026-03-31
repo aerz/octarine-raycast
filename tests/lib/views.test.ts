@@ -204,7 +204,7 @@ describe("views", () => {
     const refreshed = await scanViewsFromWorkspaces({ forceRefresh: true });
     const cached = await loadCachedViews(workspaceDiscoverySignature);
 
-    expect(initial.fromCache).toBe(false);
+    expect(initial.cached).toBe(false);
     expect(initial.workspaceViews[0]?.views.map((view) => view.name)).toEqual(["Inbox"]);
 
     expect(cached).toEqual({
@@ -212,7 +212,7 @@ describe("views", () => {
       workspaceViews: initial.workspaceViews,
     });
 
-    expect(refreshed.fromCache).toBe(false);
+    expect(refreshed.cached).toBe(false);
     expect(refreshed.workspaceViews[0]?.views.map((view) => view.name)).toEqual(["Archive"]);
     expect(loadWorkspacesMock).toHaveBeenCalledTimes(2);
   });

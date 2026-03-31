@@ -5,12 +5,12 @@ import { WorkspaceViewsEmptyView } from "./components/empty-views/workspace-miss
 import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
 import { type WorkspaceViewSection, useViews } from "./hooks/useViews";
 import { openOctarineView } from "./lib/octarine";
-import { getSearchViewsPreferences } from "./lib/preferences";
+import { searchViewsPreferences } from "./lib/preferences";
 import { IndexedView } from "./lib/views";
 import { match } from "./utils/match";
 
 export default function SearchViewsCommand() {
-  const preferences = getSearchViewsPreferences();
+  const preferences = searchViewsPreferences();
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const { workspaceNames, matchingViews, sections, renderState } = useViews({

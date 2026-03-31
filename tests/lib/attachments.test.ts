@@ -42,7 +42,7 @@ describe("attachments", () => {
     loadWorkspacesMock.mockResolvedValue({
       workspaces: [workspace],
       invalidRoots: [],
-      fromCache: false,
+      cached: false,
     });
 
     await writeTextFile(path.join(workspace.path, ".attachments", "docs", "report.pdf"), "report");
@@ -130,7 +130,7 @@ describe("attachments", () => {
     loadWorkspacesMock.mockResolvedValue({
       workspaces: [workspace],
       invalidRoots: [],
-      fromCache: false,
+      cached: false,
     });
 
     await writeTextFile(path.join(workspace.path, ".attachments", "Inbox.pdf"), "initial");

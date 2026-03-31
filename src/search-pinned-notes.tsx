@@ -5,12 +5,12 @@ import { WorkspaceNotesEmptyView } from "./components/empty-views/workspace-miss
 import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
 import { PinnedNoteActions } from "./components/pinned-notes-action";
 import { type PinnedNoteWorkspaceSection, usePinnedNotes } from "./hooks/usePinnedNotes";
-import { getSearchPinnedNotesPreferences } from "./lib/preferences";
+import { searchPinnedNotesPreferences } from "./lib/preferences";
 import { IndexedNote } from "./lib/notes";
 import { match } from "./utils/match";
 
 export default function SearchPinnedNotesCommand() {
-  const preferences = getSearchPinnedNotesPreferences();
+  const preferences = searchPinnedNotesPreferences();
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const { workspaceSections, filteredWorkspaceSections, searchState, isLoading } = usePinnedNotes({

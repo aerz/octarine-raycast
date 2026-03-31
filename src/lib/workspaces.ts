@@ -2,7 +2,7 @@ import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import type { Workspace } from "../types/octarine";
 import { getWorkspacesCache, setWorkspacesCache } from "./cache";
-import { getExtensionPreferences } from "./preferences";
+import { extensionPreferences } from "./preferences";
 
 const WORKSPACE_DIR_NAME = ".octarine";
 
@@ -102,7 +102,7 @@ async function scanWorkspaces(roots: string[], excludedWorkspaces: Set<string>):
 }
 
 export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<LoadWorkspacesResult> {
-  const { workspaceRoots, excludedWorkspaces } = getExtensionPreferences();
+  const { workspaceRoots, excludedWorkspaces } = extensionPreferences();
   const refresh = options?.refresh ?? false;
 
   if (!refresh) {

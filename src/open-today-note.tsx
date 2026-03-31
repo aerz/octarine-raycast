@@ -4,14 +4,14 @@ import { WorkspaceList } from "./components/workspace-list";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { openTodayNote } from "./lib/octarine";
-import { getOpenTodayNotePreferences } from "./lib/preferences";
+import { openTodayNotePreferences } from "./lib/preferences";
 
 type Arguments = {
   workspace?: string;
 };
 
 export default function OpenTodayNoteCommand(props: LaunchProps<{ arguments: Arguments }>) {
-  const preferences = getOpenTodayNotePreferences();
+  const preferences = openTodayNotePreferences();
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const targetWorkspace = requestedWorkspace ? requestedWorkspace : preferences.defaultWorkspace;
   const [refresh, setRefresh] = useState(false);

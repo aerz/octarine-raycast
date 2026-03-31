@@ -6,11 +6,11 @@ import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
 import { type NoteWorkspaceSection, useNotes } from "./hooks/useNotes";
 import { openNote } from "./lib/octarine";
 import { type IndexedNote } from "./lib/notes";
-import { getSearchNotesPreferences } from "./lib/preferences";
+import { searchNotesPreferences } from "./lib/preferences";
 import { match } from "./utils/match";
 
 export default function SearchNotesCommand() {
-  const preferences = getSearchNotesPreferences();
+  const preferences = searchNotesPreferences();
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const { workspaceNames, matchingNotes, sections, searchState, isLoading, pinnedNoteIds } = useNotes({

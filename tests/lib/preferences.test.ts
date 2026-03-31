@@ -3,10 +3,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
 import {
-  getExtensionPreferences,
-  getOpenTodayNotePreferences,
-  getSearchAttachmentsPreferences,
-  getSearchNotesPreferences,
+  extensionPreferences,
+  openTodayNotePreferences,
+  searchAttachmentsPreferences,
+  searchNotesPreferences,
 } from "../../src/lib/preferences";
 
 describe("preferences", () => {
@@ -19,7 +19,7 @@ describe("preferences", () => {
       showPinnedNotesFirst: false,
     });
 
-    const preferences = getExtensionPreferences();
+    const preferences = extensionPreferences();
 
     expect(preferences.workspaceRoots).toEqual([
       path.normalize(path.join(os.homedir(), "Octarine")),
@@ -42,7 +42,7 @@ describe("preferences", () => {
       excludeFileExtensions: ".PNG, pdf , txt",
     });
 
-    const preferences = getSearchAttachmentsPreferences();
+    const preferences = searchAttachmentsPreferences();
 
     expect(preferences.showWorkspaceAttachmentCount).toBe(true);
     expect(preferences.flattenWorkspaceSections).toBe(false);
@@ -55,20 +55,20 @@ describe("preferences", () => {
       workspaceRoots: "",
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
-      workspace: "  Work Notes  ",
+      defaultWorkspace: "  Work Notes  ",
       showWorkspaceNoteCount: true,
       showPinnedNotesFirst: true,
     });
 
-    expect(getOpenTodayNotePreferences()).toEqual({
+    expect(openTodayNotePreferences()).toEqual({
       extension: expect.objectContaining({
         hasConfiguredRoots: false,
         workspaceRoots: [],
       }),
-      workspace: "Work Notes",
+      defaultWorkspace: "Work Notes",
     });
 
-    expect(getSearchNotesPreferences()).toEqual({
+    expect(searchNotesPreferences()).toEqual({
       extension: expect.objectContaining({
         hasConfiguredRoots: false,
       }),

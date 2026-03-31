@@ -116,11 +116,11 @@ function buildExtensionPreferences(preferences: Preferences): ExtensionPreferenc
   };
 }
 
-export function getExtensionPreferences(): ExtensionPreferences {
+export function extensionPreferences(): ExtensionPreferences {
   return buildExtensionPreferences(getPreferenceValues<Preferences>());
 }
 
-export function getSearchNotesPreferences(): SearchNotesPreferences {
+export function searchNotesPreferences(): SearchNotesPreferences {
   const preferences = getPreferenceValues<Preferences.SearchNotes>();
 
   return {
@@ -130,7 +130,7 @@ export function getSearchNotesPreferences(): SearchNotesPreferences {
   };
 }
 
-export function getSearchPinnedNotesPreferences(): SearchPinnedNotesPreferences {
+export function searchPinnedNotesPreferences(): SearchPinnedNotesPreferences {
   const preferences = getPreferenceValues<Preferences.SearchPinnedNotes>();
 
   return {
@@ -139,7 +139,7 @@ export function getSearchPinnedNotesPreferences(): SearchPinnedNotesPreferences 
   };
 }
 
-export function getSearchAttachmentsPreferences(): SearchAttachmentsPreferences {
+export function searchAttachmentsPreferences(): SearchAttachmentsPreferences {
   const preferences = getPreferenceValues<Preferences.SearchAttachments>();
   const excludedExtensions = new Set(
     parseCommaSeparated(preferences.excludeFileExtensions).map((extension) =>
@@ -156,7 +156,7 @@ export function getSearchAttachmentsPreferences(): SearchAttachmentsPreferences 
   };
 }
 
-export function getSearchViewsPreferences(): SearchViewsPreferences {
+export function searchViewsPreferences(): SearchViewsPreferences {
   const preferences = getPreferenceValues<Preferences.SearchViews>();
 
   return {
@@ -165,7 +165,7 @@ export function getSearchViewsPreferences(): SearchViewsPreferences {
   };
 }
 
-export function getOpenTodayNotePreferences(): OpenTodayNotePreferences {
+export function openTodayNotePreferences(): OpenTodayNotePreferences {
   const preferences = getPreferenceValues<Preferences.OpenTodayNote>();
 
   return {

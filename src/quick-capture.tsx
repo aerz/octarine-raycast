@@ -11,11 +11,11 @@ import { useQuickCapture, type QuickCaptureItem } from "./hooks/useQuickCapture"
 import { isDailyDeskItem, type DailyDeskItem } from "./lib/daily-desk";
 import { type IndexedNote } from "./lib/notes";
 import { openNote } from "./lib/octarine";
-import { getExtensionPreferences } from "./lib/preferences";
+import { extensionPreferences } from "./lib/preferences";
 import { match } from "./utils/match";
 
 export default function QuickCaptureCommand() {
-  const preferences = getExtensionPreferences();
+  const preferences = extensionPreferences();
   const excludedDirectoryNames = useMemo(
     () => preferences.excludedFoldersInWorkspaces,
     [preferences.workspaceSearchSignature],
