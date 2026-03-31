@@ -13,7 +13,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const [refresh, setRefresh] = useState(false);
 
-  const onRescan = () => (refresh ? revalidate() : setRefresh(true));
+  const onRefresh = () => (refresh ? revalidate() : setRefresh(true));
   const { workspaces, status, revalidate } = useWorkspaces({ refresh });
   useOpenTarget({
     requestedWorkspace,
@@ -23,7 +23,7 @@ export default function OpenWorkspaceCommand(props: LaunchProps<{ arguments: Arg
   });
 
   return (
-    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRescan={onRescan}>
+    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRefresh={onRefresh}>
       {(workspace) => (
         <Action title="Open Workspace" icon={Icon.AppWindow} onAction={() => openWorkspace(workspace.name)} />
       )}

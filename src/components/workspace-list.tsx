@@ -6,16 +6,16 @@ import { WorkspaceListEmptyView } from "./empty-views/workspace";
 type Props = {
   isLoading: boolean;
   workspaces: Workspace[];
-  onRescan: () => void | Promise<unknown>;
+  onRefresh: () => void | Promise<unknown>;
   children: (workspace: Workspace) => ReactNode;
 };
 
-export function WorkspaceList({ isLoading, workspaces, onRescan, children }: Props) {
+export function WorkspaceList({ isLoading, workspaces, onRefresh, children }: Props) {
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search workspaces">
       {workspaces.length === 0 && !isLoading ? (
         <WorkspaceListEmptyView>
-          <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={onRescan} />
+          <Action title="Refresh Workspaces" icon={Icon.ArrowClockwise} onAction={onRefresh} />
         </WorkspaceListEmptyView>
       ) : (
         workspaces.map((workspace) => (
@@ -27,7 +27,7 @@ export function WorkspaceList({ isLoading, workspaces, onRescan, children }: Pro
               <ActionPanel>
                 {children(workspace)}
                 <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
-                <Action title="Rescan Workspaces" icon={Icon.ArrowClockwise} onAction={onRescan} />
+                <Action title="Refresh Workspaces" icon={Icon.ArrowClockwise} onAction={onRefresh} />
                 <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
               </ActionPanel>
             }
