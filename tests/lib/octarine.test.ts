@@ -1,6 +1,25 @@
-import { Toast, closeMainWindow, open, popToRoot, showToast } from "@raycast/api";
-import { describe, expect, it, vi } from "vitest";
-import { buildCreateNoteUri, buildDailyNoteUri, buildSearchUri, openOctarineUri } from "../../src/lib/octarine";
+import { closeMainWindow, open, popToRoot } from "@raycast/api";
+import { compressToBase64 } from "lz-string";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const execFileMock = vi.hoisted(() =>
+  vi.fn((_file: string, _args: string[], callback: (error: Error | null, stdout: string, stderr: string) => void) =>
+    callback(null, "", ""),
+  ),
+);
+
+vi.mock("node:child_process", () => ({
+  execFile: execFileMock,
+}));
+
+import {
+  appendDailyNoteContent,
+  appendNoteContent,
+  openAttachment,
+  openDailyDeskNote,
+  openNote,
+  openView,
+} from "../../src/lib/octarine";
 
 function parseUri(uri: string) {
   const [schemeAndAction, query = ""] = uri.split("?");
@@ -11,74 +30,93 @@ function parseUri(uri: string) {
   };
 }
 
-describe("octarine URIs", () => {
-  it("builds search URIs", () => {
-    expect(buildSearchUri("team standup", "Work")).toBe("octarine://search?query=team+standup&workspace=Work");
+function getOpenedUri(): ReturnType<typeof parseUri> {
+  const [[uri]] = vi.mocked(open).mock.calls;
+  return parseUri(uri);
+}
+
+beforeEach(() => {
+  execFileMock.mockClear();
+});
+
+describe("octarine", () => {
+  it("opens note URIs and closes Raycast", async () => {
+    await openNote("docs/plan.md", "Work");
+    const parsed = getOpenedUri();
+
+    expect(parsed.action).toBe("open");
+    expect(parsed.params.get("path")).toBe("docs/plan.md");
+    expect(parsed.params.get("workspace")).toBe("Work");
+    expect(popToRoot).toHaveBeenCalledWith({ clearSearchBar: true });
+    expect(closeMainWindow).toHaveBeenCalledWith({ clearRootSearch: true });
   });
 
-  it("builds daily note URIs with optional parameters", () => {
-    const uri = buildDailyNoteUri("2026-03-26", {
-      workspaceName: "Work",
+  it("opens attachment search URIs", async () => {
+    await openAttachment("team standup", "Work");
+    const parsed = getOpenedUri();
+
+    expect(parsed.action).toBe("search");
+    expect(parsed.params.get("query")).toBe("team standup");
+    expect(parsed.params.get("workspace")).toBe("Work");
+  });
+
+  it("opens daily desk note URIs", async () => {
+    await openDailyDeskNote("2026-03-26", "Work");
+    const parsed = getOpenedUri();
+
+    expect(parsed.action).toBe("daily");
+    expect(parsed.params.get("date")).toBe("2026-03-26");
+    expect(parsed.params.get("workspace")).toBe("Work");
+  });
+
+  it("builds create URIs when appending note content", async () => {
+    await appendNoteContent({
+      path: "docs/plan.md",
+      workspace: "Work",
       content: "Hello",
-      openAfter: false,
-      position: "top",
-      separator: "\n--\n",
     });
-    const parsed = parseUri(uri);
+    const parsed = getOpenedUri();
+
+    expect(parsed.action).toBe("create");
+    expect(parsed.params.get("path")).toBe("docs/plan.md");
+    expect(parsed.params.get("workspace")).toBe("Work");
+    expect(parsed.params.get("compressedContent")).toBe(compressToBase64("Hello"));
+    expect(parsed.params.get("position")).toBe("bottom");
+    expect(parsed.params.get("separator")).toBe("\n\n");
+    expect(parsed.params.get("openAfter")).toBe("true");
+  });
+
+  it("builds daily URIs when appending daily note content", async () => {
+    await appendDailyNoteContent({
+      date: "2026-03-26",
+      workspace: "Work",
+      content: "Hello",
+    });
+    const parsed = getOpenedUri();
 
     expect(parsed.action).toBe("daily");
     expect(parsed.params.get("date")).toBe("2026-03-26");
     expect(parsed.params.get("workspace")).toBe("Work");
     expect(parsed.params.get("content")).toBe("Hello");
-    expect(parsed.params.get("openAfter")).toBe("false");
-    expect(parsed.params.get("position")).toBe("top");
-    expect(parsed.params.get("separator")).toBe("\n--\n");
   });
 
-  it("builds create note URIs with content references", () => {
-    const uri = buildCreateNoteUri("docs/plan.md", {
-      workspaceName: "Work",
-      contentReference: "clipboard",
-      compressedContent: "abc123",
-      fresh: true,
-    });
-    const parsed = parseUri(uri);
+  it("opens a workspace and runs AppleScript when opening a view", async () => {
+    await openView("Work", "Inbox");
+    const parsed = getOpenedUri();
+    const openMock = vi.mocked(open);
+    const popToRootMock = vi.mocked(popToRoot);
 
-    expect(parsed.action).toBe("create");
-    expect(parsed.params.get("path")).toBe("docs/plan.md");
+    expect(parsed.action).toBe("daily");
+    expect(parsed.params.get("date")).toBe("today");
     expect(parsed.params.get("workspace")).toBe("Work");
-    expect(parsed.params.get("contentReference")).toBe("clipboard");
-    expect(parsed.params.get("compressedContent")).toBe("abc123");
-    expect(parsed.params.get("fresh")).toBe("true");
-  });
-});
-
-describe("openOctarineUri", () => {
-  it("opens the URI and closes Raycast on success", async () => {
-    const result = await openOctarineUri("octarine://search?query=test");
-
-    expect(result).toBe(true);
-    expect(open).toHaveBeenCalledWith("octarine://search?query=test");
+    expect(execFileMock).toHaveBeenCalledWith(
+      "osascript",
+      ["-e", expect.stringContaining('tell application "Octarine"'), "Inbox"],
+      expect.any(Function),
+    );
+    expect(openMock.mock.invocationCallOrder[0]).toBeLessThan(execFileMock.mock.invocationCallOrder[0]);
+    expect(execFileMock.mock.invocationCallOrder[0]).toBeLessThan(popToRootMock.mock.invocationCallOrder[0]);
     expect(popToRoot).toHaveBeenCalledWith({ clearSearchBar: true });
     expect(closeMainWindow).toHaveBeenCalledWith({ clearRootSearch: true });
-    expect(showToast).not.toHaveBeenCalled();
-  });
-
-  it("shows a failure toast when opening fails", async () => {
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    open.mockRejectedValueOnce(new Error("boom"));
-
-    const result = await openOctarineUri("octarine://search?query=test");
-
-    expect(result).toBe(false);
-    expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to open Octarine URI", {
-      uri: "octarine://search?query=test",
-      error: expect.any(Error),
-    });
-    expect(showToast).toHaveBeenCalledWith({
-      style: Toast.Style.Failure,
-      title: "Failed to Open in Octarine",
-      message: undefined,
-    });
   });
 });
