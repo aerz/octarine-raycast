@@ -1,4 +1,5 @@
 import { Action, LaunchProps, Icon } from "@raycast/api";
+import { useState } from "react";
 import { DateFormatsDetail } from "./components/notifications/date-formats";
 import { WorkspaceList } from "./components/workspace-list";
 import { useOpenTarget } from "./hooks/useOpenTarget";
@@ -14,28 +15,24 @@ type Arguments = {
 export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const requestedDate = props.arguments.date?.trim() ?? "";
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
-  const isValidDate = isSupportedDate(requestedDate);
-  const {
-    workspaces,
-    status: workspaceStatus,
-    revalidate,
-  } = useWorkspaces({
-    enabled: isValidDate,
-  });
+  const supportedDate = isSupportedDate(requestedDate);
+  const [refresh, setRefresh] = useState(false);
+  const { workspaces, status, revalidate } = useWorkspaces({ enabled: supportedDate });
+  const onRefresh = () => (refresh ? revalidate() : setRefresh(true));
 
   useOpenTarget({
     requestedWorkspace,
     workspaces,
-    status: workspaceStatus,
+    status,
     open: (workspaceName) => openDailyDeskNote(requestedDate, workspaceName),
   });
 
-  if (!isValidDate) {
+  if (!supportedDate) {
     return <DateFormatsDetail />;
   }
 
   return (
-    <WorkspaceList isLoading={workspaceStatus.isLoading} workspaces={workspaces} onRefresh={revalidate}>
+    <WorkspaceList isLoading={status.isLoading} workspaces={workspaces} onRefresh={onRefresh}>
       {(workspace) => (
         <Action
           title="Open Daily Desk Note"
