@@ -25,7 +25,7 @@ export type WorkspaceViews = {
   views: IndexedView[];
 };
 
-export type ViewsScanResult = Pick<LoadWorkspacesResult, "invalidRoots" | "fromCache"> & {
+export type ViewsScanResult = Pick<LoadWorkspacesResult, "invalidRoots" | "cached"> & {
   workspaceCount: number;
   workspaceViews: WorkspaceViews[];
 };
@@ -210,6 +210,6 @@ export async function scanViewsFromWorkspaces(options?: { forceRefresh?: boolean
     workspaceCount: workspaceResult.workspaces.length,
     workspaceViews,
     invalidRoots: workspaceResult.invalidRoots,
-    fromCache: workspaceResult.cached,
+    cached: workspaceResult.cached,
   };
 }
