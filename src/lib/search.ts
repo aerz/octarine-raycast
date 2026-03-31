@@ -1,7 +1,4 @@
-export type QueryPrefixMatch = {
-  remainder: string;
-  matches: string[];
-};
+import { normalizeText, normalizePath, tokenize } from "./utils";
 
 export type PathSearchableItem = {
   searchText: string;
@@ -20,14 +17,14 @@ export function buildSearchIndexText(...parts: Array<string | undefined>): strin
 }
 
 export function matchesSearchIndex(searchIndexText: string, searchText: string): boolean {
-  const normalizedQuery = normalize(searchText);
+  const normalizedQuery = normalizeText(searchText);
   const tokens = tokenize(normalizedQuery);
 
   return tokens.length === 0 || tokens.every((token) => searchIndexText.includes(token));
 }
 
 export function matchesPathSearch(item: PathSearchableItem, searchText: string): boolean {
-  const normalizedQuery = normalizePathQuery(searchText);
+  const normalizedQuery = normalizePath(searchText);
   if (!normalizedQuery) {
     return true;
   }
@@ -63,40 +60,6 @@ export function matchesPathSearch(item: PathSearchableItem, searchText: string):
   return fuzzyPathMatch || scopedTitleMatch;
 }
 
-export function matchQueryPrefix(candidates: string[], query: string): QueryPrefixMatch | undefined {
-  const input = query.trim();
-  const words = tokenize(input);
-
-  for (let len = words.length - 1; len >= 1; len -= 1) {
-    const head = words.slice(0, len).join(" ");
-    const norm = normalize(head);
-    const remainder = words.slice(len).join(" ");
-
-    if (!remainder) {
-      continue;
-    }
-
-    const matches = candidates.filter((w) => {
-      const n = normalize(w);
-      return n === norm || n.startsWith(`${norm} `);
-    });
-
-    if (matches.length > 0) {
-      return { remainder, matches };
-    }
-  }
-
-  return undefined;
-}
-
-export function normalize(value: string): string {
-  return value.trim().replace(/\s+/g, " ").toLowerCase();
-}
-
-function normalizePathQuery(value: string): string {
-  return value.trim().toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/");
-}
-
 function toPathSegments(pathValue: string): string[] {
   return pathValue
     .split("/")
@@ -130,12 +93,4 @@ function matchesDirectoryScopeAtAnyDepth(noteDirectorySegments: string[], direct
   }
 
   return false;
-}
-
-export function tokenize(query: string): string[] {
-  if (!query) {
-    return [];
-  }
-
-  return query.split(/\s+/).filter(Boolean);
 }

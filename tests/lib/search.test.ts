@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildSearchIndexText,
-  matchQueryPrefix,
-  matchesPathSearch,
-  matchesSearchIndex,
-  normalize,
-  tokenize,
-} from "../../src/lib/search";
+import { buildSearchIndexText, matchesPathSearch, matchesSearchIndex } from "../../src/lib/search";
 
 type SearchableItem = {
   searchText: string;
@@ -104,25 +97,5 @@ describe("search helpers", () => {
   it("matches normalized tokens against a search index", () => {
     expect(matchesSearchIndex("team standup work", "  STANDUP   work ")).toBe(true);
     expect(matchesSearchIndex("team standup work", "standup personal")).toBe(false);
-  });
-
-  it("returns the longest matching query prefix", () => {
-    const result = matchQueryPrefix(["Daily Desk", "Daily Notes", "Projects"], "daily desk today");
-
-    expect(result).toEqual({
-      remainder: "today",
-      matches: ["Daily Desk"],
-    });
-  });
-
-  it("returns undefined when no matching prefix leaves a remainder", () => {
-    expect(matchQueryPrefix(["Daily Desk"], "daily")).toBeUndefined();
-    expect(matchQueryPrefix(["Daily Desk"], "random topic today")).toBeUndefined();
-  });
-
-  it("normalizes whitespace and tokenizes safely", () => {
-    expect(normalize("  Team   Standup  ")).toBe("team standup");
-    expect(tokenize("team   standup   notes")).toEqual(["team", "standup", "notes"]);
-    expect(tokenize("")).toEqual([]);
   });
 });

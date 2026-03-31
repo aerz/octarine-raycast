@@ -1,4 +1,4 @@
-import { matchQueryPrefix, normalize } from "./search";
+import { extractScopeFromQuery, normalizeText } from "./utils";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_WEEK_PATTERN = /^\d{4}-W\d{2}$/i;
@@ -18,7 +18,7 @@ export type DailyDeskItem = {
 };
 
 export function isDailyDeskDate(value: string): boolean {
-  const normalized = normalize(value);
+  const normalized = normalizeText(value);
 
   if (!normalized) {
     return false;
@@ -42,9 +42,9 @@ export function buildDailyDeskItems(workspaces: string[], text: string): DailyDe
     return [];
   }
 
-  const match = matchQueryPrefix(workspaces, search);
+  const match = extractScopeFromQuery(workspaces, search);
   if (match) {
-    return match.matches.map((workspace) => ({
+    return match.scopes.map((workspace) => ({
       date: match.remainder,
       id: `daily-desk::${workspace}::${match.remainder}`,
       kind: "daily-desk",
