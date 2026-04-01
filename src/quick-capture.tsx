@@ -1,5 +1,5 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { SearchNotesEmptyView } from "./components/empty-views/search-results";
 import { WorkspaceNotesEmptyView } from "./components/empty-views/workspace-missing-files";
 import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
@@ -15,19 +15,11 @@ import { extensionPreferences } from "./lib/preferences";
 import { match } from "./utils/match";
 
 export default function QuickCaptureCommand() {
-  const preferences = extensionPreferences();
-  const excludedDirectoryNames = useMemo(
-    () => preferences.excludedFoldersInWorkspaces,
-    [preferences.workspaceSearchSignature],
-  );
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const { workspaces, items, workspaceItems, searchState, isLoading } = useQuickCapture({
     search: searchText,
     workspace: selectedWorkspace,
-    excludedFolders: excludedDirectoryNames,
-    workspacesSignature: preferences.workspaceSearchSignature,
-    hasWorkspaces: preferences.hasConfiguredRoots,
   });
 
   return (
@@ -50,23 +42,10 @@ export default function QuickCaptureCommand() {
         noAvailableNotes: () => <WorkspaceNotesEmptyView />,
         noMatchingNotes: () => <SearchNotesEmptyView />,
         showByWorkspaceWithQuickCapture: () => (
-          <QuickCaptureWithWorkspaceSections
-            excludedDirectoryNames={excludedDirectoryNames}
-            hasConfiguredRoots={preferences.hasConfiguredRoots}
-            itemsByWorkspace={workspaceItems}
-            workspaceNames={workspaces}
-            workspaceSearchSignature={preferences.workspaceSearchSignature}
-          />
+          <QuickCaptureWithWorkspaceSections itemsByWorkspace={workspaceItems} workspaceNames={workspaces} />
         ),
         showByWorkspace: () => <WorkspaceSections itemsByWorkspace={workspaceItems} workspaceNames={workspaces} />,
-        showFlatWithQuickCapture: () => (
-          <QuickCaptureWithNotes
-            excludedDirectoryNames={excludedDirectoryNames}
-            filteredItems={items}
-            hasConfiguredRoots={preferences.hasConfiguredRoots}
-            workspaceSearchSignature={preferences.workspaceSearchSignature}
-          />
-        ),
+        showFlatWithQuickCapture: () => <QuickCaptureWithNotes filteredItems={items} />,
         showFlat: () => <FlatItems filteredItems={items} />,
       })}
     </List>
@@ -212,23 +191,15 @@ function QuickCaptureSection({
   );
 }
 
-function QuickCaptureWithNotes({
-  excludedDirectoryNames,
-  filteredItems,
-  hasConfiguredRoots,
-  workspaceSearchSignature,
-}: {
-  excludedDirectoryNames: Set<string>;
-  filteredItems: QuickCaptureItem[];
-  hasConfiguredRoots: boolean;
-  workspaceSearchSignature: string;
-}) {
+function QuickCaptureWithNotes({ filteredItems }: { filteredItems: QuickCaptureItem[] }) {
+  const preferences = extensionPreferences();
+
   return (
     <>
       <QuickCaptureSection
-        excludedDirectoryNames={excludedDirectoryNames}
-        hasConfiguredRoots={hasConfiguredRoots}
-        workspaceSearchSignature={workspaceSearchSignature}
+        excludedDirectoryNames={preferences.excludedFoldersInWorkspaces}
+        hasConfiguredRoots={preferences.hasConfiguredRoots}
+        workspaceSearchSignature={preferences.workspaceSearchSignature}
       />
       <List.Section title="Notes">
         <FlatItems filteredItems={filteredItems} />
@@ -238,24 +209,20 @@ function QuickCaptureWithNotes({
 }
 
 function QuickCaptureWithWorkspaceSections({
-  excludedDirectoryNames,
-  hasConfiguredRoots,
   itemsByWorkspace,
   workspaceNames,
-  workspaceSearchSignature,
 }: {
-  excludedDirectoryNames: Set<string>;
-  hasConfiguredRoots: boolean;
   itemsByWorkspace: Map<string, QuickCaptureItem[]>;
   workspaceNames: string[];
-  workspaceSearchSignature: string;
 }) {
+  const preferences = extensionPreferences();
+
   return (
     <>
       <QuickCaptureSection
-        excludedDirectoryNames={excludedDirectoryNames}
-        hasConfiguredRoots={hasConfiguredRoots}
-        workspaceSearchSignature={workspaceSearchSignature}
+        excludedDirectoryNames={preferences.excludedFoldersInWorkspaces}
+        hasConfiguredRoots={preferences.hasConfiguredRoots}
+        workspaceSearchSignature={preferences.workspaceSearchSignature}
       />
       <WorkspaceSections itemsByWorkspace={itemsByWorkspace} workspaceNames={workspaceNames} />
     </>

@@ -5,8 +5,8 @@ import { WorkspaceViewsEmptyView } from "./components/empty-views/workspace-miss
 import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
 import { type WorkspaceViewSection, useViews } from "./hooks/useViews";
 import { openView } from "./lib/octarine";
-import { searchViewsPreferences } from "./lib/preferences";
 import { IndexedView } from "./lib/views";
+import { searchViewsPreferences } from "./lib/preferences";
 import { match } from "./utils/match";
 
 export default function SearchViewsCommand() {
@@ -16,8 +16,6 @@ export default function SearchViewsCommand() {
   const { workspaceNames, matchingViews, sections, renderState } = useViews({
     searchText,
     selectedWorkspace,
-    workspaceDiscoverySignature: preferences.extension.workspaceDiscoverySignature,
-    hasConfiguredRoots: preferences.extension.hasConfiguredRoots,
   });
 
   return (

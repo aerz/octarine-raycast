@@ -17,19 +17,11 @@ export default function SearchAttachmentsCommand() {
     () => Array.from(preferences.excludedExtensions).sort((left, right) => left.localeCompare(right)),
     [preferences.excludedExtensionsSignature],
   );
-  const excludedDirectoryNames = useMemo(
-    () =>
-      Array.from(preferences.extension.excludedFoldersInWorkspaces).sort((left, right) => left.localeCompare(right)),
-    [preferences.extension.workspaceSearchSignature],
-  );
   const [selectedExtension, setSelectedExtension] = useState<string>("all");
   const [searchText, setSearchText] = useState("");
   const { visibleAttachments, sections, filters, renderState, isLoading } = useAttachments({
     excludedExtensions,
-    excludedDirectoryNames,
-    workspaceSearchSignature: preferences.extension.workspaceSearchSignature,
     excludedExtensionsSignature: preferences.excludedExtensionsSignature,
-    hasConfiguredRoots: preferences.extension.hasConfiguredRoots,
     searchText,
     selectedExtension,
     flattenWorkspaceSections: preferences.flattenWorkspaceSections,

@@ -16,9 +16,6 @@ export default function SearchNotesCommand() {
   const { workspaceNames, matchingNotes, sections, searchState, isLoading, pinnedNoteIds } = useNotes({
     searchText,
     selectedWorkspace,
-    excludedDirectoryNames: preferences.extension.excludedFoldersInWorkspaces,
-    workspaceSearchSignature: preferences.extension.workspaceSearchSignature,
-    hasConfiguredRoots: preferences.extension.hasConfiguredRoots,
     showPinnedNotesFirst: preferences.showPinnedNotesFirst,
   });
 

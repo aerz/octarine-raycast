@@ -3,6 +3,7 @@ import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
 import { IndexedNote, refreshPinnedNotesCache } from "../lib/notes";
 import { matchesPathSearch } from "../lib/search";
+import { extensionPreferences } from "../lib/preferences";
 import { loadWorkspaces } from "../lib/workspaces";
 
 export type PinnedNoteWorkspaceSection = {
@@ -22,9 +23,6 @@ type SearchState =
 type Options = {
   searchText: string;
   selectedWorkspace: string;
-  excludedDirectoryNames: Set<string>;
-  workspaceSearchSignature: string;
-  hasConfiguredRoots: boolean;
 };
 
 type Result = {
@@ -112,34 +110,37 @@ function getSearchState({
   return "showFlat";
 }
 
-export function usePinnedNotes({
-  searchText,
-  selectedWorkspace,
-  excludedDirectoryNames,
-  workspaceSearchSignature,
-  hasConfiguredRoots,
-}: Options): Result {
+export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Result {
+  const prefs = extensionPreferences();
+
   const { data, isLoading } = useCachedPromise(
     async (workspaceSearchSignature: string): Promise<PinnedNotesScanResult> => {
       void workspaceSearchSignature;
       const showScanFailureToast = createScanFailureToast();
 
-      const workspaceResult = await loadWorkspaces({ refresh: true });
+      const { workspaces } = await loadWorkspaces({ refresh: true });
+      if (workspaces.length === 0) {
+        return {
+          workspaceCount: 0,
+          notes: [],
+        };
+      }
+
       const notes = await refreshPinnedNotesCache(
-        workspaceResult.workspaces,
-        excludedDirectoryNames,
+        workspaces,
+        prefs.excludedFoldersInWorkspaces,
         workspaceSearchSignature,
         showScanFailureToast,
       );
 
       return {
-        workspaceCount: workspaceResult.workspaces.length,
+        workspaceCount: workspaces.length,
         notes,
       };
     },
-    [workspaceSearchSignature],
+    [prefs.workspaceSearchSignature],
     {
-      execute: hasConfiguredRoots,
+      execute: prefs.hasConfiguredRoots,
       initialData: {
         workspaceCount: 0,
         notes: [],
@@ -176,7 +177,7 @@ export function usePinnedNotes({
   );
   const searchState = getSearchState({
     isLoading,
-    hasConfiguredRoots,
+    hasConfiguredRoots: prefs.hasConfiguredRoots,
     workspaceCount: data.workspaceCount,
     noteCount: data.notes.length,
     visibleNoteCount,

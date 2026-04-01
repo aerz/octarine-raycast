@@ -17,9 +17,6 @@ export type SearchState =
 type Options = {
   search: string;
   workspace: string;
-  excludedFolders: Set<string>;
-  workspacesSignature: string;
-  hasWorkspaces: boolean;
 };
 
 type Result = {
@@ -30,13 +27,7 @@ type Result = {
   isLoading: boolean;
 };
 
-export function useQuickCapture({
-  search,
-  workspace,
-  excludedFolders,
-  workspacesSignature,
-  hasWorkspaces,
-}: Options): Result {
+export function useQuickCapture({ search, workspace }: Options): Result {
   const {
     workspaceNames: workspaces,
     matchingNotes,
@@ -45,9 +36,6 @@ export function useQuickCapture({
   } = useNotes({
     searchText: search,
     selectedWorkspace: workspace,
-    excludedDirectoryNames: excludedFolders,
-    workspaceSearchSignature: workspacesSignature,
-    hasConfiguredRoots: hasWorkspaces,
     showPinnedNotesFirst: false,
   });
 

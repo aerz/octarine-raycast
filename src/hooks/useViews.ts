@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { skippedRootsToast, viewsLoadToast } from "../components/toasts";
+import { extensionPreferences } from "../lib/preferences";
 import { matchesSearchIndex } from "../lib/search";
 import {
   loadCachedViews,
@@ -25,8 +26,6 @@ type RenderState =
 type Options = {
   searchText: string;
   selectedWorkspace: string;
-  workspaceDiscoverySignature: string;
-  hasConfiguredRoots: boolean;
 };
 
 type Result = {
@@ -51,15 +50,12 @@ type RenderStateInput = {
   workspace: string;
 };
 
-export function useViews({
-  searchText,
-  selectedWorkspace,
-  workspaceDiscoverySignature,
-  hasConfiguredRoots,
-}: Options): Result {
+export function useViews({ searchText, selectedWorkspace }: Options): Result {
+  const prefs = extensionPreferences();
+
   const { workspaceViews, isLoading, loadError, skippedRootsCount } = useViewsSource({
-    hasConfiguredRoots,
-    workspaceDiscoverySignature,
+    hasConfiguredRoots: prefs.hasConfiguredRoots,
+    workspaceDiscoverySignature: prefs.workspaceDiscoverySignature,
   });
   useViewsToasts({ loadError, skippedRootsCount });
 
@@ -76,7 +72,7 @@ export function useViews({
   );
   const renderStateInput: RenderStateInput = {
     loading: isLoading,
-    hasConfiguredRoots,
+    hasConfiguredRoots: prefs.hasConfiguredRoots,
     hasWorkspaces,
     availableCount,
     matchedCount: matchingViews.length,

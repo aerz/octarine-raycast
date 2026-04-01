@@ -6,6 +6,7 @@ import {
   saveCachedAttachments,
   scanAttachments,
 } from "../lib/attachments";
+import { extensionPreferences } from "../lib/preferences";
 import { matchesSearchIndex } from "../lib/search";
 import type { IndexedAttachment } from "../types/attachment";
 import { useLoadingToast } from "./useLoadingToast";
@@ -26,10 +27,7 @@ type RenderState =
 
 type Options = {
   excludedExtensions: string[];
-  excludedDirectoryNames: string[];
-  workspaceSearchSignature: string;
   excludedExtensionsSignature: string;
-  hasConfiguredRoots: boolean;
   searchText: string;
   selectedExtension: string;
   flattenWorkspaceSections: boolean;
@@ -280,23 +278,33 @@ function toError(error: unknown): Error {
 
 export function useAttachments({
   excludedExtensions,
-  excludedDirectoryNames,
-  workspaceSearchSignature,
   excludedExtensionsSignature,
-  hasConfiguredRoots,
   searchText,
   selectedExtension,
   flattenWorkspaceSections,
 }: Options): Result {
+  const preferences = extensionPreferences();
+
+  const excludedDirectoryNames = useMemo(
+    () => Array.from(preferences.excludedFoldersInWorkspaces).sort((left, right) => left.localeCompare(right)),
+    [preferences.workspaceSearchSignature],
+  );
+
   const excludedExtensionsSet = useMemo(() => new Set(excludedExtensions), [excludedExtensionsSignature]);
-  const excludedDirectoryNamesSet = useMemo(() => new Set(excludedDirectoryNames), [workspaceSearchSignature]);
+
+  const excludedDirectoryNamesSet = useMemo(
+    () => new Set(excludedDirectoryNames),
+    [preferences.workspaceSearchSignature],
+  );
+
   const { scanResult, isLoading, loadError } = useAttachmentsSource({
-    hasConfiguredRoots,
-    workspaceSearchSignature,
+    hasConfiguredRoots: preferences.hasConfiguredRoots,
+    workspaceSearchSignature: preferences.workspaceSearchSignature,
     excludedExtensionsSignature,
     excludedExtensionsSet,
     excludedDirectoryNamesSet,
   });
+
   useAttachmentsEffects({ isLoading, loadError });
 
   const attachments = scanResult.attachments;
@@ -312,7 +320,7 @@ export function useAttachments({
   );
   const renderState = getRenderState({
     isLoading,
-    hasConfiguredRoots,
+    hasConfiguredRoots: preferences.hasConfiguredRoots,
     hasValidWorkspaces,
     attachmentCount: attachments.length,
     visibleAttachmentCount: visibleAttachments.length,

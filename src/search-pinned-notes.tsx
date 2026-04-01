@@ -16,9 +16,6 @@ export default function SearchPinnedNotesCommand() {
   const { workspaceSections, filteredWorkspaceSections, searchState, isLoading } = usePinnedNotes({
     searchText,
     selectedWorkspace,
-    excludedDirectoryNames: preferences.extension.excludedFoldersInWorkspaces,
-    workspaceSearchSignature: preferences.extension.workspaceSearchSignature,
-    hasConfiguredRoots: preferences.extension.hasConfiguredRoots,
   });
 
   return (
@@ -46,10 +43,7 @@ export default function SearchPinnedNotesCommand() {
         noAvailableNotes: () => <WorkspaceNotesEmptyView />,
         noMatchingNotes: () => <SearchNotesEmptyView />,
         showByWorkspace: () => (
-          <WorkspaceSectionList
-            sections={filteredWorkspaceSections}
-            showWorkspaceNoteCount={preferences.showWorkspaceNoteCount}
-          />
+          <WorkspaceSectionList sections={filteredWorkspaceSections} counter={preferences.showWorkspaceNoteCount} />
         ),
         showFlat: () => <NoteList sections={filteredWorkspaceSections} />,
       })}
@@ -57,18 +51,12 @@ export default function SearchPinnedNotesCommand() {
   );
 }
 
-function WorkspaceSectionList({
-  sections,
-  showWorkspaceNoteCount,
-}: {
-  sections: PinnedNoteWorkspaceSection[];
-  showWorkspaceNoteCount: boolean;
-}) {
+function WorkspaceSectionList({ sections, counter }: { sections: PinnedNoteWorkspaceSection[]; counter: boolean }) {
   return sections.map((workspaceSection) => (
     <List.Section
       key={workspaceSection.workspacePath}
       title={
-        showWorkspaceNoteCount
+        counter
           ? `${workspaceSection.workspaceName} (${workspaceSection.notes.length})`
           : workspaceSection.workspaceName
       }

@@ -11,6 +11,7 @@ import {
 } from "../lib/notes";
 import { matchesPathSearch } from "../lib/search";
 import { loadWorkspaces } from "../lib/workspaces";
+import { extensionPreferences } from "../lib/preferences";
 import type { Workspace } from "../types/octarine";
 
 export type NoteWorkspaceSection = {
@@ -29,9 +30,6 @@ type SearchState =
 type Options = {
   searchText: string;
   selectedWorkspace: string;
-  excludedDirectoryNames: Set<string>;
-  workspaceSearchSignature: string;
-  hasConfiguredRoots: boolean;
   showPinnedNotesFirst: boolean;
 };
 
@@ -51,20 +49,19 @@ type NotesSourceState = {
   isLoading: boolean;
 };
 
-type NotesSourceOptions = Pick<Options, "excludedDirectoryNames" | "workspaceSearchSignature" | "hasConfiguredRoots">;
+type NotesSourceOptions = {
+  excludedDirectoryNames: Set<string>;
+  workspaceSearchSignature: string;
+  hasConfiguredRoots: boolean;
+};
 
-export function useNotes({
-  searchText,
-  selectedWorkspace,
-  excludedDirectoryNames,
-  workspaceSearchSignature,
-  hasConfiguredRoots,
-  showPinnedNotesFirst,
-}: Options): Result {
+export function useNotes({ searchText, selectedWorkspace, showPinnedNotesFirst }: Options): Result {
+  const preferences = extensionPreferences();
+
   const source = useNotesSource({
-    excludedDirectoryNames,
-    workspaceSearchSignature,
-    hasConfiguredRoots,
+    excludedDirectoryNames: preferences.excludedFoldersInWorkspaces,
+    workspaceSearchSignature: preferences.workspaceSearchSignature,
+    hasConfiguredRoots: preferences.hasConfiguredRoots,
   });
 
   const workspaceNames = useMemo(() => buildWorkspaceNames(source.workspaces), [source.workspaces]);
@@ -82,7 +79,7 @@ export function useNotes({
   const sections = useMemo(() => buildWorkspaceSections(matchingNotes), [matchingNotes]);
   const searchState = getSearchState({
     isLoading: source.isLoading,
-    hasConfiguredRoots,
+    hasConfiguredRoots: preferences.hasConfiguredRoots,
     workspaceCount: source.workspaces.length,
     noteCount: source.notes.length,
     visibleNoteCount: matchingNotes.length,
