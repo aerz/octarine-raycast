@@ -94,7 +94,8 @@ describe("matchesPathSearch", () => {
 });
 
 describe("search helpers", () => {
-  it("matches normalized tokens against a search index", () => {
+  it("matches trimmed lowercase tokens against a search index", () => {
+    expect(matchesSearchIndex("team standup work", "  standup   work ")).toBe(true);
     expect(matchesSearchIndex("team standup work", "  STANDUP   work ")).toBe(true);
     expect(matchesSearchIndex("team standup work", "standup personal")).toBe(false);
   });

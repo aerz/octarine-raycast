@@ -1,4 +1,4 @@
-import { normalizeText, normalizePath, tokenize } from "./utils";
+import { normalizeText, normalizePathForSearch, tokenize } from "./utils";
 
 export type PathSearchableItem = {
   searchText: string;
@@ -24,7 +24,7 @@ export function matchesSearchIndex(searchIndexText: string, searchText: string):
 }
 
 export function matchesPathSearch(item: PathSearchableItem, searchText: string): boolean {
-  const normalizedQuery = normalizePath(searchText);
+  const normalizedQuery = normalizePathForSearch(searchText);
   if (!normalizedQuery) {
     return true;
   }

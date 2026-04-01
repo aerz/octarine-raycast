@@ -1,7 +1,27 @@
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
+
+vi.mock("../../src/lib/utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/lib/utils")>();
+
+  return {
+    ...actual,
+    normalizeExtensions(input?: string) {
+      return new Set(
+        actual
+          .splitList(input)
+          .map((value) => value.replace(/^\./, "").toLowerCase())
+          .filter(Boolean),
+      );
+    },
+    splitLowerList(input?: string) {
+      return new Set(actual.splitList(input).map((value) => value.toLowerCase()));
+    },
+  };
+});
+
 import {
   extensionPreferences,
   openTodayNotePreferences,
@@ -60,18 +80,9 @@ describe("preferences", () => {
       showPinnedNotesFirst: true,
     });
 
-    expect(openTodayNotePreferences()).toEqual({
-      extension: expect.objectContaining({
-        hasConfiguredRoots: false,
-        workspaceRoots: [],
-      }),
-      defaultWorkspace: "Work Notes",
-    });
+    expect(openTodayNotePreferences()).toEqual({ defaultWorkspace: "work notes" });
 
     expect(searchNotesPreferences()).toEqual({
-      extension: expect.objectContaining({
-        hasConfiguredRoots: false,
-      }),
       showWorkspaceNoteCount: true,
       showPinnedNotesFirst: true,
     });

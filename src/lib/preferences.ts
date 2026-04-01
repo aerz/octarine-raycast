@@ -1,6 +1,5 @@
 import { getPreferenceValues } from "@raycast/api";
-import os from "node:os";
-import path from "node:path";
+import { normalizeText, normalizeWorkspaceRoots, normalizeExtensions, splitLowerList } from "./utils";
 
 export type ExtensionPreferences = {
   workspaceRoots: string[];
@@ -11,80 +10,8 @@ export type ExtensionPreferences = {
   workspaceSearchSignature: string;
 };
 
-export type SearchNotesPreferences = {
-  extension: ExtensionPreferences;
-  showWorkspaceNoteCount: boolean;
-  showPinnedNotesFirst: boolean;
-};
-
-export type SearchPinnedNotesPreferences = {
-  extension: ExtensionPreferences;
-  showWorkspaceNoteCount: boolean;
-};
-
-export type SearchAttachmentsPreferences = {
-  extension: ExtensionPreferences;
-  showWorkspaceAttachmentCount: boolean;
-  flattenWorkspaceSections: boolean;
-  excludedExtensions: Set<string>;
-  excludedExtensionsSignature: string;
-};
-
-export type SearchViewsPreferences = {
-  extension: ExtensionPreferences;
-  showWorkspaceViewCount: boolean;
-};
-
-export type OpenTodayNotePreferences = {
-  extension: ExtensionPreferences;
-  defaultWorkspace: string;
-};
-
-function normalizeOptionalString(value?: string): string {
-  return value?.trim() ?? "";
-}
-
-function parseCommaSeparated(str?: string): string[] {
-  if (!str) {
-    return [];
-  }
-
-  return str
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
-function expandTilde(input: string): string {
-  if (input === "~") {
-    return os.homedir();
-  }
-
-  if (input.startsWith("~/")) {
-    return path.join(os.homedir(), input.slice(2));
-  }
-
-  return input;
-}
-
 function buildSortedSignature(values: Iterable<string>): string {
   return Array.from(values).sort().join("|");
-}
-
-function parseWorkspaceRoots(textfield: string): string[] {
-  const result = new Set<string>();
-
-  for (const root of parseCommaSeparated(textfield)) {
-    const expanded = expandTilde(root);
-    const absolute = path.resolve(expanded);
-    result.add(path.normalize(absolute));
-  }
-
-  return Array.from(result);
-}
-
-function parseExcludedNames(textfield?: string): Set<string> {
-  return new Set(parseCommaSeparated(textfield).map((value) => value.toLowerCase()));
 }
 
 function buildWorkspaceDiscoverySignature(workspaceRoots: string[], excludedWorkspaces: Set<string>): string {
@@ -100,10 +27,11 @@ function buildWorkspaceSearchSignature(
   return `${workspaceDiscoverySignature}::${buildSortedSignature(excludedFoldersInWorkspaces)}`;
 }
 
-function buildExtensionPreferences(preferences: Preferences): ExtensionPreferences {
-  const workspaceRoots = parseWorkspaceRoots(preferences.workspaceRoots);
-  const excludedWorkspaces = parseExcludedNames(preferences.excludedWorkspaces);
-  const excludedFoldersInWorkspaces = parseExcludedNames(preferences.excludedFoldersInWorkspaces);
+export function extensionPreferences(): ExtensionPreferences {
+  const prefs = getPreferenceValues<Preferences>();
+  const workspaceRoots = normalizeWorkspaceRoots(prefs.workspaceRoots);
+  const excludedFoldersInWorkspaces = splitLowerList(prefs.excludedFoldersInWorkspaces);
+  const excludedWorkspaces = splitLowerList(prefs.excludedWorkspaces);
   const workspaceDiscoverySignature = buildWorkspaceDiscoverySignature(workspaceRoots, excludedWorkspaces);
 
   return {
@@ -116,39 +44,20 @@ function buildExtensionPreferences(preferences: Preferences): ExtensionPreferenc
   };
 }
 
-export function extensionPreferences(): ExtensionPreferences {
-  return buildExtensionPreferences(getPreferenceValues<Preferences>());
-}
-
-export function searchNotesPreferences(): SearchNotesPreferences {
+export function searchNotesPreferences() {
   const preferences = getPreferenceValues<Preferences.SearchNotes>();
 
   return {
-    extension: buildExtensionPreferences(preferences),
     showWorkspaceNoteCount: preferences.showWorkspaceNoteCount,
     showPinnedNotesFirst: preferences.showPinnedNotesFirst,
   };
 }
 
-export function searchPinnedNotesPreferences(): SearchPinnedNotesPreferences {
-  const preferences = getPreferenceValues<Preferences.SearchPinnedNotes>();
-
-  return {
-    extension: buildExtensionPreferences(preferences),
-    showWorkspaceNoteCount: preferences.showWorkspaceNoteCount,
-  };
-}
-
-export function searchAttachmentsPreferences(): SearchAttachmentsPreferences {
+export function searchAttachmentsPreferences() {
   const preferences = getPreferenceValues<Preferences.SearchAttachments>();
-  const excludedExtensions = new Set(
-    parseCommaSeparated(preferences.excludeFileExtensions).map((extension) =>
-      extension.toLowerCase().replace(/^\./, ""),
-    ),
-  );
+  const excludedExtensions = normalizeExtensions(preferences.excludeFileExtensions);
 
   return {
-    extension: buildExtensionPreferences(preferences),
     showWorkspaceAttachmentCount: preferences.showWorkspaceAttachmentCount,
     flattenWorkspaceSections: preferences.flattenWorkspaceSections,
     excludedExtensions,
@@ -156,20 +65,26 @@ export function searchAttachmentsPreferences(): SearchAttachmentsPreferences {
   };
 }
 
-export function searchViewsPreferences(): SearchViewsPreferences {
+export function openTodayNotePreferences() {
+  const preferences = getPreferenceValues<Preferences.OpenTodayNote>();
+
+  return {
+    defaultWorkspace: normalizeText(preferences.defaultWorkspace),
+  };
+}
+
+export function searchViewsPreferences() {
   const preferences = getPreferenceValues<Preferences.SearchViews>();
 
   return {
-    extension: buildExtensionPreferences(preferences),
     showWorkspaceViewCount: preferences.showWorkspaceViewCount,
   };
 }
 
-export function openTodayNotePreferences(): OpenTodayNotePreferences {
-  const preferences = getPreferenceValues<Preferences.OpenTodayNote>();
+export function searchPinnedNotesPreferences() {
+  const preferences = getPreferenceValues<Preferences.SearchPinnedNotes>();
 
   return {
-    extension: buildExtensionPreferences(preferences),
-    defaultWorkspace: normalizeOptionalString(preferences.defaultWorkspace),
+    showWorkspaceNoteCount: preferences.showWorkspaceNoteCount,
   };
 }

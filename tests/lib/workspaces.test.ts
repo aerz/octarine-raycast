@@ -4,6 +4,25 @@ import { createTempDir, ensureDir, removeDir } from "../helpers/fs";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
 import { loadWorkspaces } from "../../src/lib/workspaces";
 
+vi.mock("../../src/lib/utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/lib/utils")>();
+
+  return {
+    ...actual,
+    normalizeExtensions(input?: string) {
+      return new Set(
+        actual
+          .splitList(input)
+          .map((value) => value.replace(/^\./, "").toLowerCase())
+          .filter(Boolean),
+      );
+    },
+    splitLowerList(input?: string) {
+      return new Set(actual.splitList(input).map((value) => value.toLowerCase()));
+    },
+  };
+});
+
 const workspaceMarker = ".octarine";
 
 let tempDir: string | undefined;
