@@ -3,7 +3,7 @@ import { useState } from "react";
 import { SearchNotesEmptyView } from "./components/empty-views/search-results";
 import { WorkspaceNotesEmptyView } from "./components/empty-views/workspace-missing-files";
 import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
-import { type PinnedNoteWorkspaceSection, usePinnedNotes } from "./hooks/usePinnedNotes";
+import { type WorkspaceSection, usePinnedNotes } from "./hooks/usePinnedNotes";
 import { searchPinnedNotesPreferences } from "./lib/preferences";
 import { IndexedNote } from "./lib/notes";
 import { openPinnedNote } from "./lib/octarine";
@@ -29,9 +29,9 @@ export default function SearchPinnedNotesCommand() {
           <List.Dropdown.Item title="All" value="all" />
           {workspaceSections.map((workspaceSection) => (
             <List.Dropdown.Item
-              key={workspaceSection.workspacePath}
-              title={workspaceSection.workspaceName}
-              value={workspaceSection.workspacePath}
+              key={workspaceSection.path}
+              title={workspaceSection.name}
+              value={workspaceSection.path}
             />
           ))}
         </List.Dropdown>
@@ -51,15 +51,11 @@ export default function SearchPinnedNotesCommand() {
   );
 }
 
-function WorkspaceSectionList({ sections, counter }: { sections: PinnedNoteWorkspaceSection[]; counter: boolean }) {
+function WorkspaceSectionList({ sections, counter }: { sections: WorkspaceSection[]; counter: boolean }) {
   return sections.map((workspaceSection) => (
     <List.Section
-      key={workspaceSection.workspacePath}
-      title={
-        counter
-          ? `${workspaceSection.workspaceName} (${workspaceSection.notes.length})`
-          : workspaceSection.workspaceName
-      }
+      key={workspaceSection.path}
+      title={counter ? `${workspaceSection.name} (${workspaceSection.notes.length})` : workspaceSection.name}
     >
       {workspaceSection.notes.map((note) => (
         <NoteItem key={note.id} note={note} />
@@ -68,7 +64,7 @@ function WorkspaceSectionList({ sections, counter }: { sections: PinnedNoteWorks
   ));
 }
 
-function NoteList({ sections }: { sections: PinnedNoteWorkspaceSection[] }) {
+function NoteList({ sections }: { sections: WorkspaceSection[] }) {
   return sections.flatMap((workspaceSection) =>
     workspaceSection.notes.map((note) => <NoteItem key={note.id} note={note} />),
   );
