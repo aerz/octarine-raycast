@@ -7,16 +7,33 @@ import { type WorkspaceSection, usePinnedNotes } from "./hooks/usePinnedNotes";
 import { searchPinnedNotesPreferences } from "./lib/preferences";
 import { IndexedNote } from "./lib/notes";
 import { openPinnedNote } from "./lib/octarine";
-import { match } from "./utils/match";
+
+type WorkspaceDropdownProps = {
+  workspaces: WorkspaceSection[];
+  onWorkspaceChange: (value: string) => void;
+};
+
+type NotesListProps = {
+  workspaces: WorkspaceSection[];
+  grouped?: boolean;
+  counter?: boolean;
+};
+
+type NoteItemProps = {
+  note: IndexedNote;
+};
 
 export default function SearchPinnedNotesCommand() {
   const preferences = searchPinnedNotesPreferences();
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const { workspaceSections, filteredWorkspaceSections, searchState, isLoading } = usePinnedNotes({
+  const { workspaceCount, workspaceSections, filteredWorkspaceSections, isLoading } = usePinnedNotes({
     searchText,
     selectedWorkspace,
   });
+  const [totalNotes, filteredNotes] = [workspaceSections, filteredWorkspaceSections].map((sections) =>
+    sections.reduce((count, ws) => count + ws.notes.length, 0),
+  );
 
   return (
     <List
@@ -24,53 +41,52 @@ export default function SearchPinnedNotesCommand() {
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search pinned notes"
-      searchBarAccessory={
-        <List.Dropdown tooltip="Filter by workspace" value={selectedWorkspace} onChange={setSelectedWorkspace}>
-          <List.Dropdown.Item title="All" value="all" />
-          {workspaceSections.map((workspaceSection) => (
-            <List.Dropdown.Item
-              key={workspaceSection.path}
-              title={workspaceSection.name}
-              value={workspaceSection.path}
-            />
-          ))}
-        </List.Dropdown>
-      }
+      searchBarAccessory={<WorkspaceDropdown workspaces={workspaceSections} onWorkspaceChange={setSelectedWorkspace} />}
     >
-      {match(searchState, {
-        loading: () => null,
-        noConfiguredWorkspaces: () => <WorkspaceListEmptyView />,
-        noAvailableNotes: () => <WorkspaceNotesEmptyView />,
-        noMatchingNotes: () => <SearchNotesEmptyView />,
-        showByWorkspace: () => (
-          <WorkspaceSectionList sections={filteredWorkspaceSections} counter={preferences.showWorkspaceNoteCount} />
-        ),
-        showFlat: () => <NoteList sections={filteredWorkspaceSections} />,
-      })}
+      {workspaceCount === 0 ? (
+        <WorkspaceListEmptyView />
+      ) : totalNotes === 0 ? (
+        <WorkspaceNotesEmptyView />
+      ) : filteredNotes === 0 ? (
+        <SearchNotesEmptyView />
+      ) : selectedWorkspace === "all" ? (
+        <NotesList workspaces={filteredWorkspaceSections} grouped counter={preferences.showWorkspaceNoteCount} />
+      ) : (
+        <NotesList workspaces={filteredWorkspaceSections} />
+      )}
     </List>
   );
 }
 
-function WorkspaceSectionList({ sections, counter }: { sections: WorkspaceSection[]; counter: boolean }) {
-  return sections.map((workspaceSection) => (
-    <List.Section
-      key={workspaceSection.path}
-      title={counter ? `${workspaceSection.name} (${workspaceSection.notes.length})` : workspaceSection.name}
-    >
-      {workspaceSection.notes.map((note) => (
-        <NoteItem key={note.id} note={note} />
+function WorkspaceDropdown({ workspaces, onWorkspaceChange }: WorkspaceDropdownProps) {
+  return (
+    <List.Dropdown tooltip="Filter by workspace" onChange={onWorkspaceChange}>
+      <List.Dropdown.Item title="All" value="all" />
+      {workspaces.map((workspace) => (
+        <List.Dropdown.Item title={workspace.name} key={workspace.path} value={workspace.path} />
       ))}
-    </List.Section>
-  ));
-}
-
-function NoteList({ sections }: { sections: WorkspaceSection[] }) {
-  return sections.flatMap((workspaceSection) =>
-    workspaceSection.notes.map((note) => <NoteItem key={note.id} note={note} />),
+    </List.Dropdown>
   );
 }
 
-function NoteItem({ note }: { note: IndexedNote }) {
+function NotesList({ workspaces, grouped = false, counter = false }: NotesListProps) {
+  if (grouped) {
+    return workspaces.map((workspace) => (
+      <List.Section
+        key={workspace.path}
+        title={counter ? `${workspace.name} (${workspace.notes.length})` : workspace.name}
+      >
+        {workspace.notes.map((note) => (
+          <NoteItem key={note.id} note={note} />
+        ))}
+      </List.Section>
+    ));
+  }
+
+  return workspaces.flatMap((workspace) => workspace.notes.map((note) => <NoteItem key={note.id} note={note} />));
+}
+
+function NoteItem({ note }: NoteItemProps) {
   return (
     <List.Item
       title={note.title}

@@ -18,9 +18,9 @@ type Options = {
 };
 
 type Result = {
+  workspaceCount: number;
   workspaceSections: WorkspaceSection[];
   filteredWorkspaceSections: WorkspaceSection[];
-  searchState: SearchState;
   isLoading: boolean;
 };
 
@@ -45,14 +45,6 @@ function createScanFailureToast(): () => Promise<void> {
   };
 }
 
-type SearchState =
-  | "loading"
-  | "noConfiguredWorkspaces"
-  | "noAvailableNotes"
-  | "noMatchingNotes"
-  | "showByWorkspace"
-  | "showFlat";
-
 function buildWorkspaceSections(notes: IndexedNote[]): WorkspaceSection[] {
   const grouped = new Map<string, WorkspaceSection>();
 
@@ -72,46 +64,8 @@ function buildWorkspaceSections(notes: IndexedNote[]): WorkspaceSection[] {
   return Array.from(grouped.values()).sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function getSearchState({
-  isLoading,
-  hasConfiguredRoots,
-  workspaceCount,
-  noteCount,
-  visibleNoteCount,
-  selectedWorkspace,
-}: {
-  isLoading: boolean;
-  hasConfiguredRoots: boolean;
-  workspaceCount: number;
-  noteCount: number;
-  visibleNoteCount: number;
-  selectedWorkspace: string;
-}): SearchState {
-  if (isLoading && noteCount === 0) {
-    return "loading";
-  }
-
-  if (!hasConfiguredRoots || workspaceCount === 0) {
-    return "noConfiguredWorkspaces";
-  }
-
-  if (noteCount === 0) {
-    return "noAvailableNotes";
-  }
-
-  if (visibleNoteCount === 0) {
-    return "noMatchingNotes";
-  }
-
-  if (selectedWorkspace === "all") {
-    return "showByWorkspace";
-  }
-
-  return "showFlat";
-}
-
 export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Result {
-  const prefs = extensionPreferences();
+  const preferences = extensionPreferences();
 
   const { data, isLoading } = useCachedPromise(
     async (workspaceSearchSignature: string): Promise<ScanPinnedNotesResult> => {
@@ -128,7 +82,7 @@ export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Resu
 
       const notes = await refreshPinnedNotesCache(
         workspaces,
-        prefs.excludedFoldersInWorkspaces,
+        preferences.excludedFoldersInWorkspaces,
         workspaceSearchSignature,
         showScanFailureToast,
       );
@@ -138,9 +92,9 @@ export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Resu
         notes,
       };
     },
-    [prefs.workspaceSearchSignature],
+    [preferences.workspaceSearchSignature],
     {
-      execute: prefs.hasConfiguredRoots,
+      execute: preferences.hasConfiguredRoots,
       initialData: {
         workspaceCount: 0,
         notes: [],
@@ -171,23 +125,11 @@ export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Resu
         .filter((workspaceSection) => workspaceSection.notes.length > 0),
     [searchText, selectedWorkspace, workspaceSections],
   );
-  const visibleNoteCount = filteredWorkspaceSections.reduce(
-    (count, workspaceSection) => count + workspaceSection.notes.length,
-    0,
-  );
-  const searchState = getSearchState({
-    isLoading,
-    hasConfiguredRoots: prefs.hasConfiguredRoots,
-    workspaceCount: data.workspaceCount,
-    noteCount: data.notes.length,
-    visibleNoteCount,
-    selectedWorkspace,
-  });
 
   return {
+    workspaceCount: data.workspaceCount,
     workspaceSections,
     filteredWorkspaceSections,
-    searchState,
     isLoading,
   };
 }
