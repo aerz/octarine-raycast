@@ -1,12 +1,12 @@
-import { List } from "@raycast/api";
+import { List, ActionPanel, Action } from "@raycast/api";
 import { useState } from "react";
 import { SearchNotesEmptyView } from "./components/empty-views/search-results";
 import { WorkspaceNotesEmptyView } from "./components/empty-views/workspace-missing-files";
 import { WorkspaceListEmptyView } from "./components/empty-views/workspace";
-import { PinnedNoteActions } from "./components/pinned-notes-action";
 import { type PinnedNoteWorkspaceSection, usePinnedNotes } from "./hooks/usePinnedNotes";
 import { searchPinnedNotesPreferences } from "./lib/preferences";
 import { IndexedNote } from "./lib/notes";
+import { openPinnedNote } from "./lib/octarine";
 import { match } from "./utils/match";
 
 export default function SearchPinnedNotesCommand() {
@@ -80,7 +80,11 @@ function NoteItem({ note }: { note: IndexedNote }) {
       title={note.title}
       subtitle={note.path}
       keywords={[note.path, note.workspace.name]}
-      actions={<PinnedNoteActions note={note} />}
+      actions={
+        <ActionPanel>
+          <Action title="Open Pinned Note" onAction={() => void openPinnedNote(note.path, note.workspace.name)} />
+        </ActionPanel>
+      }
     />
   );
 }
