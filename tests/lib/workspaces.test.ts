@@ -1,8 +1,10 @@
-import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTempDir, ensureDir, removeDir } from "../helpers/fs";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
 import { loadWorkspaces } from "../../src/lib/workspaces";
+
+const { scanWorkspacePaths } = vi.hoisted(() => ({
+  scanWorkspacePaths: vi.fn(),
+}));
 
 vi.mock("../../src/lib/utils", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/lib/utils")>();
@@ -23,94 +25,100 @@ vi.mock("../../src/lib/utils", async (importOriginal) => {
   };
 });
 
-const workspaceMarker = ".octarine";
-
-let tempDir: string | undefined;
+vi.mock("../../src/lib/files", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/lib/files")>();
+  return {
+    ...actual,
+    scanWorkspacePaths,
+  };
+});
 
 afterEach(async () => {
   vi.restoreAllMocks();
   vi.useRealTimers();
-
-  if (tempDir) {
-    await removeDir(tempDir);
-    tempDir = undefined;
-  }
+  scanWorkspacePaths.mockReset();
 });
 
 describe("loadWorkspaces", () => {
   const staleOffsetMs = 24 * 60 * 60 * 1000;
 
-  it("discovers workspaces, skips exclusions, dedupes overlaps, and reports invalid roots", async () => {
-    tempDir = await createTempDir("octarine-workspaces");
-
-    const root = path.join(tempDir, "root");
-    const nestedRoot = path.join(root, "nested");
-    const invalidRoot = path.join(tempDir, "missing");
-
-    await ensureDir(path.join(root, "Alpha", workspaceMarker));
-    await ensureDir(path.join(nestedRoot, "Beta", workspaceMarker));
-    await ensureDir(path.join(root, "SkipMe", workspaceMarker));
+  it("maps discovered paths into sorted workspaces and passes invalid roots through", async () => {
+    const root = "/tmp/root";
+    const nestedRoot = "/tmp/root/nested";
+    const invalidRoot = "/tmp/missing";
 
     setMockPreferences({
       workspaceRoots: `${root}, ${nestedRoot}, ${invalidRoot}`,
       excludedWorkspaces: "skipme",
       excludedFoldersInWorkspaces: "",
     });
+    scanWorkspacePaths.mockResolvedValue({
+      workspacePaths: ["/tmp/root/Beta", "/tmp/other/Alpha", "/tmp/root/Alpha"],
+      invalidRoots: [invalidRoot],
+    });
 
     const result = await loadWorkspaces();
+    const [roots, excludedWorkspaces] = scanWorkspacePaths.mock.calls[0];
 
     expect(result.cached).toBe(false);
     expect(result.invalidRoots).toEqual([invalidRoot]);
     expect(result.workspaces).toEqual([
-      { name: "Alpha", path: path.join(root, "Alpha") },
-      { name: "Beta", path: path.join(nestedRoot, "Beta") },
+      { name: "Alpha", path: "/tmp/other/Alpha" },
+      { name: "Alpha", path: "/tmp/root/Alpha" },
+      { name: "Beta", path: "/tmp/root/Beta" },
     ]);
+    expect(roots).toEqual([root, nestedRoot, invalidRoot]);
+    expect(excludedWorkspaces).toEqual(new Set(["skipme"]));
   });
 
   it("reuses the cache until a refresh is requested", async () => {
-    tempDir = await createTempDir("octarine-workspaces-cache");
-
-    const root = path.join(tempDir, "root");
-    await ensureDir(path.join(root, "Alpha", workspaceMarker));
+    const root = "/tmp/root";
 
     setMockPreferences({
       workspaceRoots: root,
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
     });
+    scanWorkspacePaths.mockResolvedValueOnce({
+      workspacePaths: ["/tmp/root/Alpha"],
+      invalidRoots: [],
+    });
 
     const initial = await loadWorkspaces();
-
-    await ensureDir(path.join(root, "Beta", workspaceMarker));
+    scanWorkspacePaths.mockResolvedValueOnce({
+      workspacePaths: ["/tmp/root/Alpha", "/tmp/root/Beta"],
+      invalidRoots: [],
+    });
 
     const cached = await loadWorkspaces();
     const refreshed = await loadWorkspaces({ refresh: true });
 
     expect(initial.cached).toBe(false);
     expect(cached).toEqual({
-      workspaces: [{ name: "Alpha", path: path.join(root, "Alpha") }],
+      workspaces: [{ name: "Alpha", path: "/tmp/root/Alpha" }],
       invalidRoots: [],
       cached: true,
     });
     expect(refreshed.cached).toBe(false);
     expect(refreshed.workspaces).toEqual([
-      { name: "Alpha", path: path.join(root, "Alpha") },
-      { name: "Beta", path: path.join(root, "Beta") },
+      { name: "Alpha", path: "/tmp/root/Alpha" },
+      { name: "Beta", path: "/tmp/root/Beta" },
     ]);
+    expect(scanWorkspacePaths).toHaveBeenCalledTimes(2);
   });
 
   it("ignores cached workspaces when workspaceRoots changes", async () => {
-    tempDir = await createTempDir("octarine-workspaces-root-change");
-
-    const firstRoot = path.join(tempDir, "first-root");
-    const secondRoot = path.join(tempDir, "second-root");
-    await ensureDir(path.join(firstRoot, "Alpha", workspaceMarker));
-    await ensureDir(path.join(secondRoot, "Beta", workspaceMarker));
+    const firstRoot = "/tmp/first-root";
+    const secondRoot = "/tmp/second-root";
 
     setMockPreferences({
       workspaceRoots: firstRoot,
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
+    });
+    scanWorkspacePaths.mockResolvedValueOnce({
+      workspacePaths: ["/tmp/first-root/Alpha"],
+      invalidRoots: [],
     });
 
     const initial = await loadWorkspaces();
@@ -120,16 +128,20 @@ describe("loadWorkspaces", () => {
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
     });
+    scanWorkspacePaths.mockResolvedValueOnce({
+      workspacePaths: ["/tmp/second-root/Beta"],
+      invalidRoots: [],
+    });
 
     const changedRoots = await loadWorkspaces();
 
     expect(initial).toEqual({
-      workspaces: [{ name: "Alpha", path: path.join(firstRoot, "Alpha") }],
+      workspaces: [{ name: "Alpha", path: "/tmp/first-root/Alpha" }],
       invalidRoots: [],
       cached: false,
     });
     expect(changedRoots).toEqual({
-      workspaces: [{ name: "Beta", path: path.join(secondRoot, "Beta") }],
+      workspaces: [{ name: "Beta", path: "/tmp/second-root/Beta" }],
       invalidRoots: [],
       cached: false,
     });
@@ -139,34 +151,36 @@ describe("loadWorkspaces", () => {
     const now = new Date("2026-03-31T10:00:00.000Z").valueOf();
     const nowSpy = vi.spyOn(Date, "now");
     nowSpy.mockReturnValue(now);
-
-    tempDir = await createTempDir("octarine-workspaces-stale-cache");
-
-    const root = path.join(tempDir, "root");
-    await ensureDir(path.join(root, "Alpha", workspaceMarker));
+    const root = "/tmp/root";
 
     setMockPreferences({
       workspaceRoots: root,
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
     });
+    scanWorkspacePaths.mockResolvedValueOnce({
+      workspacePaths: ["/tmp/root/Alpha"],
+      invalidRoots: [],
+    });
 
     const initial = await loadWorkspaces();
-
-    await ensureDir(path.join(root, "Beta", workspaceMarker));
+    scanWorkspacePaths.mockResolvedValueOnce({
+      workspacePaths: ["/tmp/root/Alpha", "/tmp/root/Beta"],
+      invalidRoots: [],
+    });
     nowSpy.mockReturnValue(now + staleOffsetMs);
 
     const stale = await loadWorkspaces();
 
     expect(initial).toEqual({
-      workspaces: [{ name: "Alpha", path: path.join(root, "Alpha") }],
+      workspaces: [{ name: "Alpha", path: "/tmp/root/Alpha" }],
       invalidRoots: [],
       cached: false,
     });
     expect(stale).toEqual({
       workspaces: [
-        { name: "Alpha", path: path.join(root, "Alpha") },
-        { name: "Beta", path: path.join(root, "Beta") },
+        { name: "Alpha", path: "/tmp/root/Alpha" },
+        { name: "Beta", path: "/tmp/root/Beta" },
       ],
       invalidRoots: [],
       cached: false,

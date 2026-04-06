@@ -2,9 +2,16 @@ import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 
+const WORKSPACE_DIR_NAME = ".octarine";
+
 export type MarkdownFile = {
   absolute: string;
   relative: string;
+};
+
+export type ScanWorkspacePathsResult = {
+  workspacePaths: string[];
+  invalidRoots: string[];
 };
 
 function toPosixPath(p: string): string {
@@ -34,6 +41,87 @@ function extractFrontmatter(content: string): string | undefined {
   }
 
   return undefined;
+}
+
+async function scanWorkspaceRootPaths(root: string, excludedWorkspaces: Set<string>): Promise<string[]> {
+  const discovered: string[] = [];
+  const pending = [root];
+
+  while (pending.length > 0) {
+    const dir = pending.pop()!;
+
+    let entries: Dirent[];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    const hasWorkspaceMarker = entries.some((entry) => entry.isDirectory() && entry.name === WORKSPACE_DIR_NAME);
+    if (hasWorkspaceMarker) {
+      const workspacePath = path.normalize(path.resolve(dir));
+      const workspaceName = path.basename(workspacePath).toLowerCase();
+
+      if (!excludedWorkspaces.has(workspaceName)) {
+        discovered.push(workspacePath);
+      }
+
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.isSymbolicLink() || entry.name === WORKSPACE_DIR_NAME) {
+        continue;
+      }
+
+      pending.push(path.join(dir, entry.name));
+    }
+  }
+
+  return discovered;
+}
+
+export async function scanWorkspacePaths(
+  roots: string[],
+  excludedWorkspaces: Set<string>,
+): Promise<ScanWorkspacePathsResult> {
+  const results = await Promise.all(
+    roots.map(async (root) => {
+      try {
+        const stat = await fs.stat(root);
+        if (!stat.isDirectory()) {
+          return { root, invalid: true, workspacePaths: [] as string[] };
+        }
+      } catch {
+        return { root, invalid: true, workspacePaths: [] as string[] };
+      }
+
+      return {
+        root,
+        invalid: false,
+        workspacePaths: await scanWorkspaceRootPaths(root, excludedWorkspaces),
+      };
+    }),
+  );
+
+  const invalidRoots: string[] = [];
+  const discovered = new Set<string>();
+
+  for (const result of results) {
+    if (result.invalid) {
+      invalidRoots.push(result.root);
+      continue;
+    }
+
+    for (const workspacePath of result.workspacePaths) {
+      discovered.add(workspacePath);
+    }
+  }
+
+  return {
+    workspacePaths: [...discovered],
+    invalidRoots,
+  };
 }
 
 export async function scanMarkdownFiles(root: string, excluded: Set<string>): Promise<MarkdownFile[]> {
