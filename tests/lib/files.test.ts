@@ -32,7 +32,7 @@ describe("files", () => {
     const result = await scanWorkspacePaths([root, nestedRoot, invalidRoot], new Set(["skipme"]));
 
     expect(result.invalidRoots).toEqual([invalidRoot]);
-    expect(result.workspacePaths.sort((left, right) => left.localeCompare(right))).toEqual([
+    expect(result.paths.sort((left, right) => left.localeCompare(right))).toEqual([
       path.join(root, "Alpha"),
       path.join(nestedRoot, "Beta"),
     ]);
@@ -54,7 +54,7 @@ describe("files", () => {
     const result = await scanWorkspacePaths([root], new Set());
 
     expect(result.invalidRoots).toEqual([]);
-    expect(result.workspacePaths.sort((left, right) => left.localeCompare(right))).toEqual([
+    expect(result.paths.sort((left, right) => left.localeCompare(right))).toEqual([
       workspaceRoot,
       path.join(realRoot, "Gamma"),
     ]);

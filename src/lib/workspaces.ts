@@ -10,8 +10,8 @@ export type ScanWorkspacesResult = {
 };
 
 async function scanWorkspaces(roots: string[], excludedWorkspaces: Set<string>): Promise<ScanWorkspacesResult> {
-  const { workspacePaths, invalidRoots } = await scanWorkspacePaths(roots, excludedWorkspaces);
-  const workspaces = workspacePaths.map((workspacePath) => ({
+  const { paths, invalidRoots } = await scanWorkspacePaths(roots, excludedWorkspaces);
+  const workspaces = paths.map((workspacePath) => ({
     name: path.basename(workspacePath),
     path: workspacePath,
   }));

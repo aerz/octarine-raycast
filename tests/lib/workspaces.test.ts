@@ -53,7 +53,7 @@ describe("loadWorkspaces", () => {
       excludedFoldersInWorkspaces: "",
     });
     scanWorkspacePaths.mockResolvedValue({
-      workspacePaths: ["/tmp/root/Beta", "/tmp/other/Alpha", "/tmp/root/Alpha"],
+      paths: ["/tmp/root/Beta", "/tmp/other/Alpha", "/tmp/root/Alpha"],
       invalidRoots: [invalidRoot],
     });
 
@@ -79,13 +79,13 @@ describe("loadWorkspaces", () => {
       excludedFoldersInWorkspaces: "",
     });
     scanWorkspacePaths.mockResolvedValueOnce({
-      workspacePaths: ["/tmp/root/Alpha"],
+      paths: ["/tmp/root/Alpha"],
       invalidRoots: [],
     });
 
     const initial = await loadWorkspaces();
     scanWorkspacePaths.mockResolvedValueOnce({
-      workspacePaths: ["/tmp/root/Alpha", "/tmp/root/Beta"],
+      paths: ["/tmp/root/Alpha", "/tmp/root/Beta"],
       invalidRoots: [],
     });
 
@@ -117,7 +117,7 @@ describe("loadWorkspaces", () => {
       excludedFoldersInWorkspaces: "",
     });
     scanWorkspacePaths.mockResolvedValueOnce({
-      workspacePaths: ["/tmp/first-root/Alpha"],
+      paths: ["/tmp/first-root/Alpha"],
       invalidRoots: [],
     });
 
@@ -129,7 +129,7 @@ describe("loadWorkspaces", () => {
       excludedFoldersInWorkspaces: "",
     });
     scanWorkspacePaths.mockResolvedValueOnce({
-      workspacePaths: ["/tmp/second-root/Beta"],
+      paths: ["/tmp/second-root/Beta"],
       invalidRoots: [],
     });
 
@@ -157,13 +157,13 @@ describe("loadWorkspaces", () => {
       excludedFoldersInWorkspaces: "",
     });
     scanWorkspacePaths.mockResolvedValueOnce({
-      workspacePaths: ["/tmp/root/Alpha"],
+      paths: ["/tmp/root/Alpha"],
       invalidRoots: [],
     });
 
     const initial = await loadWorkspaces();
     scanWorkspacePaths.mockResolvedValueOnce({
-      workspacePaths: ["/tmp/root/Alpha", "/tmp/root/Beta"],
+      paths: ["/tmp/root/Alpha", "/tmp/root/Beta"],
       invalidRoots: [],
     });
     nowSpy.mockReturnValue(now + staleOffsetMs);

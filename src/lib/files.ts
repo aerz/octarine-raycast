@@ -10,7 +10,7 @@ export type MarkdownFile = {
 };
 
 export type ScanWorkspacePathsResult = {
-  workspacePaths: string[];
+  paths: string[];
   invalidRoots: string[];
 };
 
@@ -90,16 +90,16 @@ export async function scanWorkspacePaths(
       try {
         const stat = await fs.stat(root);
         if (!stat.isDirectory()) {
-          return { root, invalid: true, workspacePaths: [] as string[] };
+          return { root, invalid: true, paths: [] as string[] };
         }
       } catch {
-        return { root, invalid: true, workspacePaths: [] as string[] };
+        return { root, invalid: true, paths: [] as string[] };
       }
 
       return {
         root,
         invalid: false,
-        workspacePaths: await scanWorkspaceRootPaths(root, excludedWorkspaces),
+        paths: await scanWorkspaceRootPaths(root, excludedWorkspaces),
       };
     }),
   );
@@ -113,13 +113,13 @@ export async function scanWorkspacePaths(
       continue;
     }
 
-    for (const workspacePath of result.workspacePaths) {
+    for (const workspacePath of result.paths) {
       discovered.add(workspacePath);
     }
   }
 
   return {
-    workspacePaths: [...discovered],
+    paths: [...discovered],
     invalidRoots,
   };
 }
