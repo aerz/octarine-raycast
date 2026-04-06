@@ -1,8 +1,7 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
-import { refreshPinnedNotesCache, scanWorkspaceForNotes } from "../../src/lib/notes";
+import { loadPinnedNotes, scanNotesFromWorkspaces, scanWorkspaceForNotes } from "../../src/lib/notes";
 
 let tempDir: string | undefined;
 
@@ -31,7 +30,7 @@ describe("notes", () => {
     await writeTextFile(path.join(workspace.path, "Archive", "ignored.md"), "# Ignored");
     await writeTextFile(path.join(workspace.path, "docs", "image.png"), "png");
 
-    const notes = await scanWorkspaceForNotes(workspace, new Set(["archive"]), async () => undefined);
+    const notes = await scanWorkspaceForNotes(workspace, new Set(["archive"]));
     const notesByPath = notes.slice().sort((left, right) => left.path.localeCompare(right.path));
 
     expect(notesByPath).toHaveLength(2);
@@ -55,7 +54,7 @@ describe("notes", () => {
     ]);
   });
 
-  it("detects pinned notes and reuses cached file metadata", async () => {
+  it("loads only pinned notes and reuses the pinned notes cache", async () => {
     tempDir = await createTempDir("octarine-pinned-notes");
 
     const workspace = {
@@ -66,18 +65,94 @@ describe("notes", () => {
     await writeTextFile(path.join(workspace.path, "Pinned.md"), "---\npinned: true\n---\ncontent");
     await writeTextFile(path.join(workspace.path, "Regular.md"), "---\npinned: false\n---\ncontent");
 
-    const readFileSpy = vi.spyOn(fs, "readFile");
-
-    const firstResult = await refreshPinnedNotesCache([workspace], new Set(), "signature", async () => undefined);
+    const firstResult = await loadPinnedNotes([workspace], new Set());
 
     expect(firstResult.map((note) => note.path)).toEqual(["Pinned.md"]);
-    expect(readFileSpy).toHaveBeenCalledTimes(2);
+    await writeTextFile(path.join(workspace.path, "Regular.md"), "---\npinned: true\n---\ncontent");
 
-    readFileSpy.mockClear();
-
-    const secondResult = await refreshPinnedNotesCache([workspace], new Set(), "signature", async () => undefined);
+    const secondResult = await loadPinnedNotes([workspace], new Set());
 
     expect(secondResult.map((note) => note.path)).toEqual(["Pinned.md"]);
-    expect(readFileSpy).not.toHaveBeenCalled();
+  });
+
+  it("rescans pinned notes when refresh is requested", async () => {
+    tempDir = await createTempDir("octarine-pinned-notes-refresh");
+
+    const workspace = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
+
+    await writeTextFile(path.join(workspace.path, "Pinned.md"), "---\npinned: true\n---\ncontent");
+    await writeTextFile(path.join(workspace.path, "Regular.md"), "---\npinned: false\n---\ncontent");
+
+    expect((await loadPinnedNotes([workspace], new Set())).map((note) => note.path)).toEqual(["Pinned.md"]);
+
+    await writeTextFile(path.join(workspace.path, "Regular.md"), "---\npinned: true\n---\ncontent");
+
+    const refreshed = await loadPinnedNotes([workspace], new Set(), { refresh: true });
+
+    expect(refreshed.map((note) => note.path)).toEqual(["Pinned.md", "Regular.md"]);
+  });
+
+  it("rescans when excluded directories change", async () => {
+    tempDir = await createTempDir("octarine-pinned-notes-excluded-dirs");
+
+    const workspace = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
+
+    await writeTextFile(path.join(workspace.path, "Pinned.md"), "---\npinned: true\n---\ncontent");
+    await writeTextFile(path.join(workspace.path, "Archive", "Hidden.md"), "---\npinned: true\n---\ncontent");
+
+    expect((await loadPinnedNotes([workspace], new Set(["archive"]))).map((note) => note.path)).toEqual([
+      "Pinned.md",
+    ]);
+
+    const rescanned = await loadPinnedNotes([workspace], new Set());
+
+    expect(rescanned.map((note) => note.path)).toEqual(["Archive/Hidden.md", "Pinned.md"]);
+  });
+
+  it("rescans when the workspace set changes", async () => {
+    tempDir = await createTempDir("octarine-pinned-notes-workspace-change");
+
+    const work = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
+    const personal = {
+      name: "Personal",
+      path: path.join(tempDir, "Personal"),
+    };
+
+    await writeTextFile(path.join(work.path, "Pinned.md"), "---\npinned: true\n---\ncontent");
+    await writeTextFile(path.join(personal.path, "Side.md"), "---\npinned: true\n---\ncontent");
+
+    expect((await loadPinnedNotes([work], new Set())).map((note) => note.id)).toEqual([
+      "Work::Pinned.md",
+    ]);
+
+    const rescanned = await loadPinnedNotes([work, personal], new Set());
+
+    expect(rescanned.map((note) => note.id)).toEqual(["Personal::Side.md", "Work::Pinned.md"]);
+  });
+
+  it("fails fast when note scanning hits the first unreadable workspace", async () => {
+    tempDir = await createTempDir("octarine-notes-scan-error");
+
+    const missing = {
+      name: "Missing",
+      path: path.join(tempDir, "Missing"),
+    };
+    const laterMissing = {
+      name: "LaterMissing",
+      path: path.join(tempDir, "LaterMissing"),
+    };
+
+    await expect(scanNotesFromWorkspaces([missing, laterMissing], new Set())).rejects.toThrow(
+      `Failed to read directory ${missing.path}`,
+    );
   });
 });
