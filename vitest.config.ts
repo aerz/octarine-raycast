@@ -12,6 +12,8 @@ export default defineConfig({
       provider: "v8",
     },
     environment: "node",
+    include: ["tests/**/*.test.ts"],
+    exclude: [".direnv/**"],
     setupFiles: ["./tests/setup.ts"],
   },
 });
