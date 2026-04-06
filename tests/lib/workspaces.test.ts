@@ -60,7 +60,6 @@ describe("loadWorkspaces", () => {
     const result = await loadWorkspaces();
     const [roots, excludedWorkspaces] = scanWorkspacePaths.mock.calls[0];
 
-    expect(result.cached).toBe(false);
     expect(result.invalidRoots).toEqual([invalidRoot]);
     expect(result.workspaces).toEqual([
       { name: "Alpha", path: "/tmp/other/Alpha" },
@@ -90,16 +89,17 @@ describe("loadWorkspaces", () => {
       invalidRoots: [],
     });
 
-    const cached = await loadWorkspaces();
+    const cachedResult = await loadWorkspaces();
     const refreshed = await loadWorkspaces({ refresh: true });
 
-    expect(initial.cached).toBe(false);
-    expect(cached).toEqual({
+    expect(initial).toEqual({
       workspaces: [{ name: "Alpha", path: "/tmp/root/Alpha" }],
       invalidRoots: [],
-      cached: true,
     });
-    expect(refreshed.cached).toBe(false);
+    expect(cachedResult).toEqual({
+      workspaces: [{ name: "Alpha", path: "/tmp/root/Alpha" }],
+      invalidRoots: [],
+    });
     expect(refreshed.workspaces).toEqual([
       { name: "Alpha", path: "/tmp/root/Alpha" },
       { name: "Beta", path: "/tmp/root/Beta" },
@@ -138,12 +138,10 @@ describe("loadWorkspaces", () => {
     expect(initial).toEqual({
       workspaces: [{ name: "Alpha", path: "/tmp/first-root/Alpha" }],
       invalidRoots: [],
-      cached: false,
     });
     expect(changedRoots).toEqual({
       workspaces: [{ name: "Beta", path: "/tmp/second-root/Beta" }],
       invalidRoots: [],
-      cached: false,
     });
   });
 
@@ -175,7 +173,6 @@ describe("loadWorkspaces", () => {
     expect(initial).toEqual({
       workspaces: [{ name: "Alpha", path: "/tmp/root/Alpha" }],
       invalidRoots: [],
-      cached: false,
     });
     expect(stale).toEqual({
       workspaces: [
@@ -183,7 +180,6 @@ describe("loadWorkspaces", () => {
         { name: "Beta", path: "/tmp/root/Beta" },
       ],
       invalidRoots: [],
-      cached: false,
     });
   });
 });
