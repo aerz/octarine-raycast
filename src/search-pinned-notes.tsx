@@ -2,6 +2,7 @@ import { List, ActionPanel, Action, Icon } from "@raycast/api";
 import { useState, type ReactNode } from "react";
 import { SearchNotesEmptyView } from "./components/empty-views/search-results";
 import { type WorkspaceSection, usePinnedNotes } from "./hooks/usePinnedNotes";
+import { useWorkspaces } from "./hooks/useWorkspaces";
 import { searchPinnedNotesPreferences } from "./lib/preferences";
 import { openPinnedNote } from "./lib/octarine";
 import type { IndexedNote } from "./types/notes";
@@ -28,13 +29,15 @@ export default function SearchPinnedNotesCommand() {
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const [refresh, setRefresh] = useState(false);
-  const { sections, workspaces, isLoading, revalidate } = usePinnedNotes({
+  const { workspaces } = useWorkspaces({ refresh });
+  const { dropdown, sections, isLoading, revalidate } = usePinnedNotes({
+    workspaces,
     searchText,
     selectedWorkspace,
     refresh,
   });
   const onRefresh = () => (refresh ? revalidate() : setRefresh(true));
-  const hasResults = workspaces.some((w) => w.notes.length > 0);
+  const hasResults = sections.some((section) => section.notes.length > 0);
 
   return (
     <List
@@ -42,16 +45,16 @@ export default function SearchPinnedNotesCommand() {
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search pinned notes"
-      searchBarAccessory={<WorkspaceDropdown sections={sections} onWorkspaceChange={setSelectedWorkspace} />}
+      searchBarAccessory={<WorkspaceDropdown sections={dropdown} onWorkspaceChange={setSelectedWorkspace} />}
     >
-      {sections.length === 0 ? (
+      {dropdown.length === 0 ? (
         <NotesEmptyView actions={<DefaultActionPanel onRefresh={onRefresh} />} />
       ) : !hasResults ? (
         <SearchNotesEmptyView actions={<DefaultActionPanel onRefresh={onRefresh} />} />
       ) : selectedWorkspace === "all" ? (
-        <NotesList workspaces={workspaces} grouped counter={preferences.showWorkspaceNoteCount} onRefresh={onRefresh} />
+        <NotesList workspaces={sections} grouped counter={preferences.showWorkspaceNoteCount} onRefresh={onRefresh} />
       ) : (
-        <NotesList workspaces={workspaces} onRefresh={onRefresh} />
+        <NotesList workspaces={sections} onRefresh={onRefresh} />
       )}
     </List>
   );

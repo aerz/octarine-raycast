@@ -4,8 +4,8 @@ import { useMemo } from "react";
 import { loadPinnedNotes } from "../lib/notes";
 import { matchesPathSearch } from "../lib/search";
 import { extensionPreferences } from "../lib/preferences";
-import { loadWorkspaces } from "../lib/workspaces";
 import type { IndexedNote } from "../types/notes";
+import type { Workspace } from "../types/octarine";
 
 export type WorkspaceSection = {
   name: string;
@@ -14,36 +14,27 @@ export type WorkspaceSection = {
 };
 
 type Options = {
+  workspaces: Workspace[];
   searchText: string;
   selectedWorkspace: string;
   refresh?: boolean;
 };
 
 type Result = {
-  sections: string[];
-  workspaces: WorkspaceSection[];
+  dropdown: string[];
+  sections: WorkspaceSection[];
   isLoading: boolean;
   revalidate: () => void;
 };
 
-export function usePinnedNotes({ searchText, selectedWorkspace, refresh = false }: Options): Result {
+export function usePinnedNotes({ workspaces, searchText, selectedWorkspace, refresh = false }: Options): Result {
   const preferences = extensionPreferences();
 
   const { data, isLoading, revalidate } = useCachedPromise(
-    async (refresh: boolean): Promise<IndexedNote[]> => {
-      const { workspaces } = await loadWorkspaces({ refresh });
-
-      if (workspaces.length === 0) {
-        showToast({
-          style: Toast.Style.Failure,
-          title: "No valid workspaces found. Check your paths in preferences.",
-        });
-        return [];
-      }
-
+    async (refresh: boolean, workspaces: Workspace[]): Promise<IndexedNote[]> => {
       return loadPinnedNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
     },
-    [refresh],
+    [refresh, workspaces],
     {
       initialData: [] satisfies IndexedNote[],
       keepPreviousData: true,
@@ -59,15 +50,15 @@ export function usePinnedNotes({ searchText, selectedWorkspace, refresh = false 
   );
 
   const grouped = useMemo(() => groupByWorkspace(data), [data]);
-  const sections = useMemo(() => dropdownNames(grouped), [grouped]);
-  const workspaces = useMemo(
+  const dropdown = useMemo(() => dropdownNames(grouped), [grouped]);
+  const sections = useMemo(
     () => filterWorkspaces(grouped, selectedWorkspace, searchText),
     [grouped, searchText, selectedWorkspace],
   );
 
   return {
+    dropdown,
     sections,
-    workspaces,
     isLoading,
     revalidate,
   };
