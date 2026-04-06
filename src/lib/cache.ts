@@ -1,53 +1,73 @@
 import { Cache } from "@raycast/api";
 import { isWorkspace, type Workspace } from "../types/octarine";
+import { isIndexedNote, type IndexedNote } from "../types/notes";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
-const WORKSPACES_CACHE_TTL = 15 * 60 * 1000;
+const PINNED_NOTES_CACHE_KEY = "octarine.pinned-notes.v1";
+const CACHE_TTL = 15 * 60 * 1000;
 
 const cache = new Cache();
 
-type WorkspacesCache = {
+type CacheEntry<T> = {
   cachedAt: number;
-  workspaces: Workspace[];
+  data: T;
 };
 
-function isWorkspacesCache(value: unknown): value is WorkspacesCache {
-  const v = value as WorkspacesCache;
-  return typeof v?.cachedAt === "number" && Array.isArray(v?.workspaces) && v.workspaces.every(isWorkspace);
-}
-
-function sortWorkspaceRoots(workspaceRoots: string[]): string[] {
-  return [...workspaceRoots].sort();
-}
-
-function workspaceRootsKey(workspaceRoots: string[]): string {
-  return `${WORKSPACES_CACHE_KEY}.${JSON.stringify(sortWorkspaceRoots(workspaceRoots))}`;
-}
-
-export function getWorkspacesCache(workspaceRoots: string[]): Workspace[] | undefined {
-  const value = cache.get(workspaceRootsKey(workspaceRoots));
-  if (!value) {
-    return undefined;
-  }
+function readCache<T>(key: string, isValid: (v: unknown) => v is T): T | undefined {
+  const raw = cache.get(key);
+  if (!raw) return undefined;
 
   try {
-    const parsed: unknown = JSON.parse(value);
-    if (!isWorkspacesCache(parsed)) {
-      return undefined;
-    }
-
-    return Date.now() - parsed.cachedAt <= WORKSPACES_CACHE_TTL ? parsed.workspaces : undefined;
+    const entry = JSON.parse(raw) as CacheEntry<T>;
+    if (typeof entry?.cachedAt !== "number" || !isValid(entry.data)) return undefined;
+    return Date.now() - entry.cachedAt <= CACHE_TTL ? entry.data : undefined;
   } catch {
     return undefined;
   }
 }
 
-export function setWorkspacesCache(workspaces: Workspace[], workspaceRoots: string[]): void {
-  cache.set(
-    workspaceRootsKey(workspaceRoots),
-    JSON.stringify({
-      cachedAt: Date.now(),
-      workspaces,
-    }),
-  );
+function writeCache<T>(key: string, data: T): void {
+  cache.set(key, JSON.stringify({ cachedAt: Date.now(), data }));
+}
+
+function workspacesKey(roots: string[]): string {
+  return `${WORKSPACES_CACHE_KEY}.${JSON.stringify([...roots].sort())}`;
+}
+
+function pinnedNotesKey(workspaces: Workspace[], excludedDirectoryNames: Set<string>): string {
+  return `${PINNED_NOTES_CACHE_KEY}.${JSON.stringify({
+    workspaces: workspaces.map((w) => w.path).sort(),
+    excludedDirectoryNames: [...excludedDirectoryNames].sort(),
+  })}`;
+}
+
+function isWorkspaceArray(v: unknown): v is Workspace[] {
+  return Array.isArray(v) && v.every(isWorkspace);
+}
+
+function isIndexedNoteArray(v: unknown): v is IndexedNote[] {
+  return Array.isArray(v) && v.every(isIndexedNote);
+}
+
+export function getWorkspacesCache(roots: string[]): Workspace[] | undefined {
+  return readCache(workspacesKey(roots), isWorkspaceArray);
+}
+
+export function setWorkspacesCache(workspaces: Workspace[], roots: string[]): void {
+  writeCache(workspacesKey(roots), workspaces);
+}
+
+export function getPinnedNotesCache(
+  workspaces: Workspace[],
+  excludedDirectoryNames: Set<string>,
+): IndexedNote[] | undefined {
+  return readCache(pinnedNotesKey(workspaces, excludedDirectoryNames), isIndexedNoteArray);
+}
+
+export function setPinnedNotesCache(
+  notes: IndexedNote[],
+  workspaces: Workspace[],
+  excludedDirectoryNames: Set<string>,
+): void {
+  writeCache(pinnedNotesKey(workspaces, excludedDirectoryNames), notes);
 }

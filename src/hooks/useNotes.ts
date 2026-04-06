@@ -1,10 +1,8 @@
 import { Toast, showToast } from "@raycast/api";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import {
-  type IndexedNote,
   loadCachedNotes,
-  loadCachedPinnedNotes,
-  refreshPinnedNotesCache,
+  loadPinnedNotes,
   saveCachedNotes,
   scanNotesFromWorkspaces,
   toPinnedNoteIds,
@@ -13,6 +11,7 @@ import { matchesPathSearch } from "../lib/search";
 import { loadWorkspaces } from "../lib/workspaces";
 import { extensionPreferences } from "../lib/preferences";
 import type { Workspace } from "../types/octarine";
+import type { IndexedNote } from "../types/notes";
 
 export type NoteWorkspaceSection = {
   workspaceName: string;
@@ -167,18 +166,7 @@ function useNotesSource({
     };
 
     const scan = async () => {
-      let hasReportedPartialScanFailure = false;
-
       setIsLoading(true);
-
-      const reportPartialScanFailure = async () => {
-        if (canceled || hasReportedPartialScanFailure) {
-          return;
-        }
-
-        hasReportedPartialScanFailure = true;
-        await showPartialScanFailureToast();
-      };
 
       try {
         if (!hasConfiguredRoots) {
@@ -186,19 +174,12 @@ function useNotesSource({
           return;
         }
 
-        const workspaceResultPromise = loadWorkspaces({ refresh: true });
-        const [cachedResult, cachedPinnedResult] = await Promise.all([
-          loadCachedNotes(workspaceSearchSignature),
-          loadCachedPinnedNotes(workspaceSearchSignature),
-        ]);
+        const workspaceResultPromise = loadWorkspaces();
+        const cachedResult = await loadCachedNotes(workspaceSearchSignature);
         const hasCachedResult = Boolean(cachedResult);
 
-        if (cachedResult || cachedPinnedResult) {
-          setCachedSourceData(
-            cachedResult?.workspaces ?? cachedPinnedResult?.workspaces ?? [],
-            cachedResult?.notes ?? [],
-            toPinnedNoteIds(cachedPinnedResult?.notes ?? []),
-          );
+        if (cachedResult) {
+          setCachedSourceData(cachedResult.workspaces, cachedResult.notes, new Set());
         } else {
           clearSourceData();
         }
@@ -215,17 +196,8 @@ function useNotesSource({
         }
 
         const [discoveredNotes, pinnedNotes] = await Promise.all([
-          scanNotesFromWorkspaces(
-            workspaceResult.workspaces,
-            excludedDirectoryNamesRef.current,
-            reportPartialScanFailure,
-          ),
-          refreshPinnedNotesCache(
-            workspaceResult.workspaces,
-            excludedDirectoryNamesRef.current,
-            workspaceSearchSignature,
-            reportPartialScanFailure,
-          ),
+          scanNotesFromWorkspaces(workspaceResult.workspaces, excludedDirectoryNamesRef.current),
+          loadPinnedNotes(workspaceResult.workspaces, excludedDirectoryNamesRef.current),
         ]);
         if (canceled) {
           return;
@@ -260,18 +232,12 @@ function useNotesSource({
   };
 }
 
-async function showPartialScanFailureToast(): Promise<void> {
-  await showToast({
-    style: Toast.Style.Failure,
-    title: "Failed to Scan Some Notes",
-  });
-}
-
 async function handleFatalScanFailure(error: unknown): Promise<void> {
   console.error("Failed to scan Octarine notes", error);
   await showToast({
     style: Toast.Style.Failure,
     title: "Failed to Scan Notes",
+    message: error instanceof Error ? error.message : String(error),
   });
 }
 

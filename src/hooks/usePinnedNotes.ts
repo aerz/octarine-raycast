@@ -1,10 +1,11 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
-import { IndexedNote, refreshPinnedNotesCache } from "../lib/notes";
+import { loadPinnedNotes } from "../lib/notes";
 import { matchesPathSearch } from "../lib/search";
 import { extensionPreferences } from "../lib/preferences";
 import { loadWorkspaces } from "../lib/workspaces";
+import type { IndexedNote } from "../types/notes";
 
 export type WorkspaceSection = {
   name: string;
@@ -18,32 +19,10 @@ type Options = {
 };
 
 type Result = {
-  workspaceCount: number;
-  workspaceSections: WorkspaceSection[];
-  filteredWorkspaceSections: WorkspaceSection[];
+  sections: string[];
+  workspaces: WorkspaceSection[];
   isLoading: boolean;
 };
-
-type ScanPinnedNotesResult = {
-  workspaceCount: number;
-  notes: IndexedNote[];
-};
-
-function createScanFailureToast(): () => Promise<void> {
-  let shown = false;
-
-  return async () => {
-    if (shown) {
-      return;
-    }
-
-    shown = true;
-    await showToast({
-      style: Toast.Style.Failure,
-      title: "Failed to Scan Some Pinned Notes",
-    });
-  };
-}
 
 function buildWorkspaceSections(notes: IndexedNote[]): WorkspaceSection[] {
   const grouped = new Map<string, WorkspaceSection>();
@@ -64,72 +43,59 @@ function buildWorkspaceSections(notes: IndexedNote[]): WorkspaceSection[] {
   return Array.from(grouped.values()).sort((left, right) => left.name.localeCompare(right.name));
 }
 
+function buildSectionNames(notes: IndexedNote[]): string[] {
+  return Array.from(new Set(notes.map((note) => note.workspace.name))).sort((left, right) => left.localeCompare(right));
+}
+
 export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Result {
   const preferences = extensionPreferences();
 
   const { data, isLoading } = useCachedPromise(
-    async (workspaceSearchSignature: string): Promise<ScanPinnedNotesResult> => {
-      void workspaceSearchSignature;
-      const showScanFailureToast = createScanFailureToast();
+    async (): Promise<IndexedNote[]> => {
       const { workspaces } = await loadWorkspaces({ refresh: true });
 
       if (workspaces.length === 0) {
-        return {
-          workspaceCount: 0,
-          notes: [],
-        };
+        showToast({
+          style: Toast.Style.Failure,
+          title: "No valid workspaces found. Check your paths in preferences.",
+        });
+        return [];
       }
 
-      const notes = await refreshPinnedNotesCache(
-        workspaces,
-        preferences.excludedFoldersInWorkspaces,
-        workspaceSearchSignature,
-        showScanFailureToast,
-      );
-
-      return {
-        workspaceCount: workspaces.length,
-        notes,
-      };
+      return loadPinnedNotes(workspaces, preferences.excludedFoldersInWorkspaces);
     },
-    [preferences.workspaceSearchSignature],
+    [],
     {
-      execute: preferences.hasConfiguredRoots,
-      initialData: {
-        workspaceCount: 0,
-        notes: [],
-      } satisfies ScanPinnedNotesResult,
+      initialData: [] satisfies IndexedNote[],
       keepPreviousData: true,
       onError: async (error) => {
         console.error("Failed to scan pinned Octarine notes", error);
         await showToast({
           style: Toast.Style.Failure,
           title: "Failed to Scan Pinned Notes",
+          message: error instanceof Error ? error.message : String(error),
         });
       },
     },
   );
 
-  const workspaceSections = useMemo(() => buildWorkspaceSections(data.notes), [data.notes]);
-  const filteredWorkspaceSections = useMemo(
+  const sections = useMemo(() => buildSectionNames(data), [data]);
+  const workspaces = useMemo(
     () =>
-      workspaceSections
-        .filter(
-          (workspaceSection) => selectedWorkspace === "all" || workspaceSection.path === selectedWorkspace,
-        )
-        .map((workspaceSection) => ({
-          path: workspaceSection.path,
-          name: workspaceSection.name,
-          notes: workspaceSection.notes.filter((note) => matchesPathSearch(note, searchText)),
+      buildWorkspaceSections(data)
+        .filter((workspace) => selectedWorkspace === "all" || workspace.name === selectedWorkspace)
+        .map((workspace) => ({
+          path: workspace.path,
+          name: workspace.name,
+          notes: workspace.notes.filter((note) => matchesPathSearch(note, searchText)),
         }))
         .filter((workspaceSection) => workspaceSection.notes.length > 0),
-    [searchText, selectedWorkspace, workspaceSections],
+    [data, searchText, selectedWorkspace],
   );
 
   return {
-    workspaceCount: data.workspaceCount,
-    workspaceSections,
-    filteredWorkspaceSections,
+    sections,
+    workspaces,
     isLoading,
   };
 }
