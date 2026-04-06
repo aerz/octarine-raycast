@@ -4,7 +4,7 @@ import { getWorkspacesCache, setWorkspacesCache } from "./cache";
 import { scanWorkspacePaths } from "./files";
 import { extensionPreferences } from "./preferences";
 
-type ScanWorkspacesResult = {
+export type ScanWorkspacesResult = {
   workspaces: Workspace[];
   invalidRoots: string[];
 };
@@ -36,19 +36,19 @@ export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<L
     const cache = getWorkspacesCache(workspaceRoots);
     if (cache) {
       return {
-        workspaces: cache,
-        invalidRoots: [],
+        workspaces: cache.workspaces,
+        invalidRoots: cache.invalidRoots,
         cached: true,
       };
     }
   }
 
-  const scan = await scanWorkspaces(workspaceRoots, excludedWorkspaces);
-  setWorkspacesCache(scan.workspaces, workspaceRoots);
+  const { workspaces, invalidRoots } = await scanWorkspaces(workspaceRoots, excludedWorkspaces);
+  setWorkspacesCache(workspaces, workspaceRoots, invalidRoots);
 
   return {
-    workspaces: scan.workspaces,
-    invalidRoots: scan.invalidRoots,
+    workspaces,
+    invalidRoots,
     cached: false,
   };
 }

@@ -20,20 +20,19 @@ describe("workspace cache", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-31T10:00:00.000Z"));
 
-    setWorkspacesCache(
-      [
+    const cached = {
+      workspaces: [
         { name: "Alpha", path: "/workspaces/alpha" },
         { name: "Beta", path: "/workspaces/beta" },
       ],
-      ["/workspaces"],
-    );
+      invalidRoots: ["/workspaces/missing"],
+    };
+
+    setWorkspacesCache(cached.workspaces, ["/workspaces"], cached.invalidRoots);
 
     const result = getWorkspacesCache(["/workspaces"]);
 
-    expect(result).toEqual([
-      { name: "Alpha", path: "/workspaces/alpha" },
-      { name: "Beta", path: "/workspaces/beta" },
-    ]);
+    expect(result).toEqual(cached);
   });
 
   it("returns undefined when the cached value is stale", () => {
@@ -41,7 +40,7 @@ describe("workspace cache", () => {
     const nowSpy = vi.spyOn(Date, "now");
     nowSpy.mockReturnValue(now);
 
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces"]);
+    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces"], []);
     nowSpy.mockReturnValue(now + staleOffsetMs);
 
     expect(getWorkspacesCache(["/workspaces"])).toBeUndefined();
@@ -55,9 +54,9 @@ describe("workspace cache", () => {
     expect(result).toBeUndefined();
   });
 
-  it("returns undefined when the cached value is not a valid workspace list", () => {
+  it("returns undefined when the cached value is not a valid workspace payload", () => {
     vi.spyOn(Cache.prototype, "get").mockReturnValue(
-      JSON.stringify({ cachedAt: Date.now(), workspaces: [{ name: "Alpha", path: 1 }] }),
+      JSON.stringify({ cachedAt: Date.now(), data: { workspaces: [{ name: "Alpha", path: 1 }], invalidRoots: [] } }),
     );
 
     const result = getWorkspacesCache(["/workspaces"]);
@@ -66,25 +65,37 @@ describe("workspace cache", () => {
   });
 
   it("stores workspaces under a roots-specific cache key", () => {
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces"]);
+    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces"], []);
 
-    expect(getWorkspacesCache(["/workspaces"])).toEqual([{ name: "Alpha", path: "/workspaces/alpha" }]);
+    expect(getWorkspacesCache(["/workspaces"])).toEqual({
+      workspaces: [{ name: "Alpha", path: "/workspaces/alpha" }],
+      invalidRoots: [],
+    });
   });
 
   it("keeps caches for different workspace roots separate", () => {
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces-a"]);
-    setWorkspacesCache([{ name: "Beta", path: "/workspaces/beta" }], ["/workspaces-b"]);
+    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces-a"], []);
+    setWorkspacesCache([{ name: "Beta", path: "/workspaces/beta" }], ["/workspaces-b"], ["/workspaces-b/missing"]);
 
-    expect(getWorkspacesCache(["/workspaces-a"])).toEqual([{ name: "Alpha", path: "/workspaces/alpha" }]);
-    expect(getWorkspacesCache(["/workspaces-b"])).toEqual([{ name: "Beta", path: "/workspaces/beta" }]);
+    expect(getWorkspacesCache(["/workspaces-a"])).toEqual({
+      workspaces: [{ name: "Alpha", path: "/workspaces/alpha" }],
+      invalidRoots: [],
+    });
+    expect(getWorkspacesCache(["/workspaces-b"])).toEqual({
+      workspaces: [{ name: "Beta", path: "/workspaces/beta" }],
+      invalidRoots: ["/workspaces-b/missing"],
+    });
   });
 
   it("treats the same workspace roots in different orders as the same cache entry", () => {
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces-b", "/workspaces-a"]);
-
-    expect(getWorkspacesCache(["/workspaces-a", "/workspaces-b"])).toEqual([
-      { name: "Alpha", path: "/workspaces/alpha" },
+    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces-b", "/workspaces-a"], [
+      "/workspaces-missing",
     ]);
+
+    expect(getWorkspacesCache(["/workspaces-a", "/workspaces-b"])).toEqual({
+      workspaces: [{ name: "Alpha", path: "/workspaces/alpha" }],
+      invalidRoots: ["/workspaces-missing"],
+    });
   });
 });
 

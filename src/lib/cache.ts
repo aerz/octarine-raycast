@@ -1,6 +1,7 @@
 import { Cache } from "@raycast/api";
 import { isWorkspace, type Workspace } from "../types/octarine";
 import { isIndexedNote, type IndexedNote } from "../types/notes";
+import type { ScanWorkspacesResult } from "./workspaces";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
 const PINNED_NOTES_CACHE_KEY = "octarine.pinned-notes.v1";
@@ -45,16 +46,29 @@ function isWorkspaceArray(v: unknown): v is Workspace[] {
   return Array.isArray(v) && v.every(isWorkspace);
 }
 
+function isWorkspacesCache(v: unknown): v is ScanWorkspacesResult {
+  if (!v || typeof v !== "object") return false;
+
+  const { workspaces, invalidRoots } = v as ScanWorkspacesResult;
+  return isWorkspaceArray(workspaces) && Array.isArray(invalidRoots) && invalidRoots.every((root) => typeof root === "string");
+}
+
 function isIndexedNoteArray(v: unknown): v is IndexedNote[] {
   return Array.isArray(v) && v.every(isIndexedNote);
 }
 
-export function getWorkspacesCache(roots: string[]): Workspace[] | undefined {
-  return readCache(workspacesKey(roots), isWorkspaceArray);
+export function getWorkspacesCache(roots: string[]): ScanWorkspacesResult | undefined {
+  const data = readCache(
+    workspacesKey(roots),
+    (v): v is ScanWorkspacesResult | Workspace[] => isWorkspacesCache(v) || isWorkspaceArray(v),
+  );
+  if (!data) return undefined;
+
+  return isWorkspaceArray(data) ? { workspaces: data, invalidRoots: [] } : data;
 }
 
-export function setWorkspacesCache(workspaces: Workspace[], roots: string[]): void {
-  writeCache(workspacesKey(roots), workspaces);
+export function setWorkspacesCache(workspaces: Workspace[], roots: string[], invalidRoots: string[]): void {
+  writeCache(workspacesKey(roots), { workspaces, invalidRoots });
 }
 
 export function getPinnedNotesCache(
