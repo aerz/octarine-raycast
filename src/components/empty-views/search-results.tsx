@@ -2,29 +2,36 @@ import { ActionPanel, Grid, List } from "@raycast/api";
 import type { ReactNode } from "react";
 
 type Props = {
+  actions?: ReactNode;
   children?: ReactNode;
 };
 
-export function SearchAttachmentsEmptyView({ children }: Props) {
-  const actions = children ? <ActionPanel>{children}</ActionPanel> : undefined;
-
+export function SearchAttachmentsEmptyView({ actions, children }: Props) {
   return (
     <Grid.EmptyView
-      title="No Matching Attachments"
-      description="Try a different type filter or search text."
-      actions={actions}
+      title="No attachments found"
+      description="Try a different search or filter"
+      actions={actions ?? (children ? <ActionPanel>{children}</ActionPanel> : undefined)}
     />
   );
 }
 
-export function SearchNotesEmptyView({ children }: Props) {
-  const actions = children ? <ActionPanel>{children}</ActionPanel> : undefined;
-
-  return <List.EmptyView title="No Matching Notes" actions={actions} />;
+export function SearchNotesEmptyView({ actions, children }: Props) {
+  return (
+    <List.EmptyView
+      title="No notes found"
+      description="Try a different search"
+      actions={actions ?? (children ? <ActionPanel>{children}</ActionPanel> : undefined)}
+    />
+  );
 }
 
-export function SearchViewsEmptyView({ children }: Props) {
-  const actions = children ? <ActionPanel>{children}</ActionPanel> : undefined;
-
-  return <List.EmptyView title="No Matching Views" actions={actions} />;
+export function SearchViewsEmptyView({ actions, children }: Props) {
+  return (
+    <List.EmptyView
+      title="No views found"
+      description="Try a different search"
+      actions={actions ?? (children ? <ActionPanel>{children}</ActionPanel> : undefined)}
+    />
+  );
 }

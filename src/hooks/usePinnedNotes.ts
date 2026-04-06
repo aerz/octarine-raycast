@@ -16,12 +16,14 @@ export type WorkspaceSection = {
 type Options = {
   searchText: string;
   selectedWorkspace: string;
+  refresh?: boolean;
 };
 
 type Result = {
   sections: string[];
   workspaces: WorkspaceSection[];
   isLoading: boolean;
+  revalidate: () => void;
 };
 
 function buildWorkspaceSections(notes: IndexedNote[]): WorkspaceSection[] {
@@ -47,12 +49,12 @@ function buildSectionNames(notes: IndexedNote[]): string[] {
   return Array.from(new Set(notes.map((note) => note.workspace.name))).sort((left, right) => left.localeCompare(right));
 }
 
-export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Result {
+export function usePinnedNotes({ searchText, selectedWorkspace, refresh = false }: Options): Result {
   const preferences = extensionPreferences();
 
-  const { data, isLoading } = useCachedPromise(
-    async (): Promise<IndexedNote[]> => {
-      const { workspaces } = await loadWorkspaces({ refresh: true });
+  const { data, isLoading, revalidate } = useCachedPromise(
+    async (refresh: boolean): Promise<IndexedNote[]> => {
+      const { workspaces } = await loadWorkspaces({ refresh });
 
       if (workspaces.length === 0) {
         showToast({
@@ -62,9 +64,9 @@ export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Resu
         return [];
       }
 
-      return loadPinnedNotes(workspaces, preferences.excludedFoldersInWorkspaces);
+      return loadPinnedNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
     },
-    [],
+    [refresh],
     {
       initialData: [] satisfies IndexedNote[],
       keepPreviousData: true,
@@ -97,5 +99,6 @@ export function usePinnedNotes({ searchText, selectedWorkspace }: Options): Resu
     sections,
     workspaces,
     isLoading,
+    revalidate,
   };
 }
