@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNotes } from "./useNotes";
 import { buildDailyDeskItems, isDailyDeskItem, type DailyDeskItem } from "../lib/daily-desk";
-import { type IndexedNote } from "../lib/notes";
+import { type IndexedNote } from "../types/notes";
 
 export type QuickCaptureItem = IndexedNote | DailyDeskItem;
 
