@@ -26,13 +26,13 @@ type Result = {
   revalidate: () => void;
 };
 
-function buildWorkspaceSections(notes: IndexedNote[]): WorkspaceSection[] {
+function groupSections(notes: IndexedNote[]): WorkspaceSection[] {
   const grouped = new Map<string, WorkspaceSection>();
 
   for (const note of notes) {
-    const existing = grouped.get(note.workspace.path);
-    if (existing) {
-      existing.notes.push(note);
+    const section = grouped.get(note.workspace.path);
+    if (section) {
+      section.notes.push(note);
     } else {
       grouped.set(note.workspace.path, {
         name: note.workspace.name,
@@ -43,10 +43,6 @@ function buildWorkspaceSections(notes: IndexedNote[]): WorkspaceSection[] {
   }
 
   return Array.from(grouped.values()).sort((left, right) => left.name.localeCompare(right.name));
-}
-
-function buildSectionNames(notes: IndexedNote[]): string[] {
-  return Array.from(new Set(notes.map((note) => note.workspace.name))).sort((left, right) => left.localeCompare(right));
 }
 
 export function usePinnedNotes({ searchText, selectedWorkspace, refresh = false }: Options): Result {
@@ -81,18 +77,21 @@ export function usePinnedNotes({ searchText, selectedWorkspace, refresh = false 
     },
   );
 
-  const sections = useMemo(() => buildSectionNames(data), [data]);
+  const groupedSections = useMemo(() => groupSections(data), [data]);
+
+  const sections = useMemo(() => Array.from(new Set(groupedSections.map((ws) => ws.name))), [groupedSections]);
+
   const workspaces = useMemo(
     () =>
-      buildWorkspaceSections(data)
+      groupedSections
         .filter((workspace) => selectedWorkspace === "all" || workspace.name === selectedWorkspace)
         .map((workspace) => ({
           path: workspace.path,
           name: workspace.name,
-          notes: workspace.notes.filter((note) => matchesPathSearch(note, searchText)),
+          notes: searchText ? workspace.notes.filter((note) => matchesPathSearch(note, searchText)) : workspace.notes,
         }))
-        .filter((workspaceSection) => workspaceSection.notes.length > 0),
-    [data, searchText, selectedWorkspace],
+        .filter((workspace) => workspace.notes.length > 0),
+    [groupedSections, searchText, selectedWorkspace],
   );
 
   return {
