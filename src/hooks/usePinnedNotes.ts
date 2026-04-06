@@ -26,25 +26,6 @@ type Result = {
   revalidate: () => void;
 };
 
-function groupSections(notes: IndexedNote[]): WorkspaceSection[] {
-  const grouped = new Map<string, WorkspaceSection>();
-
-  for (const note of notes) {
-    const section = grouped.get(note.workspace.path);
-    if (section) {
-      section.notes.push(note);
-    } else {
-      grouped.set(note.workspace.path, {
-        name: note.workspace.name,
-        path: note.workspace.path,
-        notes: [note],
-      });
-    }
-  }
-
-  return Array.from(grouped.values()).sort((left, right) => left.name.localeCompare(right.name));
-}
-
 export function usePinnedNotes({ searchText, selectedWorkspace, refresh = false }: Options): Result {
   const preferences = extensionPreferences();
 
@@ -77,21 +58,11 @@ export function usePinnedNotes({ searchText, selectedWorkspace, refresh = false 
     },
   );
 
-  const groupedSections = useMemo(() => groupSections(data), [data]);
-
-  const sections = useMemo(() => Array.from(new Set(groupedSections.map((ws) => ws.name))), [groupedSections]);
-
+  const grouped = useMemo(() => groupByWorkspace(data), [data]);
+  const sections = useMemo(() => dropdownNames(grouped), [grouped]);
   const workspaces = useMemo(
-    () =>
-      groupedSections
-        .filter((workspace) => selectedWorkspace === "all" || workspace.name === selectedWorkspace)
-        .map((workspace) => ({
-          path: workspace.path,
-          name: workspace.name,
-          notes: searchText ? workspace.notes.filter((note) => matchesPathSearch(note, searchText)) : workspace.notes,
-        }))
-        .filter((workspace) => workspace.notes.length > 0),
-    [groupedSections, searchText, selectedWorkspace],
+    () => filterWorkspaces(grouped, selectedWorkspace, searchText),
+    [grouped, searchText, selectedWorkspace],
   );
 
   return {
@@ -100,4 +71,42 @@ export function usePinnedNotes({ searchText, selectedWorkspace, refresh = false 
     isLoading,
     revalidate,
   };
+}
+
+function groupByWorkspace(notes: IndexedNote[]): WorkspaceSection[] {
+  const grouped = new Map<string, WorkspaceSection>();
+
+  for (const note of notes) {
+    const section = grouped.get(note.workspace.path);
+    if (section) {
+      section.notes.push(note);
+    } else {
+      grouped.set(note.workspace.path, {
+        name: note.workspace.name,
+        path: note.workspace.path,
+        notes: [note],
+      });
+    }
+  }
+
+  return Array.from(grouped.values()).sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function dropdownNames(workspaces: WorkspaceSection[]): string[] {
+  return Array.from(new Set(workspaces.map((workspace) => workspace.name)));
+}
+
+function filterWorkspaces(
+  workspaces: WorkspaceSection[],
+  selectedWorkspace: string,
+  searchText: string,
+): WorkspaceSection[] {
+  return workspaces
+    .filter((workspace) => selectedWorkspace === "all" || workspace.name === selectedWorkspace)
+    .map((workspace) => ({
+      path: workspace.path,
+      name: workspace.name,
+      notes: searchText ? workspace.notes.filter((note) => matchesPathSearch(note, searchText)) : workspace.notes,
+    }))
+    .filter((workspace) => workspace.notes.length > 0);
 }
