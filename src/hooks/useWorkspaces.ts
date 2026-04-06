@@ -1,6 +1,6 @@
 import { Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { loadWorkspaces, type LoadWorkspacesResult } from "../lib/workspaces";
+import { loadWorkspaces, type ScanWorkspacesResult } from "../lib/workspaces";
 import type { Workspace } from "../types/octarine";
 
 export type LoadStatus = {
@@ -16,7 +16,7 @@ type Options = {
 type Result = {
   workspaces: Workspace[];
   status: LoadStatus;
-  revalidate: () => Promise<LoadWorkspacesResult>;
+  revalidate: () => Promise<ScanWorkspacesResult>;
 };
 
 export function useWorkspaces(options: Options = {}): Result {
@@ -25,17 +25,26 @@ export function useWorkspaces(options: Options = {}): Result {
 
   const { data, error, isLoading, revalidate } = usePromise(
     async (refresh: boolean) => {
-      const workspaces = await loadWorkspaces({ refresh });
+      const { workspaces, invalidRoots } = await loadWorkspaces({ refresh });
 
-      if (!workspaces.cached && workspaces.invalidRoots.length > 0) {
-        await showToast({
+      if (invalidRoots.length > 0) {
+        showToast({
           style: Toast.Style.Failure,
-          title: "Workspaces were skipped",
-          message: `${workspaces.invalidRoots.length} workspace roots could not be read`,
+          title: "Invalid workspace root paths",
+          message: `${invalidRoots.length} paths could not be found`,
+        });
+      } else if (workspaces.length === 0) {
+        showToast({
+          style: Toast.Style.Failure,
+          title: "No workspaces found",
+          message: "Check root paths in preferences",
         });
       }
 
-      return workspaces;
+      return {
+        workspaces,
+        invalidRoots,
+      };
     },
     [refresh],
     {

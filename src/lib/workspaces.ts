@@ -9,10 +9,6 @@ export type ScanWorkspacesResult = {
   invalidRoots: string[];
 };
 
-export type LoadWorkspacesResult = ScanWorkspacesResult & {
-  cached: boolean;
-};
-
 async function scanWorkspaces(roots: string[], excludedWorkspaces: Set<string>): Promise<ScanWorkspacesResult> {
   const { workspacePaths, invalidRoots } = await scanWorkspacePaths(roots, excludedWorkspaces);
   const workspaces = workspacePaths.map((workspacePath) => ({
@@ -28,7 +24,7 @@ async function scanWorkspaces(roots: string[], excludedWorkspaces: Set<string>):
   return { workspaces, invalidRoots };
 }
 
-export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<LoadWorkspacesResult> {
+export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<ScanWorkspacesResult> {
   const { workspaceRoots, excludedWorkspaces } = extensionPreferences();
   const refresh = options?.refresh ?? false;
 
@@ -38,7 +34,6 @@ export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<L
       return {
         workspaces: cache.workspaces,
         invalidRoots: cache.invalidRoots,
-        cached: true,
       };
     }
   }
@@ -49,6 +44,5 @@ export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<L
   return {
     workspaces,
     invalidRoots,
-    cached: false,
   };
 }

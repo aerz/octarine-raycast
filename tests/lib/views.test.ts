@@ -46,7 +46,6 @@ describe("views", () => {
     loadWorkspacesMock.mockResolvedValue({
       workspaces: [validWorkspace, malformedWorkspace, invalidWorkspace, missingWorkspace],
       invalidRoots: [],
-      cached: false,
     });
 
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -185,7 +184,6 @@ describe("views", () => {
     loadWorkspacesMock.mockResolvedValue({
       workspaces: [workspace],
       invalidRoots: [],
-      cached: false,
     });
 
     await writeTextFile(
@@ -204,7 +202,6 @@ describe("views", () => {
     const refreshed = await scanViewsFromWorkspaces({ forceRefresh: true });
     const cached = await loadCachedViews(workspaceDiscoverySignature);
 
-    expect(initial.cached).toBe(false);
     expect(initial.workspaceViews[0]?.views.map((view) => view.name)).toEqual(["Inbox"]);
 
     expect(cached).toEqual({
@@ -212,7 +209,6 @@ describe("views", () => {
       workspaceViews: initial.workspaceViews,
     });
 
-    expect(refreshed.cached).toBe(false);
     expect(refreshed.workspaceViews[0]?.views.map((view) => view.name)).toEqual(["Archive"]);
     expect(loadWorkspacesMock).toHaveBeenCalledTimes(2);
   });
@@ -227,7 +223,6 @@ describe("views", () => {
     loadWorkspacesMock.mockResolvedValue({
       workspaces: [workspace],
       invalidRoots: [],
-      cached: false,
     });
 
     await writeTextFile(
