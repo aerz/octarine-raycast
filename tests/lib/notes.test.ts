@@ -1,7 +1,7 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
-import { loadPinnedNotes, scanNotesFromWorkspaces, scanWorkspaceForNotes } from "../../src/lib/notes";
+import { loadPinnedNotes, scanNotes } from "../../src/lib/notes";
 
 let tempDir: string | undefined;
 
@@ -30,7 +30,7 @@ describe("notes", () => {
     await writeTextFile(path.join(workspace.path, "Archive", "ignored.md"), "# Ignored");
     await writeTextFile(path.join(workspace.path, "docs", "image.png"), "png");
 
-    const notes = await scanWorkspaceForNotes(workspace, new Set(["archive"]));
+    const notes = await scanNotes([workspace], new Set(["archive"]));
     const notesByPath = notes.slice().sort((left, right) => left.path.localeCompare(right.path));
 
     expect(notesByPath).toHaveLength(2);
@@ -139,7 +139,7 @@ describe("notes", () => {
     expect(rescanned.map((note) => note.id)).toEqual(["Personal::Side.md", "Work::Pinned.md"]);
   });
 
-  it("fails fast when note scanning hits the first unreadable workspace", async () => {
+  it("fails when note scanning hits an unreadable workspace", async () => {
     tempDir = await createTempDir("octarine-notes-scan-error");
 
     const missing = {
@@ -151,8 +151,6 @@ describe("notes", () => {
       path: path.join(tempDir, "LaterMissing"),
     };
 
-    await expect(scanNotesFromWorkspaces([missing, laterMissing], new Set())).rejects.toThrow(
-      `Failed to read directory ${missing.path}`,
-    );
+    await expect(scanNotes([missing, laterMissing], new Set())).rejects.toThrow(/Failed to read directory .+/);
   });
 });

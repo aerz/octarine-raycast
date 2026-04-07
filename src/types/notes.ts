@@ -5,6 +5,7 @@ export type ScannedNote = {
   title: string;
   path: string;
   workspace: Workspace;
+  pinned: boolean;
 };
 
 export type IndexedNote = ScannedNote & {
@@ -28,6 +29,7 @@ export function isIndexedNote(value: unknown): value is IndexedNote {
   return (
     isNote(value) &&
     typeof (value as IndexedNote).id === "string" &&
+    typeof (value as IndexedNote).pinned === "boolean" &&
     typeof (value as IndexedNote).normalizedTitle === "string" &&
     typeof (value as IndexedNote).normalizedPath === "string" &&
     typeof (value as IndexedNote).normalizedWorkspace === "string" &&

@@ -4,6 +4,7 @@ import { isIndexedNote, type IndexedNote } from "../types/notes";
 import type { ScanWorkspacesResult } from "./workspaces";
 
 const WORKSPACES_CACHE_KEY = "octarine.workspaces.v1";
+const NOTES_CACHE_KEY = "octarine.notes.v1";
 const PINNED_NOTES_CACHE_KEY = "octarine.pinned-notes.v1";
 const CACHE_TTL = 15 * 60 * 1000;
 
@@ -42,6 +43,13 @@ function pinnedNotesKey(workspaces: Workspace[], excludedDirectoryNames: Set<str
   })}`;
 }
 
+function notesKey(workspaces: Workspace[], excludedDirectoryNames: Set<string>): string {
+  return `${NOTES_CACHE_KEY}.${JSON.stringify({
+    workspaces: workspaces.map((w) => w.path).sort(),
+    excludedDirectoryNames: [...excludedDirectoryNames].sort(),
+  })}`;
+}
+
 function isWorkspaceArray(v: unknown): v is Workspace[] {
   return Array.isArray(v) && v.every(isWorkspace);
 }
@@ -50,7 +58,11 @@ function isWorkspacesCache(v: unknown): v is ScanWorkspacesResult {
   if (!v || typeof v !== "object") return false;
 
   const { workspaces, invalidRoots } = v as ScanWorkspacesResult;
-  return isWorkspaceArray(workspaces) && Array.isArray(invalidRoots) && invalidRoots.every((root) => typeof root === "string");
+  return (
+    isWorkspaceArray(workspaces) &&
+    Array.isArray(invalidRoots) &&
+    invalidRoots.every((root) => typeof root === "string")
+  );
 }
 
 function isIndexedNoteArray(v: unknown): v is IndexedNote[] {
@@ -78,10 +90,22 @@ export function getPinnedNotesCache(
   return readCache(pinnedNotesKey(workspaces, excludedDirectoryNames), isIndexedNoteArray);
 }
 
+export function getNotesCache(workspaces: Workspace[], excludedDirectoryNames: Set<string>): IndexedNote[] | undefined {
+  return readCache(notesKey(workspaces, excludedDirectoryNames), isIndexedNoteArray);
+}
+
 export function setPinnedNotesCache(
   notes: IndexedNote[],
   workspaces: Workspace[],
   excludedDirectoryNames: Set<string>,
 ): void {
   writeCache(pinnedNotesKey(workspaces, excludedDirectoryNames), notes);
+}
+
+export function setNotesCache(
+  notes: IndexedNote[],
+  workspaces: Workspace[],
+  excludedDirectoryNames: Set<string>,
+): void {
+  writeCache(notesKey(workspaces, excludedDirectoryNames), notes);
 }
