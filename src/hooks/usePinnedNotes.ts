@@ -46,6 +46,14 @@ export function usePinnedNotes({ workspaces, searchText, selectedWorkspace, refr
           message: error instanceof Error ? error.message : String(error),
         });
       },
+      onData: () => {
+        if (refresh) {
+          showToast({
+            style: Toast.Style.Success,
+            title: "Notes refreshed",
+          });
+        }
+      },
     },
   );
 

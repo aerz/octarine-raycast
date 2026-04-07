@@ -1,5 +1,5 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { SearchNotesEmptyView } from "./components/empty-views/search-results";
 import { type WorkspaceSection, useNotes } from "./hooks/useNotes";
 import { useWorkspaces } from "./hooks/useWorkspaces";
@@ -16,19 +16,23 @@ type NotesListProps = {
   workspaces: WorkspaceSection[];
   grouped?: boolean;
   counter?: boolean;
+  onRefresh: () => void;
 };
 
 export default function SearchNotesCommand() {
   const preferences = searchNotesPreferences();
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const { workspaces } = useWorkspaces();
-  const { dropdown, sections, isLoading } = useNotes({
+  const [refresh, setRefresh] = useState(false);
+  const { workspaces } = useWorkspaces({ refresh });
+  const { dropdown, sections, isLoading, revalidate } = useNotes({
     workspaces,
     searchText,
     selectedWorkspace,
     showPinnedNotesFirst: preferences.showPinnedNotesFirst,
+    refresh,
   });
+  const onRefresh = () => (refresh ? revalidate() : setRefresh(true));
   const hasResults = sections.some((section) => section.notes.length > 0);
 
   return (
@@ -40,13 +44,13 @@ export default function SearchNotesCommand() {
       searchBarAccessory={<WorkspaceDropdown sections={dropdown} onWorkspaceChange={setSelectedWorkspace} />}
     >
       {dropdown.length === 0 ? (
-        <NotesEmptyView />
+        <NotesEmptyView actions={<DefaultActionPanel onRefresh={onRefresh} />} />
       ) : !hasResults ? (
-        <SearchNotesEmptyView />
+        <SearchNotesEmptyView actions={<DefaultActionPanel onRefresh={onRefresh} />} />
       ) : selectedWorkspace === "all" ? (
-        <NotesList workspaces={sections} grouped counter={preferences.showWorkspaceNoteCount} />
+        <NotesList workspaces={sections} grouped counter={preferences.showWorkspaceNoteCount} onRefresh={onRefresh} />
       ) : (
-        <NotesList workspaces={sections} />
+        <NotesList workspaces={sections} onRefresh={onRefresh} />
       )}
     </List>
   );
@@ -63,7 +67,7 @@ function WorkspaceDropdown({ sections, onWorkspaceChange }: WorkspaceDropdownPro
   );
 }
 
-function NotesList({ workspaces, grouped = false, counter = false }: NotesListProps) {
+function NotesList({ workspaces, grouped = false, counter = false, onRefresh }: NotesListProps) {
   if (grouped) {
     return workspaces.map((workspace) => (
       <List.Section
@@ -71,16 +75,18 @@ function NotesList({ workspaces, grouped = false, counter = false }: NotesListPr
         title={counter ? `${workspace.name} (${workspace.notes.length})` : workspace.name}
       >
         {workspace.notes.map((note) => (
-          <NoteItem key={note.id} note={note} />
+          <NoteItem key={note.id} note={note} onRefresh={onRefresh} />
         ))}
       </List.Section>
     ));
   }
 
-  return workspaces.flatMap((workspace) => workspace.notes.map((note) => <NoteItem key={note.id} note={note} />));
+  return workspaces.flatMap((workspace) =>
+    workspace.notes.map((note) => <NoteItem key={note.id} note={note} onRefresh={onRefresh} />),
+  );
 }
 
-function NoteItem({ note }: { note: IndexedNote }) {
+function NoteItem({ note, onRefresh }: { note: IndexedNote; onRefresh: () => void }) {
   return (
     <List.Item
       title={note.title}
@@ -88,20 +94,30 @@ function NoteItem({ note }: { note: IndexedNote }) {
       keywords={[note.path, note.workspace.name]}
       accessories={note.pinned ? [{ icon: Icon.Tack, tooltip: "Pinned" }] : undefined}
       actions={
-        <ActionPanel>
+        <DefaultActionPanel onRefresh={onRefresh}>
           <Action title="Open Note in Octarine" onAction={() => void openNote(note.path, note.workspace.name)} />
-        </ActionPanel>
+        </DefaultActionPanel>
       }
     />
   );
 }
 
-function NotesEmptyView() {
+function DefaultActionPanel({ onRefresh, children }: { onRefresh: () => void; children?: ReactNode }) {
+  return (
+    <ActionPanel>
+      {children}
+      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+    </ActionPanel>
+  );
+}
+
+function NotesEmptyView({ actions }: { actions?: ReactNode }) {
   return (
     <List.EmptyView
       icon={Icon.Document}
       title="No notes in any workspace"
       description="Create a note in Octarine to see it here"
+      actions={actions}
     />
   );
 }

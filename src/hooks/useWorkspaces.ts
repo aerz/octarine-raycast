@@ -57,6 +57,14 @@ export function useWorkspaces(options: Options = {}): Result {
           title: "Failed to load workspaces",
         });
       },
+      onData: () => {
+        if (refresh) {
+          showToast({
+            style: Toast.Style.Success,
+            title: "Workspaces refreshed",
+          });
+        }
+      },
     },
   );
 

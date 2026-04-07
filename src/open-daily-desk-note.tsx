@@ -17,7 +17,7 @@ export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments:
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
   const supportedDate = isSupportedDate(requestedDate);
   const [refresh, setRefresh] = useState(false);
-  const { workspaces, status, revalidate } = useWorkspaces({ enabled: supportedDate });
+  const { workspaces, status, revalidate } = useWorkspaces({ enabled: supportedDate, refresh });
   const onRefresh = () => (refresh ? revalidate() : setRefresh(true));
 
   useOpenTarget({

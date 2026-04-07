@@ -117,7 +117,7 @@ function DefaultActionPanel({ onRefresh, children }: { onRefresh: () => void; ch
 function NotesEmptyView({ actions }: { actions?: ReactNode }) {
   return (
     <List.EmptyView
-      icon={Icon.Geopin}
+      icon={Icon.Tack}
       title="Nothing Pinned Yet"
       description="Pin a note in Octarine to see it here."
       actions={actions}
