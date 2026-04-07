@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useNotes } from "./useNotes";
+import { useWorkspaces } from "./useWorkspaces";
 import { buildDailyDeskItems, isDailyDeskItem, type DailyDeskItem } from "../lib/daily-desk";
 import { type IndexedNote } from "../types/notes";
 
@@ -28,16 +29,14 @@ type Result = {
 };
 
 export function useQuickCapture({ search, workspace }: Options): Result {
-  const {
-    workspaceNames: workspaces,
-    matchingNotes,
-    searchState: notesSearchState,
-    isLoading,
-  } = useNotes({
+  const { workspaces: availableWorkspaces, status } = useWorkspaces();
+  const { dropdown: workspaces, sections, isLoading } = useNotes({
+    workspaces: availableWorkspaces,
     searchText: search,
     selectedWorkspace: workspace,
     showPinnedNotesFirst: false,
   });
+  const matchingNotes = useMemo(() => sections.flatMap((section) => section.notes), [sections]);
 
   const searchableItems = useMemo(
     () => [...matchingNotes, ...buildDailyDeskItems(workspaces, search)],
@@ -54,8 +53,9 @@ export function useQuickCapture({ search, workspace }: Options): Result {
   const showQuickCapture = search.trim().length === 0;
   const searchState = getSearchState({
     filteredItemCount: items.length,
-    isLoading,
-    searchState: notesSearchState,
+    hasWorkspaces: availableWorkspaces.length > 0,
+    isLoading: status.isLoading || isLoading,
+    noteCount: matchingNotes.length,
     workspace,
     showQuickCapture,
   });
@@ -65,34 +65,30 @@ export function useQuickCapture({ search, workspace }: Options): Result {
     items,
     workspaceItems,
     searchState,
-    isLoading,
+    isLoading: status.isLoading || isLoading,
   };
 }
 
 function getSearchState({
   filteredItemCount,
+  hasWorkspaces,
   isLoading,
-  searchState,
+  noteCount,
   workspace,
   showQuickCapture,
 }: {
   filteredItemCount: number;
+  hasWorkspaces: boolean;
   isLoading: boolean;
-  searchState:
-    | "loading"
-    | "noConfiguredWorkspaces"
-    | "noAvailableNotes"
-    | "noMatchingNotes"
-    | "showByWorkspace"
-    | "showFlat";
+  noteCount: number;
   workspace: string;
   showQuickCapture: boolean;
 }): SearchState {
-  if (searchState === "noConfiguredWorkspaces") {
+  if (!isLoading && !hasWorkspaces) {
     return "noConfiguredWorkspaces";
   }
 
-  if (showQuickCapture && searchState === "noAvailableNotes") {
+  if (showQuickCapture && !isLoading && noteCount === 0) {
     return "noAvailableNotes";
   }
 

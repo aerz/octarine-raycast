@@ -5,6 +5,7 @@ import { WorkspaceNotesEmptyView } from "../empty-views/workspace-missing-files"
 import { WorkspaceListEmptyView } from "../empty-views/workspace";
 import { DateFormatsDetail } from "../notifications/date-formats";
 import { useNotes } from "../../hooks/useNotes";
+import { useWorkspaces } from "../../hooks/useWorkspaces";
 import { buildDailyDeskItems, isDailyDeskItem, isSupportedDate, type DailyDeskItem } from "../../lib/daily-desk";
 import { type IndexedNote } from "../../lib/notes";
 import { openNote } from "../../lib/octarine";
@@ -41,28 +42,26 @@ export type QuickCaptureNotePickerProps = {
 
 function getNotePickerRenderState({
   filteredItemCount,
+  hasConfiguredRoots,
+  hasWorkspaces,
   isLoading,
-  searchState,
+  noteCount,
   searchText,
   selectedWorkspace,
 }: {
   filteredItemCount: number;
+  hasConfiguredRoots: boolean;
+  hasWorkspaces: boolean;
   isLoading: boolean;
-  searchState:
-    | "loading"
-    | "noConfiguredWorkspaces"
-    | "noAvailableNotes"
-    | "noMatchingNotes"
-    | "showByWorkspace"
-    | "showFlat";
+  noteCount: number;
   searchText: string;
   selectedWorkspace: string;
 }): NotePickerRenderState {
-  if (searchState === "noConfiguredWorkspaces") {
+  if (!hasConfiguredRoots || (!isLoading && !hasWorkspaces)) {
     return "noConfiguredWorkspaces";
   }
 
-  if (searchText.trim().length === 0 && searchState === "noAvailableNotes") {
+  if (searchText.trim().length === 0 && !isLoading && noteCount === 0) {
     return "noAvailableNotes";
   }
 
@@ -279,14 +278,15 @@ export function NotePicker({
 }: NotePickerProps) {
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const { workspaceNames, matchingNotes, searchState, isLoading } = useNotes({
+  const { workspaces, status } = useWorkspaces({ enabled: hasConfiguredRoots });
+  const { dropdown: workspaceNames, sections, isLoading: isNotesLoading } = useNotes({
+    workspaces,
     searchText,
     selectedWorkspace,
-    excludedDirectoryNames,
-    workspaceSearchSignature,
-    hasConfiguredRoots,
     showPinnedNotesFirst: false,
   });
+  const matchingNotes = sections.flatMap((section) => section.notes);
+  const isLoading = status.isLoading || isNotesLoading;
 
   const searchableItems = [...matchingNotes, ...buildDailyDeskItems(workspaceNames, searchText)];
   const filteredItems = searchableItems.filter(
@@ -297,8 +297,10 @@ export function NotePicker({
   const itemsByWorkspace = groupItemsByWorkspace(filteredItems);
   const renderState = getNotePickerRenderState({
     filteredItemCount: filteredItems.length,
+    hasConfiguredRoots,
+    hasWorkspaces: workspaces.length > 0,
     isLoading,
-    searchState,
+    noteCount: matchingNotes.length,
     searchText,
     selectedWorkspace,
   });
