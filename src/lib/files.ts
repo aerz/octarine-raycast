@@ -43,83 +43,53 @@ function extractFrontmatter(content: string): string | undefined {
   return undefined;
 }
 
-async function scanWorkspaceRootPaths(root: string, excludedWorkspaces: Set<string>): Promise<string[]> {
-  const discovered: string[] = [];
-  const pending = [root];
-
-  while (pending.length > 0) {
-    const dir = pending.pop()!;
-
-    let entries: Dirent[];
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-
-    const hasWorkspaceMarker = entries.some((entry) => entry.isDirectory() && entry.name === WORKSPACE_DIR_NAME);
-    if (hasWorkspaceMarker) {
-      const workspacePath = path.normalize(path.resolve(dir));
-      const workspaceName = path.basename(workspacePath).toLowerCase();
-
-      if (!excludedWorkspaces.has(workspaceName)) {
-        discovered.push(workspacePath);
-      }
-
-      continue;
-    }
-
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.isSymbolicLink() || entry.name === WORKSPACE_DIR_NAME) {
-        continue;
-      }
-
-      pending.push(path.join(dir, entry.name));
-    }
-  }
-
-  return discovered;
-}
-
 export async function scanWorkspacePaths(
   roots: string[],
   excludedWorkspaces: Set<string>,
 ): Promise<ScanWorkspacePathsResult> {
-  const results = await Promise.all(
-    roots.map(async (root) => {
-      try {
-        const stat = await fs.stat(root);
-        if (!stat.isDirectory()) {
-          return { root, invalid: true, paths: [] as string[] };
-        }
-      } catch {
-        return { root, invalid: true, paths: [] as string[] };
-      }
-
-      return {
-        root,
-        invalid: false,
-        paths: await scanWorkspaceRootPaths(root, excludedWorkspaces),
-      };
-    }),
-  );
-
   const invalidRoots: string[] = [];
   const discovered = new Set<string>();
 
-  for (const result of results) {
-    if (result.invalid) {
-      invalidRoots.push(result.root);
-      continue;
-    }
+  const addWorkspace = (workspacePath: string) => {
+    const name = path.basename(workspacePath).toLowerCase();
+    if (!excludedWorkspaces.has(name)) discovered.add(workspacePath);
+  };
 
-    for (const workspacePath of result.paths) {
-      discovered.add(workspacePath);
-    }
-  }
+  await Promise.all(
+    roots.map(async (root) => {
+      const resolvedRoot = path.resolve(root);
+
+      let entries;
+      try {
+        entries = await fs.readdir(resolvedRoot, { withFileTypes: true });
+      } catch {
+        invalidRoots.push(root);
+        return;
+      }
+
+      if (entries.some((e) => e.isDirectory() && e.name === WORKSPACE_DIR_NAME)) {
+        addWorkspace(resolvedRoot);
+        return;
+      }
+
+      const directories = entries.filter((e) => e.isDirectory() && !e.isSymbolicLink() && !e.name.startsWith("."));
+
+      await Promise.all(
+        directories.map(async (dir) => {
+          const childPath = path.join(resolvedRoot, dir.name);
+          try {
+            const stat = await fs.stat(path.join(childPath, WORKSPACE_DIR_NAME));
+            if (stat.isDirectory()) addWorkspace(childPath);
+          } catch {
+            return;
+          }
+        }),
+      );
+    }),
+  );
 
   return {
-    paths: [...discovered],
+    paths: Array.from(discovered),
     invalidRoots,
   };
 }
