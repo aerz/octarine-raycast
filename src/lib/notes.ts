@@ -1,12 +1,12 @@
-import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { type Workspace } from "../types/octarine";
 import { type IndexedNote, type IndexedNoteFolder } from "../types/notes";
 import { getNotesCache, getPinnedNotesCache, setNotesCache, setPinnedNotesCache } from "./cache";
-import { readMarkdownFrontmatter, scanMarkdownFiles } from "./files";
+import { readMarkdownFrontmatter, scanDirectories, scanMarkdownFiles } from "./files";
 import { buildSearchIndexText } from "./search";
 
 const DEFAULT_EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
+const DAILY_FOLDER_RELATIVE_PATH = "daily";
 
 function withDefaultExcluded(directories: Set<string>): Set<string> {
   return new Set([...DEFAULT_EXCLUDED_DIRECTORY_NAMES, ...directories]);
@@ -124,95 +124,34 @@ export async function scanWorkspaceDirectories(
   workspaces: Workspace[],
   excludedDirectories: Set<string>,
 ): Promise<IndexedNoteFolder[]> {
-  const discoveredFolderIds = new Set<string>();
-  const discoveredFolders: IndexedNoteFolder[] = [];
+  const effectiveExcluded = withDefaultExcluded(excludedDirectories);
   const foldersByWorkspace = await Promise.all(
-    workspaces.map((workspace) => scanWorkspaceForNoteFolders(workspace, excludedDirectories)),
+    workspaces.map(async (workspace) => {
+      const discoveredDirectories = await scanDirectories(workspace.path, effectiveExcluded);
+
+      return [
+        {
+          id: `${workspace.path}::.`,
+          name: "Root (No folder)",
+          path: "",
+          workspace,
+          searchText: buildSearchIndexText("root", workspace.name),
+        },
+        ...discoveredDirectories
+          .filter((dir) => dir.relative !== DAILY_FOLDER_RELATIVE_PATH)
+          .map((directory) => ({
+            id: `${workspace.path}::${directory.relative}`,
+            name: directory.name,
+            path: directory.relative,
+            workspace,
+            searchText: buildSearchIndexText(directory.name, directory.relative, workspace.name),
+          })),
+      ];
+    }),
   );
 
-  for (const workspaceFolders of foldersByWorkspace) {
-    for (const folder of workspaceFolders) {
-      if (discoveredFolderIds.has(folder.id)) {
-        continue;
-      }
-
-      discoveredFolderIds.add(folder.id);
-      discoveredFolders.push(folder);
-    }
-  }
-
-  discoveredFolders.sort((left, right) => {
-    const byWorkspace = left.workspace.name.localeCompare(right.workspace.name);
-    if (byWorkspace !== 0) {
-      return byWorkspace;
-    }
-
-    return left.path.localeCompare(right.path);
+  return foldersByWorkspace.flat().sort((a, b) => {
+    const byWorkspace = a.workspace.name.localeCompare(b.workspace.name);
+    return byWorkspace !== 0 ? byWorkspace : a.path.localeCompare(b.path);
   });
-
-  return discoveredFolders;
-}
-
-async function scanWorkspaceForNoteFolders(
-  workspace: Workspace,
-  excludedDirectories: Set<string>,
-): Promise<IndexedNoteFolder[]> {
-  const pendingDirectories: Array<{ absolutePath: string; relativePath: string }> = [
-    { absolutePath: workspace.path, relativePath: "" },
-  ];
-  const discoveredFolders: IndexedNoteFolder[] = [
-    {
-      id: `${workspace.path}::.`,
-      name: "Root (No folder)",
-      path: "",
-      workspace,
-      searchText: buildSearchIndexText("root", workspace.name),
-    },
-  ];
-
-  while (pendingDirectories.length > 0) {
-    const currentDirectory = pendingDirectories.pop();
-    if (!currentDirectory) {
-      continue;
-    }
-
-    let entries: Dirent[];
-    try {
-      entries = await fs.readdir(currentDirectory.absolutePath, { withFileTypes: true });
-    } catch (error) {
-      throw new Error(`Failed to read directory ${currentDirectory.absolutePath}: ${error}`);
-    }
-
-    for (const entry of entries) {
-      const normalizedEntryName = entry.name.toLowerCase();
-      const isRootLevelDailyFolder = currentDirectory.relativePath === "" && normalizedEntryName === "daily";
-      if (
-        !entry.isDirectory() ||
-        entry.isSymbolicLink() ||
-        entry.name.startsWith(".") ||
-        isRootLevelDailyFolder ||
-        DEFAULT_EXCLUDED_DIRECTORY_NAMES.has(normalizedEntryName) ||
-        excludedDirectories.has(normalizedEntryName)
-      ) {
-        continue;
-      }
-
-      const absolutePath = path.join(currentDirectory.absolutePath, entry.name);
-      const relativePath = currentDirectory.relativePath
-        ? path.posix.join(currentDirectory.relativePath, entry.name)
-        : entry.name;
-
-      discoveredFolders.push({
-        id: `${workspace.path}::${relativePath}`,
-        name: entry.name,
-        path: relativePath,
-        workspace,
-        searchText: buildSearchIndexText(entry.name, relativePath, workspace.name),
-      });
-
-      pendingDirectories.push({ absolutePath, relativePath });
-    }
-  }
-
-  return discoveredFolders;
 }

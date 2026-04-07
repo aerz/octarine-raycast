@@ -1,8 +1,8 @@
-import { Action, ActionPanel, BrowserExtension, Icon, List, Toast, environment, showToast } from "@raycast/api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Action, ActionPanel, BrowserExtension, Icon, List, environment } from "@raycast/api";
+import { useEffect, useMemo, useState } from "react";
 import path from "node:path";
 import { WorkspaceListEmptyView } from "../empty-views/workspace";
-import { type IndexedNoteFolder, scanNoteFoldersFromWorkspaces } from "../../lib/notes";
+import { type IndexedNoteFolder, scanWorkspaceDirectories } from "../../lib/notes";
 import { appendNoteContent } from "../../lib/octarine";
 import { matchesSearchIndex } from "../../lib/search";
 import { loadWorkspaces } from "../../lib/workspaces";
@@ -121,26 +121,12 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
-  const hasShownScanErrorToast = useRef(false);
 
   useEffect(() => {
     let canceled = false;
 
-    const showScanFailureToast = async () => {
-      if (hasShownScanErrorToast.current) {
-        return;
-      }
-
-      hasShownScanErrorToast.current = true;
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to Scan Some Folders",
-      });
-    };
-
     const scanFolders = async () => {
       setIsLoading(true);
-      hasShownScanErrorToast.current = false;
 
       try {
         if (!hasConfiguredRoots) {
@@ -167,10 +153,9 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
           return;
         }
 
-        const discoveredFolders = await scanNoteFoldersFromWorkspaces(
+        const discoveredFolders = await scanWorkspaceDirectories(
           workspaceResult.workspaces,
           excludedDirectoryNames,
-          showScanFailureToast,
         );
 
         if (!canceled) {

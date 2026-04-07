@@ -14,6 +14,12 @@ export type ScanWorkspacePathsResult = {
   invalidRoots: string[];
 };
 
+export type ScannedDirectory = {
+  name: string;
+  absolute: string;
+  relative: string;
+};
+
 function toPosixPath(p: string): string {
   return p.split(path.sep).join(path.posix.sep);
 }
@@ -131,6 +137,41 @@ export async function scanMarkdownFiles(root: string, excluded: Set<string>): Pr
   }
 
   return files;
+}
+
+export async function scanDirectories(root: string, excludedDirectories: Set<string>): Promise<ScannedDirectory[]> {
+  const pending: Array<{ absolute: string; relative: string }> = [{ absolute: root, relative: "" }];
+  const directories: ScannedDirectory[] = [];
+
+  while (pending.length > 0) {
+    const { absolute: currentAbsolute, relative: currentRelative } = pending.pop()!;
+
+    let entries: Dirent[];
+    try {
+      entries = await fs.readdir(currentAbsolute, { withFileTypes: true });
+    } catch (error) {
+      throw new Error(`Failed to read directory ${currentAbsolute}: ${toErrorMessage(error)}`);
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".") || excludedDirectories.has(entry.name.toLowerCase())) {
+        continue;
+      }
+
+      const absolute = path.join(currentAbsolute, entry.name);
+      const relative = currentRelative ? path.posix.join(currentRelative, entry.name) : entry.name;
+
+      directories.push({
+        name: entry.name,
+        absolute,
+        relative,
+      });
+
+      pending.push({ absolute, relative });
+    }
+  }
+
+  return directories;
 }
 
 export async function readMarkdownFrontmatter(filePath: string): Promise<string | undefined> {
