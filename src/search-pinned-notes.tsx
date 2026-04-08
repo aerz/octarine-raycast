@@ -1,7 +1,7 @@
 import { List, ActionPanel, Action, Icon } from "@raycast/api";
 import { useState, type ReactNode } from "react";
 import { SearchNotesEmptyView } from "./components/empty-views/search-results";
-import { type WorkspaceSection, usePinnedNotes } from "./hooks/usePinnedNotes";
+import { type WorkspaceSection, useNotes } from "./hooks/useNotes";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { searchPinnedNotesPreferences } from "./lib/preferences";
 import { openPinnedNote } from "./lib/octarine";
@@ -30,7 +30,8 @@ export default function SearchPinnedNotesCommand() {
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const [refresh, setRefresh] = useState(false);
   const { workspaces } = useWorkspaces({ refresh });
-  const { dropdown, sections, isLoading, revalidate } = usePinnedNotes({
+  const { dropdown, sections, isLoading, revalidate } = useNotes({
+    scope: "pinned",
     workspaces,
     searchText,
     selectedWorkspace,

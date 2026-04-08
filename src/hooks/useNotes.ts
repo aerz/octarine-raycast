@@ -2,7 +2,7 @@ import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
 import { extensionPreferences } from "../lib/preferences";
-import { loadNotes } from "../lib/notes";
+import { loadNotes, loadPinnedNotes } from "../lib/notes";
 import { matchesPathSearch } from "../lib/search";
 import type { Workspace } from "../types/octarine";
 import type { IndexedNote } from "../types/notes";
@@ -13,12 +13,20 @@ export type WorkspaceSection = {
   notes: IndexedNote[];
 };
 
+type Scope = "all" | "pinned";
+
 type Options = {
+  scope?: Scope;
   workspaces: Workspace[];
   searchText: string;
   selectedWorkspace: string;
-  showPinnedNotesFirst: boolean;
+  showPinnedNotesFirst?: boolean;
   refresh?: boolean;
+};
+
+type NotesResult = {
+  dropdown: string[];
+  sections: WorkspaceSection[];
 };
 
 type Result = {
@@ -29,27 +37,36 @@ type Result = {
 };
 
 export function useNotes({
+  scope = "all",
   workspaces,
   searchText,
   selectedWorkspace,
-  showPinnedNotesFirst,
+  showPinnedNotesFirst = false,
   refresh = false,
 }: Options): Result {
   const preferences = extensionPreferences();
 
-  const { data, isLoading, revalidate } = useCachedPromise(
-    async (refresh: boolean, workspaces: Workspace[]): Promise<IndexedNote[]> => {
+  const {
+    data: notes,
+    isLoading,
+    revalidate,
+  } = useCachedPromise(
+    async (refresh: boolean, workspaces: Workspace[], scope: Scope): Promise<IndexedNote[]> => {
+      if (scope === "pinned") {
+        return loadPinnedNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
+      }
+
       return loadNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
     },
-    [refresh, workspaces],
+    [refresh, workspaces, scope],
     {
       initialData: [] satisfies IndexedNote[],
       keepPreviousData: true,
       onError: async (error) => {
-        console.error("Failed to scan Octarine notes", error);
+        console.error(`Failed to scan Octarine notes`, error);
         await showToast({
           style: Toast.Style.Failure,
-          title: "Failed to Scan Notes",
+          title: `Failed to Scan Notes`,
           message: error instanceof Error ? error.message : String(error),
         });
       },
@@ -64,11 +81,14 @@ export function useNotes({
     },
   );
 
-  const grouped = useMemo(() => groupByWorkspace(data), [data]);
-  const dropdown = useMemo(() => dropdownNames(grouped), [grouped]);
-  const sections = useMemo(
-    () => filterWorkspaces(grouped, selectedWorkspace, searchText, showPinnedNotesFirst),
-    [grouped, searchText, selectedWorkspace, showPinnedNotesFirst],
+  const { dropdown, sections } = useMemo(
+    () =>
+      buildNotesResult(notes, {
+        searchText,
+        selectedWorkspace,
+        showPinnedNotesFirst,
+      }),
+    [notes, searchText, selectedWorkspace, showPinnedNotesFirst],
   );
 
   return {
@@ -76,6 +96,26 @@ export function useNotes({
     sections,
     isLoading,
     revalidate,
+  };
+}
+
+function buildNotesResult(
+  notes: IndexedNote[],
+  {
+    searchText,
+    selectedWorkspace,
+    showPinnedNotesFirst,
+  }: {
+    searchText: string;
+    selectedWorkspace: string;
+    showPinnedNotesFirst: boolean;
+  },
+): NotesResult {
+  const grouped = groupByWorkspace(notes);
+
+  return {
+    dropdown: workspaceNames(grouped),
+    sections: buildWorkspaceSections(grouped, { selectedWorkspace, searchText, showPinnedNotesFirst }),
   };
 }
 
@@ -99,15 +139,21 @@ function groupByWorkspace(notes: IndexedNote[]): WorkspaceSection[] {
   return Array.from(grouped.values()).sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function dropdownNames(workspaces: WorkspaceSection[]): string[] {
+function workspaceNames(workspaces: WorkspaceSection[]): string[] {
   return Array.from(new Set(workspaces.map((workspace) => workspace.name)));
 }
 
-function filterWorkspaces(
+function buildWorkspaceSections(
   workspaces: WorkspaceSection[],
-  selectedWorkspace: string,
-  searchText: string,
-  showPinnedNotesFirst: boolean,
+  {
+    selectedWorkspace,
+    searchText,
+    showPinnedNotesFirst,
+  }: {
+    selectedWorkspace: string;
+    searchText: string;
+    showPinnedNotesFirst: boolean;
+  },
 ): WorkspaceSection[] {
   return workspaces
     .filter((workspace) => selectedWorkspace === "all" || workspace.name === selectedWorkspace)
@@ -119,13 +165,13 @@ function filterWorkspaces(
       return {
         name: workspace.name,
         path: workspace.path,
-        notes: orderPinnedNotesFirst(notes, showPinnedNotesFirst),
+        notes: sortPinnedNotesFirst(notes, showPinnedNotesFirst),
       };
     })
     .filter((workspace) => workspace.notes.length > 0);
 }
 
-function orderPinnedNotesFirst(notes: IndexedNote[], showPinnedNotesFirst: boolean): IndexedNote[] {
+function sortPinnedNotesFirst(notes: IndexedNote[], showPinnedNotesFirst: boolean): IndexedNote[] {
   if (!showPinnedNotesFirst || notes.length < 2) {
     return notes;
   }
