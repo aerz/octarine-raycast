@@ -1,14 +1,18 @@
-type UnknownRecord = Record<string, unknown>;
-
 export type Workspace = {
   name: string;
   path: string;
 };
 
+export type Folder = {
+  name: string;
+  path: string;
+  workspace: Workspace;
+};
+
 export type Note = {
   title: string;
   path: string;
-  workspace: Workspace;
+  folder: Folder;
 };
 
 export type View = {
@@ -24,6 +28,8 @@ export type Attachment = {
   extension: string;
   workspace: Workspace;
 };
+
+type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
   return Boolean(value) && typeof value === "object";
@@ -41,12 +47,20 @@ export function isWorkspace(value: unknown): value is Workspace {
   return hasStringProperty(value, "name") && hasStringProperty(value, "path");
 }
 
+export function isFolder(value: unknown): value is Folder {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return hasStringProperty(value, "name") && hasStringProperty(value, "path") && isWorkspace(value.workspace);
+}
+
 export function isNote(value: unknown): value is Note {
   if (!isRecord(value)) {
     return false;
   }
 
-  return hasStringProperty(value, "title") && hasStringProperty(value, "path") && isWorkspace(value.workspace);
+  return hasStringProperty(value, "title") && hasStringProperty(value, "path") && isFolder(value.folder);
 }
 
 export function isView(value: unknown): value is View {

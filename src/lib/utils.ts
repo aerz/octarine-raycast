@@ -16,11 +16,11 @@ export function normalizeText(value?: string): string {
 }
 
 /**
- * Normalizes a path string to lowercase forward-slash form.
+ * Normalizes search text to lowercase forward-slash form.
  *
- * @param value Path value to normalize for search matching.
+ * @param value Text value to normalize for search matching.
  */
-export function normalizePathForSearch(value: string): string {
+export function normalizeSearchText(value: string): string {
   return value.trim().toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/");
 }
 

@@ -1,5 +1,5 @@
 import { Action, ActionPanel, Form } from "@raycast/api";
-import { type IndexedNote } from "../../lib/notes";
+import { type IndexedNote } from "../../types/notes";
 import { isSupportedDate } from "../../lib/daily-desk";
 import { appendDailyNoteContent, appendNoteContent } from "../../lib/octarine";
 import { isEmptyAppendContent, showCaptureFailureToast } from "./shared";
@@ -72,12 +72,12 @@ function getAppendTargetConfig(props: CaptureContentFormProps): AppendTargetConf
     return {
       navigationTitle: `Append to ${props.note.title}`,
       submitTitle: "Append to Note",
-      description: `${props.note.workspace.name} / ${props.note.path}`,
+      description: `${props.note.folder.workspace.name} / ${props.note.path}`,
       placeholder: "Write something to append to this note...",
       append: async (content) =>
         appendNoteContent({
           path: props.note.path,
-          workspace: props.note.workspace.name,
+          workspace: props.note.folder.workspace.name,
           content,
         }),
     };

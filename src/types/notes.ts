@@ -1,27 +1,13 @@
-import { isNote, type Workspace } from "./octarine";
+import { isFolder, isNote, type Folder, type Note } from "./octarine";
 
-export type ScannedNote = {
+export type IndexedNote = Note & {
   id: string;
-  title: string;
-  path: string;
-  workspace: Workspace;
   pinned: boolean;
-};
-
-export type IndexedNote = ScannedNote & {
-  normalizedTitle: string;
-  normalizedPath: string;
-  normalizedWorkspace: string;
-  normalizedDirectory: string;
-  directorySegments: string[];
   searchText: string;
 };
 
-export type IndexedNoteFolder = {
+export type IndexedFolder = Folder & {
   id: string;
-  name: string;
-  path: string;
-  workspace: Workspace;
   searchText: string;
 };
 
@@ -30,12 +16,14 @@ export function isIndexedNote(value: unknown): value is IndexedNote {
     isNote(value) &&
     typeof (value as IndexedNote).id === "string" &&
     typeof (value as IndexedNote).pinned === "boolean" &&
-    typeof (value as IndexedNote).normalizedTitle === "string" &&
-    typeof (value as IndexedNote).normalizedPath === "string" &&
-    typeof (value as IndexedNote).normalizedWorkspace === "string" &&
-    typeof (value as IndexedNote).normalizedDirectory === "string" &&
-    Array.isArray((value as IndexedNote).directorySegments) &&
-    (value as IndexedNote).directorySegments.every((s) => typeof s === "string") &&
     typeof (value as IndexedNote).searchText === "string"
+  );
+}
+
+export function isIndexedFolder(value: unknown): value is IndexedFolder {
+  return (
+    isFolder(value) &&
+    typeof (value as IndexedFolder).id === "string" &&
+    typeof (value as IndexedFolder).searchText === "string"
   );
 }

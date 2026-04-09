@@ -1,12 +1,13 @@
-import { Action, ActionPanel, BrowserExtension, Icon, List, environment } from "@raycast/api";
+import { Action, ActionPanel, BrowserExtension, Icon, List, environment, showToast, Toast } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
 import path from "node:path";
 import { WorkspaceListEmptyView } from "../empty-views/workspace";
-import { type IndexedNoteFolder, scanWorkspaceDirectories } from "../../lib/notes";
+import { scanWorkspaceFolders } from "../../lib/notes";
 import { appendNoteContent } from "../../lib/octarine";
-import { matchesSearchIndex } from "../../lib/search";
-import { loadWorkspaces } from "../../lib/workspaces";
+import { querySearchText } from "../../lib/search";
+import { getWorkspaces } from "../../lib/workspaces";
 import type { Workspace } from "../../types/octarine";
+import type { IndexedFolder } from "../../types/notes";
 import { match } from "../../utils/match";
 import { showCaptureFailureToast } from "./shared";
 
@@ -43,8 +44,8 @@ function getFolderPickerRenderState({
   return "showFlat";
 }
 
-function groupFoldersByWorkspace(folders: IndexedNoteFolder[]): Map<string, IndexedNoteFolder[]> {
-  const groupedFolders = new Map<string, IndexedNoteFolder[]>();
+function groupFoldersByWorkspace(folders: IndexedFolder[]): Map<string, IndexedFolder[]> {
+  const groupedFolders = new Map<string, IndexedFolder[]>();
 
   for (const folder of folders) {
     const workspaceName = folder.workspace.name;
@@ -93,13 +94,7 @@ function buildWebsiteCaptureFileName(tabTitle?: string, tabUrl?: string): string
   return `${sanitizeFileName(tabTitle || fallbackTitle)} ${timestamp}`;
 }
 
-function FolderItem({
-  folder,
-  onCapture,
-}: {
-  folder: IndexedNoteFolder;
-  onCapture: (folder: IndexedNoteFolder) => void;
-}) {
+function FolderItem({ folder, onCapture }: { folder: IndexedFolder; onCapture: (folder: IndexedFolder) => void }) {
   return (
     <List.Item
       icon={Icon.Folder}
@@ -117,7 +112,7 @@ function FolderItem({
 
 export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: CaptureWebsiteProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [folders, setFolders] = useState<IndexedNoteFolder[]>([]);
+  const [folders, setFolders] = useState<IndexedFolder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
@@ -137,12 +132,13 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
           return;
         }
 
-        const workspaceResult = await loadWorkspaces({ refresh: true });
+        const indexedWorkspaces = await getWorkspaces({ refresh: true });
+        const workspaces = indexedWorkspaces.filter((workspace) => !workspace.invalid && !workspace.ignored);
         if (!canceled) {
-          setWorkspaces(workspaceResult.workspaces);
+          setWorkspaces(workspaces);
         }
 
-        if (workspaceResult.workspaces.length === 0) {
+        if (workspaces.length === 0) {
           if (!canceled) {
             setFolders([]);
           }
@@ -153,10 +149,7 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
           return;
         }
 
-        const discoveredFolders = await scanWorkspaceDirectories(
-          workspaceResult.workspaces,
-          excludedDirectoryNames,
-        );
+        const discoveredFolders = await scanWorkspaceFolders(workspaces, excludedDirectoryNames);
 
         if (!canceled) {
           setFolders(discoveredFolders);
@@ -179,10 +172,7 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
   }, [excludedDirectoryNames, hasConfiguredRoots]);
 
   const workspaceNames = useMemo(
-    () =>
-      Array.from(new Set(folders.map((folder) => folder.workspace.name))).sort((left, right) =>
-        left.localeCompare(right),
-      ),
+    () => Array.from(new Set(folders.map((folder) => folder.workspace.name))).sort((a, b) => a.localeCompare(b)),
     [folders],
   );
   const filteredFolders = useMemo(
@@ -190,7 +180,7 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
     [folders, selectedWorkspace],
   );
   const searchFilteredFolders = useMemo(
-    () => filteredFolders.filter((folder) => matchesSearchIndex(folder.searchText, searchText)),
+    () => filteredFolders.filter((folder) => querySearchText(folder, searchText)),
     [filteredFolders, searchText],
   );
   const foldersByWorkspace = useMemo(() => groupFoldersByWorkspace(searchFilteredFolders), [searchFilteredFolders]);
@@ -201,7 +191,7 @@ export function CaptureWebsite({ excludedDirectoryNames, hasConfiguredRoots }: C
     selectedWorkspace,
   });
 
-  async function handleFolderSelection(folder: IndexedNoteFolder) {
+  async function handleFolderSelection(folder: IndexedFolder) {
     if (!environment.canAccess(BrowserExtension)) {
       await showCaptureFailureToast(
         "Browser Extension Required",

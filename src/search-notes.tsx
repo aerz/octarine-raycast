@@ -91,11 +91,11 @@ function NoteItem({ note, onRefresh }: { note: IndexedNote; onRefresh: () => voi
     <List.Item
       title={note.title}
       subtitle={note.path}
-      keywords={[note.path, note.workspace.name]}
+      keywords={[note.path, note.folder.workspace.name]}
       accessories={note.pinned ? [{ icon: Icon.Tack, tooltip: "Pinned" }] : undefined}
       actions={
         <DefaultActionPanel onRefresh={onRefresh}>
-          <Action title="Open Note in Octarine" onAction={() => void openNote(note.path, note.workspace.name)} />
+          <Action title="Open Note in Octarine" onAction={() => void openNote(note.path, note.folder.workspace.name)} />
         </DefaultActionPanel>
       }
     />

@@ -9,9 +9,9 @@ import { CaptureSelectedText } from "./components/quick-capture/capture-selected
 import { CaptureWebsite } from "./components/quick-capture/capture-website";
 import { useQuickCapture, type QuickCaptureItem } from "./hooks/useQuickCapture";
 import { isDailyDeskItem, type DailyDeskItem } from "./lib/daily-desk";
-import { type IndexedNote } from "./lib/notes";
 import { openNote } from "./lib/octarine";
 import { extensionPreferences } from "./lib/preferences";
+import { type IndexedNote } from "./types/notes";
 import { match } from "./utils/match";
 
 export default function QuickCaptureCommand() {
@@ -75,14 +75,14 @@ function NoteListItem({ note }: { note: IndexedNote }) {
     <List.Item
       title={note.title}
       subtitle={note.path}
-      keywords={[note.path, note.workspace.name]}
+      keywords={[note.path, note.folder.workspace.name]}
       actions={
         <ActionPanel>
           <Action.Push title="Append to Note" target={<CaptureContentForm note={note} />} />
           <Action
             title="Open Note in Octarine"
             icon={Icon.AppWindow}
-            onAction={() => void openNote(note.path, note.workspace.name)}
+            onAction={() => void openNote(note.path, note.folder.workspace.name)}
           />
           <Action.CopyToClipboard title="Copy Note Path" content={note.path} />
         </ActionPanel>

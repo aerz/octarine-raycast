@@ -2,8 +2,8 @@ import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
 import { extensionPreferences } from "../lib/preferences";
-import { loadNotes, loadPinnedNotes } from "../lib/notes";
-import { matchesPathSearch } from "../lib/search";
+import { getNotes, getPinnedNotes } from "../lib/notes";
+import { querySearchText } from "../lib/search";
 import type { Workspace } from "../types/octarine";
 import type { IndexedNote } from "../types/notes";
 
@@ -22,11 +22,6 @@ type Options = {
   selectedWorkspace: string;
   showPinnedNotesFirst?: boolean;
   refresh?: boolean;
-};
-
-type NotesResult = {
-  dropdown: string[];
-  sections: WorkspaceSection[];
 };
 
 type Result = {
@@ -53,10 +48,10 @@ export function useNotes({
   } = useCachedPromise(
     async (refresh: boolean, workspaces: Workspace[], scope: Scope): Promise<IndexedNote[]> => {
       if (scope === "pinned") {
-        return loadPinnedNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
+        return getPinnedNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
       }
 
-      return loadNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
+      return getNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
     },
     [refresh, workspaces, scope],
     {
@@ -81,15 +76,14 @@ export function useNotes({
     },
   );
 
-  const { dropdown, sections } = useMemo(
-    () =>
-      buildNotesResult(notes, {
-        searchText,
-        selectedWorkspace,
-        showPinnedNotesFirst,
-      }),
-    [notes, searchText, selectedWorkspace, showPinnedNotesFirst],
-  );
+  const { dropdown, sections } = useMemo(() => {
+    const grouped = groupByWorkspace(notes);
+
+    return {
+      dropdown: workspaceNames(grouped),
+      sections: buildWorkspaceSections(grouped, { selectedWorkspace, searchText, showPinnedNotesFirst }),
+    };
+  }, [notes, searchText, selectedWorkspace, showPinnedNotesFirst]);
 
   return {
     dropdown,
@@ -99,44 +93,24 @@ export function useNotes({
   };
 }
 
-function buildNotesResult(
-  notes: IndexedNote[],
-  {
-    searchText,
-    selectedWorkspace,
-    showPinnedNotesFirst,
-  }: {
-    searchText: string;
-    selectedWorkspace: string;
-    showPinnedNotesFirst: boolean;
-  },
-): NotesResult {
-  const grouped = groupByWorkspace(notes);
-
-  return {
-    dropdown: workspaceNames(grouped),
-    sections: buildWorkspaceSections(grouped, { selectedWorkspace, searchText, showPinnedNotesFirst }),
-  };
-}
-
 function groupByWorkspace(notes: IndexedNote[]): WorkspaceSection[] {
   const grouped = new Map<string, WorkspaceSection>();
 
   for (const note of notes) {
-    const section = grouped.get(note.workspace.path);
+    const section = grouped.get(note.folder.workspace.path);
 
     if (section) {
       section.notes.push(note);
     } else {
-      grouped.set(note.workspace.path, {
-        name: note.workspace.name,
-        path: note.workspace.path,
+      grouped.set(note.folder.workspace.path, {
+        name: note.folder.workspace.name,
+        path: note.folder.workspace.path,
         notes: [note],
       });
     }
   }
 
-  return Array.from(grouped.values()).sort((left, right) => left.name.localeCompare(right.name));
+  return Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function workspaceNames(workspaces: WorkspaceSection[]): string[] {
@@ -158,9 +132,7 @@ function buildWorkspaceSections(
   return workspaces
     .filter((workspace) => selectedWorkspace === "all" || workspace.name === selectedWorkspace)
     .map((workspace) => {
-      const notes = searchText
-        ? workspace.notes.filter((note) => matchesPathSearch(note, searchText))
-        : workspace.notes;
+      const notes = searchText ? workspace.notes.filter((note) => querySearchText(note, searchText)) : workspace.notes;
 
       return {
         name: workspace.name,

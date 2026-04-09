@@ -1,87 +1,22 @@
 import path from "node:path";
-import { type Workspace } from "../types/octarine";
-import { type IndexedNote, type IndexedNoteFolder } from "../types/notes";
-import { getNotesCache, getPinnedNotesCache, setNotesCache, setPinnedNotesCache } from "./cache";
-import { readMarkdownFrontmatter, scanDirectories, scanMarkdownFiles } from "./files";
-import { buildSearchIndexText } from "./search";
+import { type Folder, type Workspace } from "../types/octarine";
+import { type IndexedNote, type IndexedFolder } from "../types/notes";
+import { PinnedNotesCache, NotesCache } from "./cache";
+import { readMarkdownFrontmatter, scanFolders, scanMarkdownFiles } from "./files";
+import { buildSearchText } from "./search";
 
 const DEFAULT_EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
 const DAILY_FOLDER_RELATIVE_PATH = "daily";
+const ROOT_FOLDER_PATH = "";
 
-function withDefaultExcluded(directories: Set<string>): Set<string> {
-  return new Set([...DEFAULT_EXCLUDED_DIRECTORY_NAMES, ...directories]);
-}
+type BuildIndexedNoteInput = {
+  workspace: Workspace;
+  relative: string;
+  folder: Folder;
+  pinned?: boolean;
+};
 
-function toPathSegments(pathValue: string): string[] {
-  return pathValue
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-}
-
-function buildNoteSearchFields(title: string, notePath: string, workspaceName: string) {
-  const normalizedTitle = title.toLowerCase();
-  const normalizedPath = notePath.toLowerCase();
-  const normalizedWorkspace = workspaceName.toLowerCase();
-  const noteDirectory = path.posix.dirname(normalizedPath);
-  const normalizedDirectory = noteDirectory === "." ? "" : noteDirectory;
-  const directorySegments = toPathSegments(normalizedDirectory);
-
-  return {
-    normalizedTitle,
-    normalizedPath,
-    normalizedWorkspace,
-    normalizedDirectory,
-    directorySegments,
-    searchText: buildSearchIndexText(title, notePath, workspaceName),
-  };
-}
-
-function buildIndexedNote(workspace: Workspace, relativePath: string, pinned = false): IndexedNote {
-  const noteTitle = path.posix.basename(relativePath, ".md");
-
-  return {
-    id: `${workspace.name}::${relativePath}`,
-    title: noteTitle,
-    path: relativePath,
-    workspace,
-    pinned,
-    ...buildNoteSearchFields(noteTitle, relativePath, workspace.name),
-  };
-}
-
-function hasPinnedFrontmatter(frontmatter: string | undefined): boolean {
-  if (!frontmatter) return false;
-  return /^pinned\s*:\s*true\s*$/m.test(frontmatter);
-}
-
-async function scanWorkspaceNotes(workspace: Workspace, excludedDirectories: Set<string>): Promise<IndexedNote[]> {
-  const files = await scanMarkdownFiles(workspace.path, excludedDirectories);
-  return Promise.all(
-    files.map(async (file) => {
-      const frontmatter = await readMarkdownFrontmatter(file.absolute);
-      return buildIndexedNote(workspace, file.relative, hasPinnedFrontmatter(frontmatter));
-    }),
-  );
-}
-
-function sortNotes(notes: IndexedNote[]): IndexedNote[] {
-  return notes.toSorted(
-    (left, right) => left.workspace.name.localeCompare(right.workspace.name) || left.path.localeCompare(right.path),
-  );
-}
-
-export async function scanNotes(workspaces: Workspace[], excludedDirectories: Set<string>): Promise<IndexedNote[]> {
-  const effectiveExcluded = withDefaultExcluded(excludedDirectories);
-  const byWorkspace = await Promise.all(
-    workspaces.map((workspace) => scanWorkspaceNotes(workspace, effectiveExcluded)),
-  );
-
-  const byId = new Map(byWorkspace.flat().map((note) => [note.id, note]));
-  return sortNotes([...byId.values()]);
-}
-
-export async function loadNotes(
+export async function getNotes(
   workspaces: Workspace[],
   excludedDirectories: Set<string>,
   options?: { refresh?: boolean },
@@ -89,18 +24,18 @@ export async function loadNotes(
   const refresh = options?.refresh ?? false;
 
   if (!refresh) {
-    const cached = getNotesCache(workspaces, excludedDirectories);
+    const cached = NotesCache.read(workspaces, excludedDirectories);
     if (cached) {
       return cached;
     }
   }
 
   const notes = await scanNotes(workspaces, excludedDirectories);
-  setNotesCache(notes, workspaces, excludedDirectories);
+  NotesCache.write(notes, workspaces, excludedDirectories);
   return notes;
 }
 
-export async function loadPinnedNotes(
+export async function getPinnedNotes(
   workspaces: Workspace[],
   excludedDirectories: Set<string>,
   options?: { refresh?: boolean },
@@ -108,50 +43,115 @@ export async function loadPinnedNotes(
   const refresh = options?.refresh ?? false;
 
   if (!refresh) {
-    const cached = getPinnedNotesCache(workspaces, excludedDirectories);
+    const cached = PinnedNotesCache.read(workspaces, excludedDirectories);
     if (cached) {
       return cached;
     }
   }
 
-  const notes = await loadNotes(workspaces, excludedDirectories, { refresh });
+  const notes = await getNotes(workspaces, excludedDirectories, { refresh });
   const pinned = notes.filter((note) => note.pinned);
-  setPinnedNotesCache(pinned, workspaces, excludedDirectories);
+  PinnedNotesCache.write(pinned, workspaces, excludedDirectories);
   return pinned;
 }
 
-export async function scanWorkspaceDirectories(
+export async function scanNotes(workspaces: Workspace[], excludedDirectories: Set<string>): Promise<IndexedNote[]> {
+  const excluded = withDefaultExcluded(excludedDirectories);
+  const byWorkspace = await Promise.all(workspaces.map((workspace) => scanWorkspaceNotes(workspace, excluded)));
+
+  const byId = new Map(byWorkspace.flat().map((note) => [note.id, note]));
+  return [...byId.values()].toSorted(
+    (a, b) => a.folder.workspace.name.localeCompare(b.folder.workspace.name) || a.path.localeCompare(b.path),
+  );
+}
+
+export async function scanWorkspaceFolders(
   workspaces: Workspace[],
   excludedDirectories: Set<string>,
-): Promise<IndexedNoteFolder[]> {
-  const effectiveExcluded = withDefaultExcluded(excludedDirectories);
-  const foldersByWorkspace = await Promise.all(
+): Promise<IndexedFolder[]> {
+  const excluded = withDefaultExcluded(excludedDirectories);
+  const byWorkspace = await Promise.all(
     workspaces.map(async (workspace) => {
-      const discoveredDirectories = await scanDirectories(workspace.path, effectiveExcluded);
+      const directories = await scanFolders(workspace.path, excluded);
 
       return [
-        {
-          id: `${workspace.path}::.`,
-          name: "Root (No folder)",
-          path: "",
-          workspace,
-          searchText: buildSearchIndexText("root", workspace.name),
-        },
-        ...discoveredDirectories
+        buildRootIndexedFolder(workspace),
+        ...directories
           .filter((dir) => dir.relative !== DAILY_FOLDER_RELATIVE_PATH)
-          .map((directory) => ({
-            id: `${workspace.path}::${directory.relative}`,
-            name: directory.name,
-            path: directory.relative,
-            workspace,
-            searchText: buildSearchIndexText(directory.name, directory.relative, workspace.name),
-          })),
+          .map((directory) => buildIndexedFolder(buildFolder(workspace, directory.relative))),
       ];
     }),
   );
 
-  return foldersByWorkspace.flat().sort((a, b) => {
+  return byWorkspace.flat().sort((a, b) => {
     const byWorkspace = a.workspace.name.localeCompare(b.workspace.name);
     return byWorkspace !== 0 ? byWorkspace : a.path.localeCompare(b.path);
+  });
+}
+
+function withDefaultExcluded(directories: Set<string>): Set<string> {
+  return new Set([...DEFAULT_EXCLUDED_DIRECTORY_NAMES, ...directories]);
+}
+
+async function scanWorkspaceNotes(workspace: Workspace, excludedDirectories: Set<string>): Promise<IndexedNote[]> {
+  const files = await scanMarkdownFiles(workspace.path, excludedDirectories);
+
+  return Promise.all(
+    files.map(async (file) => {
+      const frontmatter = await readMarkdownFrontmatter(file.absolute);
+      const dir = path.posix.dirname(file.relative);
+      const parent = dir === "." ? ROOT_FOLDER_PATH : dir;
+      return buildIndexedNote({
+        workspace,
+        relative: file.relative,
+        folder: buildFolder(workspace, parent),
+        pinned: isPinnedInFrontmatter(frontmatter),
+      });
+    }),
+  );
+}
+
+function buildIndexedNote(input: BuildIndexedNoteInput): IndexedNote {
+  const { workspace, relative, folder, pinned = false } = input;
+  const title = path.posix.basename(relative, ".md");
+
+  return {
+    id: `${workspace.name}::${relative}`,
+    title,
+    folder,
+    path: relative,
+    pinned,
+    searchText: buildSearchText(title, relative, folder.workspace.name),
+  };
+}
+
+function isPinnedInFrontmatter(frontmatter: string | undefined): boolean {
+  if (!frontmatter) return false;
+  return /^pinned\s*:\s*true\s*$/m.test(frontmatter);
+}
+
+function buildFolder(workspace: Workspace, folderPath: string): Folder {
+  return {
+    name: folderPath === ROOT_FOLDER_PATH ? "" : path.posix.basename(folderPath),
+    path: folderPath,
+    workspace,
+  };
+}
+
+function buildIndexedFolder(folder: Folder, options: { name?: string; searchName?: string } = {}): IndexedFolder {
+  const { name = folder.name, searchName = name } = options;
+
+  return {
+    ...folder,
+    id: `${folder.workspace.path}::${folder.path || "."}`,
+    name,
+    searchText: buildSearchText(searchName, folder.path, folder.workspace.name),
+  };
+}
+
+function buildRootIndexedFolder(workspace: Workspace): IndexedFolder {
+  return buildIndexedFolder(buildFolder(workspace, ROOT_FOLDER_PATH), {
+    name: "Root (No folder)",
+    searchName: "root",
   });
 }

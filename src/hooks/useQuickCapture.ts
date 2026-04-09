@@ -45,7 +45,8 @@ export function useQuickCapture({ search, workspace }: Options): Result {
   const items = useMemo(
     () =>
       searchableItems.filter(
-        (item) => workspace === "all" || (isDailyDeskItem(item) ? item.workspace : item.workspace.name) === workspace,
+        (item) =>
+          workspace === "all" || (isDailyDeskItem(item) ? item.workspace : item.folder.workspace.name) === workspace,
       ),
     [searchableItems, workspace],
   );
@@ -115,7 +116,7 @@ function groupItemsByWorkspace(items: QuickCaptureItem[]): Map<string, QuickCapt
   const result = new Map<string, QuickCaptureItem[]>();
 
   for (const item of items) {
-    const workspace = isDailyDeskItem(item) ? item.workspace : item.workspace.name;
+    const workspace = isDailyDeskItem(item) ? item.workspace : item.folder.workspace.name;
     const workspaceItems = result.get(workspace);
 
     if (workspaceItems) {

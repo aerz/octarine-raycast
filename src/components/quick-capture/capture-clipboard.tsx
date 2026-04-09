@@ -1,6 +1,6 @@
 import { Clipboard } from "@raycast/api";
 import { appendDailyNoteContent, appendNoteContent } from "../../lib/octarine";
-import { type IndexedNote } from "../../lib/notes";
+import { type IndexedNote } from "../../types/notes";
 import {
   AutoCaptureToDailyDeskTarget,
   NotePicker,
@@ -24,7 +24,7 @@ export function CaptureClipboard({
     try {
       await appendNoteContent({
         path: note.path,
-        workspace: note.workspace.name,
+        workspace: note.folder.workspace.name,
         content: clipboardText,
       });
     } catch (error) {

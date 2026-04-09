@@ -96,10 +96,10 @@ function NoteItem({ note, onRefresh }: NoteItemProps) {
     <List.Item
       title={note.title}
       subtitle={note.path}
-      keywords={[note.path, note.workspace.name]}
+      keywords={[note.path, note.folder.workspace.name]}
       actions={
         <DefaultActionPanel onRefresh={onRefresh}>
-          <Action title="Open Pinned Note" onAction={() => void openPinnedNote(note.path, note.workspace.name)} />
+          <Action title="Open Pinned Note" onAction={() => void openPinnedNote(note.path, note.folder.workspace.name)} />
         </DefaultActionPanel>
       }
     />

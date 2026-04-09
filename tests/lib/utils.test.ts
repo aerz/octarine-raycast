@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   expandHome,
   extractScopeFromQuery,
-  normalizePathForSearch,
+  normalizeSearchText,
   normalizeWorkspaceRoots,
   normalizeText,
   splitList,
@@ -34,7 +34,7 @@ describe("utils", () => {
   });
 
   it("normalizes path strings and expands workspace roots", () => {
-    expect(normalizePathForSearch("  C:\\Users\\Me\\\\Notes  ")).toBe("c:/users/me/notes");
+    expect(normalizeSearchText("  C:\\Users\\Me\\\\Notes  ")).toBe("c:/users/me/notes");
     expect(expandHome("~")).toBe(os.homedir());
     expect(expandHome("~/Octarine")).toBe(path.join(os.homedir(), "Octarine"));
     expect(expandHome("/tmp/octarine")).toBe("/tmp/octarine");

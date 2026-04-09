@@ -7,8 +7,8 @@ import { DateFormatsDetail } from "../notifications/date-formats";
 import { useNotes } from "../../hooks/useNotes";
 import { useWorkspaces } from "../../hooks/useWorkspaces";
 import { buildDailyDeskItems, isDailyDeskItem, isSupportedDate, type DailyDeskItem } from "../../lib/daily-desk";
-import { type IndexedNote } from "../../lib/notes";
 import { openNote } from "../../lib/octarine";
+import { type IndexedNote } from "../../types/notes";
 import { match } from "../../utils/match";
 
 type AppendFormValues = {
@@ -80,7 +80,7 @@ function groupItemsByWorkspace(items: SearchableNoteItem[]): Map<string, Searcha
   const groupedItems = new Map<string, SearchableNoteItem[]>();
 
   for (const item of items) {
-    const workspaceName = isDailyDeskItem(item) ? item.workspace : item.workspace.name;
+    const workspaceName = isDailyDeskItem(item) ? item.workspace : item.folder.workspace.name;
     const itemsInWorkspace = groupedItems.get(workspaceName);
 
     if (itemsInWorkspace) {
@@ -114,14 +114,14 @@ function NoteListItem({
     <List.Item
       title={note.title}
       subtitle={note.path}
-      keywords={[note.path, note.workspace.name]}
+      keywords={[note.path, note.folder.workspace.name]}
       actions={
         <ActionPanel>
           <Action title={actionTitle} onAction={() => onAction(note)} />
           <Action
             title="Open Note in Octarine"
             icon={Icon.AppWindow}
-            onAction={() => void openNote(note.path, note.workspace.name)}
+            onAction={() => void openNote(note.path, note.folder.workspace.name)}
           />
           <Action.CopyToClipboard title="Copy Note Path" content={note.path} />
         </ActionPanel>
@@ -292,7 +292,7 @@ export function NotePicker({
   const filteredItems = searchableItems.filter(
     (item) =>
       selectedWorkspace === "all" ||
-      (isDailyDeskItem(item) ? item.workspace : item.workspace.name) === selectedWorkspace,
+      (isDailyDeskItem(item) ? item.workspace : item.folder.workspace.name) === selectedWorkspace,
   );
   const itemsByWorkspace = groupItemsByWorkspace(filteredItems);
   const renderState = getNotePickerRenderState({

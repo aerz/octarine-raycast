@@ -1,7 +1,7 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
-import { loadPinnedNotes, scanNotes } from "../../src/lib/notes";
+import { getPinnedNotes, scanNotes } from "../../src/lib/notes";
 
 let tempDir: string | undefined;
 
@@ -31,7 +31,7 @@ describe("notes", () => {
     await writeTextFile(path.join(workspace.path, "docs", "image.png"), "png");
 
     const notes = await scanNotes([workspace], new Set(["archive"]));
-    const notesByPath = notes.slice().sort((left, right) => left.path.localeCompare(right.path));
+    const notesByPath = notes.slice().sort((a, b) => a.path.localeCompare(b.path));
 
     expect(notesByPath).toHaveLength(2);
     expect(notesByPath).toEqual([
@@ -39,17 +39,23 @@ describe("notes", () => {
         id: "Work::docs/Guide.md",
         title: "Guide",
         path: "docs/Guide.md",
-        normalizedDirectory: "docs",
-        directorySegments: ["docs"],
         searchText: "guide docs/guide.md work",
+        folder: expect.objectContaining({
+          name: "docs",
+          path: "docs",
+          workspace,
+        }),
       }),
       expect.objectContaining({
         id: "Work::root.md",
         title: "root",
         path: "root.md",
-        normalizedDirectory: "",
-        directorySegments: [],
         searchText: "root root.md work",
+        folder: expect.objectContaining({
+          name: "",
+          path: "",
+          workspace,
+        }),
       }),
     ]);
   });
@@ -65,12 +71,12 @@ describe("notes", () => {
     await writeTextFile(path.join(workspace.path, "Pinned.md"), "---\npinned: true\n---\ncontent");
     await writeTextFile(path.join(workspace.path, "Regular.md"), "---\npinned: false\n---\ncontent");
 
-    const firstResult = await loadPinnedNotes([workspace], new Set());
+    const firstResult = await getPinnedNotes([workspace], new Set());
 
     expect(firstResult.map((note) => note.path)).toEqual(["Pinned.md"]);
     await writeTextFile(path.join(workspace.path, "Regular.md"), "---\npinned: true\n---\ncontent");
 
-    const secondResult = await loadPinnedNotes([workspace], new Set());
+    const secondResult = await getPinnedNotes([workspace], new Set());
 
     expect(secondResult.map((note) => note.path)).toEqual(["Pinned.md"]);
   });
@@ -86,11 +92,11 @@ describe("notes", () => {
     await writeTextFile(path.join(workspace.path, "Pinned.md"), "---\npinned: true\n---\ncontent");
     await writeTextFile(path.join(workspace.path, "Regular.md"), "---\npinned: false\n---\ncontent");
 
-    expect((await loadPinnedNotes([workspace], new Set())).map((note) => note.path)).toEqual(["Pinned.md"]);
+    expect((await getPinnedNotes([workspace], new Set())).map((note) => note.path)).toEqual(["Pinned.md"]);
 
     await writeTextFile(path.join(workspace.path, "Regular.md"), "---\npinned: true\n---\ncontent");
 
-    const refreshed = await loadPinnedNotes([workspace], new Set(), { refresh: true });
+    const refreshed = await getPinnedNotes([workspace], new Set(), { refresh: true });
 
     expect(refreshed.map((note) => note.path)).toEqual(["Pinned.md", "Regular.md"]);
   });
@@ -106,11 +112,9 @@ describe("notes", () => {
     await writeTextFile(path.join(workspace.path, "Pinned.md"), "---\npinned: true\n---\ncontent");
     await writeTextFile(path.join(workspace.path, "Archive", "Hidden.md"), "---\npinned: true\n---\ncontent");
 
-    expect((await loadPinnedNotes([workspace], new Set(["archive"]))).map((note) => note.path)).toEqual([
-      "Pinned.md",
-    ]);
+    expect((await getPinnedNotes([workspace], new Set(["archive"]))).map((note) => note.path)).toEqual(["Pinned.md"]);
 
-    const rescanned = await loadPinnedNotes([workspace], new Set());
+    const rescanned = await getPinnedNotes([workspace], new Set());
 
     expect(rescanned.map((note) => note.path)).toEqual(["Archive/Hidden.md", "Pinned.md"]);
   });
@@ -130,11 +134,9 @@ describe("notes", () => {
     await writeTextFile(path.join(work.path, "Pinned.md"), "---\npinned: true\n---\ncontent");
     await writeTextFile(path.join(personal.path, "Side.md"), "---\npinned: true\n---\ncontent");
 
-    expect((await loadPinnedNotes([work], new Set())).map((note) => note.id)).toEqual([
-      "Work::Pinned.md",
-    ]);
+    expect((await getPinnedNotes([work], new Set())).map((note) => note.id)).toEqual(["Work::Pinned.md"]);
 
-    const rescanned = await loadPinnedNotes([work, personal], new Set());
+    const rescanned = await getPinnedNotes([work, personal], new Set());
 
     expect(rescanned.map((note) => note.id)).toEqual(["Personal::Side.md", "Work::Pinned.md"]);
   });
