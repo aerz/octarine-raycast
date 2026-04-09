@@ -6,7 +6,7 @@ import { WorkspaceGridEmptyView } from "./components/empty-views/workspace";
 import { type AttachmentSection, useAttachments } from "./hooks/useAttachments";
 import { openAttachment } from "./lib/octarine";
 import { searchAttachmentsPreferences } from "./lib/preferences";
-import type { IndexedAttachment } from "./types/attachment";
+import type { IndexedAttachment } from "./types/attachments";
 import { match } from "./utils/match";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
@@ -14,7 +14,7 @@ const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
 export default function SearchAttachmentsCommand() {
   const preferences = searchAttachmentsPreferences();
   const excludedExtensions = useMemo(
-    () => Array.from(preferences.excludedExtensions).sort((left, right) => left.localeCompare(right)),
+    () => Array.from(preferences.excludedExtensions).sort((a, b) => a.localeCompare(b)),
     [preferences.excludedExtensionsSignature],
   );
   const [selectedExtension, setSelectedExtension] = useState<string>("all");

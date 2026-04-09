@@ -7,8 +7,8 @@ import {
   scanAttachments,
 } from "../lib/attachments";
 import { extensionPreferences } from "../lib/preferences";
-import { matchesSearchIndex } from "../lib/search";
-import type { IndexedAttachment } from "../types/attachment";
+import { querySearchText } from "../lib/search";
+import type { IndexedAttachment } from "../types/attachments";
 import { useLoadingToast } from "./useLoadingToast";
 
 export type AttachmentSection = {
@@ -231,7 +231,7 @@ function buildAttachmentFilters(attachments: IndexedAttachment[]): string[] {
     }
   }
 
-  return Array.from(uniqueExtensions).sort((left, right) => left.localeCompare(right));
+  return Array.from(uniqueExtensions).sort((a, b) => a.localeCompare(b));
 }
 
 function buildVisibleAttachments({
@@ -250,7 +250,7 @@ function buildVisibleAttachments({
 
   return attachments
     .filter((file) => file.extension === selectedExtension)
-    .filter((file) => matchesSearchIndex(file.searchText, searchText));
+    .filter((file) => querySearchText(file, searchText));
 }
 
 function buildAttachmentSections(visibleAttachments: IndexedAttachment[]): AttachmentSection[] {
@@ -269,7 +269,7 @@ function buildAttachmentSections(visibleAttachments: IndexedAttachment[]): Attac
     }
   }
 
-  return Array.from(grouped.values()).sort((left, right) => left.workspaceName.localeCompare(right.workspaceName));
+  return Array.from(grouped.values()).sort((a, b) => a.workspaceName.localeCompare(b.workspaceName));
 }
 
 function toError(error: unknown): Error {
@@ -286,7 +286,7 @@ export function useAttachments({
   const preferences = extensionPreferences();
 
   const excludedDirectoryNames = useMemo(
-    () => Array.from(preferences.excludedFoldersInWorkspaces).sort((left, right) => left.localeCompare(right)),
+    () => Array.from(preferences.excludedFoldersInWorkspaces).sort((a, b) => a.localeCompare(b)),
     [preferences.workspaceSearchSignature],
   );
 

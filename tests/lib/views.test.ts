@@ -4,20 +4,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
 import { loadCachedViews, saveCachedViews, scanViewsFromWorkspaces } from "../../src/lib/views";
-import { loadWorkspaces } from "../../src/lib/workspaces";
+import { getWorkspaces } from "../../src/lib/workspaces";
 
 vi.mock("../../src/lib/workspaces", () => ({
-  loadWorkspaces: vi.fn(),
+  getWorkspaces: vi.fn(),
 }));
 
-const loadWorkspacesMock = vi.mocked(loadWorkspaces);
+const getWorkspacesMock = vi.mocked(getWorkspaces);
 const VIEWS_CACHE_KEY = "octarine.views.v1";
 
 let tempDir: string | undefined;
 
 afterEach(async () => {
   vi.restoreAllMocks();
-  loadWorkspacesMock.mockReset();
+  getWorkspacesMock.mockReset();
 
   if (tempDir) {
     await removeDir(tempDir);
@@ -42,11 +42,14 @@ describe("views", () => {
     const malformedWorkspace = { name: "Malformed", path: path.join(tempDir, "Malformed") };
     const invalidWorkspace = { name: "Invalid", path: path.join(tempDir, "Invalid") };
     const missingWorkspace = { name: "Missing", path: path.join(tempDir, "Missing") };
+    const indexedValidWorkspace = { ...validWorkspace, ignored: false, invalid: false };
 
-    loadWorkspacesMock.mockResolvedValue({
-      workspaces: [validWorkspace, malformedWorkspace, invalidWorkspace, missingWorkspace],
-      invalidRoots: [],
-    });
+    getWorkspacesMock.mockResolvedValue([
+      indexedValidWorkspace,
+      { ...malformedWorkspace, ignored: false, invalid: false },
+      { ...invalidWorkspace, ignored: false, invalid: false },
+      { ...missingWorkspace, ignored: false, invalid: false },
+    ]);
 
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
@@ -66,22 +69,23 @@ describe("views", () => {
     const result = await scanViewsFromWorkspaces();
 
     expect(result.workspaceCount).toBe(4);
+    expect(result.skippedRootsCount).toBe(0);
     expect(result.workspaceViews).toEqual([
       {
-        workspace: validWorkspace,
+        workspace: indexedValidWorkspace,
         views: [
           {
             id: `${validWorkspace.path}::1`,
             name: "Archive",
             description: "",
-            workspace: validWorkspace,
+            workspace: indexedValidWorkspace,
             searchText: "archive valid",
           },
           {
             id: `${validWorkspace.path}::0`,
             name: "Inbox",
             description: "Incoming work",
-            workspace: validWorkspace,
+            workspace: indexedValidWorkspace,
             searchText: "inbox incoming work valid",
           },
         ],
@@ -181,10 +185,7 @@ describe("views", () => {
     const workspace = { name: "Work", path: path.join(tempDir, "Work") };
     const workspaceDiscoverySignature = `${path.resolve(tempDir)}::`;
 
-    loadWorkspacesMock.mockResolvedValue({
-      workspaces: [workspace],
-      invalidRoots: [],
-    });
+    getWorkspacesMock.mockResolvedValue([{ ...workspace, ignored: false, invalid: false }]);
 
     await writeTextFile(
       path.join(workspace.path, ".octarine", "views.json"),
@@ -210,7 +211,7 @@ describe("views", () => {
     });
 
     expect(refreshed.workspaceViews[0]?.views.map((view) => view.name)).toEqual(["Archive"]);
-    expect(loadWorkspacesMock).toHaveBeenCalledTimes(2);
+    expect(getWorkspacesMock).toHaveBeenCalledTimes(2);
   });
 
   it("updates the stored cache after a forced refresh", async () => {
@@ -220,10 +221,7 @@ describe("views", () => {
     const workspace = { name: "Work", path: path.join(tempDir, "Work") };
     const workspaceDiscoverySignature = `${path.resolve(tempDir)}::`;
 
-    loadWorkspacesMock.mockResolvedValue({
-      workspaces: [workspace],
-      invalidRoots: [],
-    });
+    getWorkspacesMock.mockResolvedValue([{ ...workspace, ignored: false, invalid: false }]);
 
     await writeTextFile(
       path.join(workspace.path, ".octarine", "views.json"),

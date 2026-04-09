@@ -7,21 +7,21 @@ import {
   scanAttachments,
   type AttachmentsSnapshot,
 } from "../../src/lib/attachments";
-import { loadWorkspaces } from "../../src/lib/workspaces";
+import { getWorkspaces } from "../../src/lib/workspaces";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
 
 vi.mock("../../src/lib/workspaces", () => ({
-  loadWorkspaces: vi.fn(),
+  getWorkspaces: vi.fn(),
 }));
 
 const ATTACHMENTS_CACHE_KEY = "octarine.attachments.v1";
-const loadWorkspacesMock = vi.mocked(loadWorkspaces);
+const getWorkspacesMock = vi.mocked(getWorkspaces);
 
 let tempDir: string | undefined;
 
 afterEach(async () => {
   vi.restoreAllMocks();
-  loadWorkspacesMock.mockReset();
+  getWorkspacesMock.mockReset();
   await LocalStorage.clear();
 
   if (tempDir) {
@@ -39,10 +39,7 @@ describe("attachments", () => {
       path: path.join(tempDir, "Work"),
     };
 
-    loadWorkspacesMock.mockResolvedValue({
-      workspaces: [workspace],
-      invalidRoots: [],
-    });
+    getWorkspacesMock.mockResolvedValue([{ ...workspace, ignored: false, invalid: false }]);
 
     await writeTextFile(path.join(workspace.path, ".attachments", "docs", "report.pdf"), "report");
     await writeTextFile(path.join(workspace.path, ".attachments", "images", "logo.png"), "png");
@@ -126,10 +123,7 @@ describe("attachments", () => {
       path: path.join(tempDir, "Work"),
     };
 
-    loadWorkspacesMock.mockResolvedValue({
-      workspaces: [workspace],
-      invalidRoots: [],
-    });
+    getWorkspacesMock.mockResolvedValue([{ ...workspace, ignored: false, invalid: false }]);
 
     await writeTextFile(path.join(workspace.path, ".attachments", "Inbox.pdf"), "initial");
 
@@ -149,8 +143,8 @@ describe("attachments", () => {
       workspaceCount: 1,
       attachments: refreshed.attachments,
     });
-    expect(loadWorkspacesMock).toHaveBeenNthCalledWith(1, { refresh: undefined });
-    expect(loadWorkspacesMock).toHaveBeenNthCalledWith(2, { refresh: true });
+    expect(getWorkspacesMock).toHaveBeenNthCalledWith(1, { refresh: undefined });
+    expect(getWorkspacesMock).toHaveBeenNthCalledWith(2, { refresh: true });
   });
 });
 

@@ -1,11 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { isView, isWorkspace, type View, type Workspace } from "../types/octarine";
+import { isWorkspace, type Workspace } from "../types/octarine";
+import { type IndexedWorkspace } from "../types/workspaces";
 import { loadStoredJson, saveStoredJson } from "./localstorage";
-import { buildSearchIndexText } from "./search";
-import { loadWorkspaces, type ScanWorkspacesResult } from "./workspaces";
+import { buildSearchText } from "./search";
+import { isIndexedView, type IndexedView } from "../types/views";
+import { getWorkspaces } from "./workspaces";
 
-const VIEWS_FILE_NAME = "views.json";
+const OCTARINE_VIEWS_FILE = "views.json";
 const OCTARINE_DIRECTORY_NAME = ".octarine";
 const VIEWS_CACHE_KEY = "octarine.views.v1";
 const VIEWS_CACHE_VERSION = 1;
@@ -16,17 +18,14 @@ type RawView = {
   desc?: unknown;
 };
 
-export type IndexedView = View & {
-  searchText: string;
-};
-
 export type WorkspaceViews = {
   workspace: Workspace;
   views: IndexedView[];
 };
 
-export type ViewsScanResult = Pick<ScanWorkspacesResult, "invalidRoots"> & {
+export type ViewsScanResult = {
   workspaceCount: number;
+  skippedRootsCount: number;
   workspaceViews: WorkspaceViews[];
 };
 
@@ -42,10 +41,6 @@ export type ViewsCacheResult = {
   workspaces: Workspace[];
   workspaceViews: WorkspaceViews[];
 };
-
-function isIndexedView(value: unknown): value is IndexedView {
-  return isView(value) && typeof (value as IndexedView).searchText === "string";
-}
 
 function isWorkspaceViews(value: unknown): value is WorkspaceViews {
   if (!value || typeof value !== "object") {
@@ -99,7 +94,7 @@ function parseView(rawValue: unknown, workspace: Workspace, index: number): Inde
     name: viewName,
     description,
     workspace,
-    searchText: buildSearchIndexText(viewName, description, workspace.name),
+    searchText: buildSearchText(viewName, description, workspace.name),
   };
 }
 
@@ -119,11 +114,11 @@ function parseViews(rawValue: unknown, workspace: Workspace): IndexedView[] | un
     views.push(parsedView);
   }
 
-  return views.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
+  return views.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
 async function scanWorkspaceViews(workspace: Workspace): Promise<WorkspaceViews | undefined> {
-  const viewsPath = path.join(workspace.path, OCTARINE_DIRECTORY_NAME, VIEWS_FILE_NAME);
+  const viewsPath = path.join(workspace.path, OCTARINE_DIRECTORY_NAME, OCTARINE_VIEWS_FILE);
 
   let fileContents: string;
   try {
@@ -201,14 +196,17 @@ export async function saveCachedViews(
 }
 
 export async function scanViewsFromWorkspaces(options?: { forceRefresh?: boolean }): Promise<ViewsScanResult> {
-  const workspaceResult = await loadWorkspaces({ refresh: options?.forceRefresh });
-  const workspaceViews = (
-    await Promise.all(workspaceResult.workspaces.map((workspace) => scanWorkspaceViews(workspace)))
-  ).filter((value): value is WorkspaceViews => value !== undefined);
+  const indexedWorkspaces = await getWorkspaces({ refresh: options?.forceRefresh });
+  const workspaces = indexedWorkspaces.filter(
+    (workspace): workspace is IndexedWorkspace => !workspace.invalid && !workspace.ignored,
+  );
+  const workspaceViews = (await Promise.all(workspaces.map((workspace) => scanWorkspaceViews(workspace)))).filter(
+    (value): value is WorkspaceViews => value !== undefined,
+  );
 
   return {
-    workspaceCount: workspaceResult.workspaces.length,
+    workspaceCount: workspaces.length,
+    skippedRootsCount: indexedWorkspaces.filter((workspace) => workspace.invalid).length,
     workspaceViews,
-    invalidRoots: workspaceResult.invalidRoots,
   };
 }

@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { skippedRootsToast, viewsLoadToast } from "../components/toasts";
 import { extensionPreferences } from "../lib/preferences";
-import { matchesSearchIndex } from "../lib/search";
+import { querySearchText } from "../lib/search";
 import {
   loadCachedViews,
   saveCachedViews,
@@ -145,7 +145,7 @@ function useViewsSource({
           return;
         }
 
-        setSkippedRootsCount(refreshed.invalidRoots.length);
+        setSkippedRootsCount(refreshed.skippedRootsCount);
         applyViews(refreshed.workspaceViews);
       } catch (error) {
         if (!canceled) {
@@ -218,7 +218,7 @@ function buildSearchResults({ views, search, workspace }: SearchResultsInput) {
 
     availableCount += entry.views.length;
 
-    const workspaceMatchingViews = entry.views.filter((view) => matchesSearchIndex(view.searchText, search));
+    const workspaceMatchingViews = entry.views.filter((view) => querySearchText(view, search));
 
     if (workspaceMatchingViews.length === 0) {
       continue;

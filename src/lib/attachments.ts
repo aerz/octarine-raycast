@@ -1,10 +1,10 @@
 import { Dirent, Stats, promises as fs } from "node:fs";
 import path from "node:path";
-import { type IndexedAttachment, isIndexedAttachment } from "../types/attachment";
+import { type IndexedAttachment, isIndexedAttachment } from "../types/attachments";
 import type { Workspace } from "../types/octarine";
 import { loadStoredJson, saveStoredJson } from "./localstorage";
-import { buildSearchIndexText } from "./search";
-import { loadWorkspaces } from "./workspaces";
+import { buildSearchText } from "./search";
+import { getWorkspaces } from "./workspaces";
 
 const ATTACHMENT_DIRECTORIES = [".attachments", ".files"] as const;
 const ATTACHMENTS_CACHE_KEY = "octarine.attachments.v1";
@@ -122,7 +122,7 @@ async function collectIndexedAttachments(
         path: absoluteEntryPath,
         extension,
         workspace,
-        searchText: buildSearchIndexText(entry.name, workspace.name, extension),
+        searchText: buildSearchText(entry.name, workspace.name, extension),
       });
     }
   }
@@ -241,32 +241,35 @@ export async function scanAttachments(options?: {
   excludedExtensions?: Set<string>;
   excludedDirectoryNames?: Set<string>;
 }): Promise<AttachmentsSnapshot> {
-  const workspaceResult = await loadWorkspaces({ refresh: options?.forceRefresh });
+  const indexedWorkspaces = await getWorkspaces({ refresh: options?.forceRefresh });
   const excludedExtensions = options?.excludedExtensions ?? new Set<string>();
   const excludedDirectoryNames = options?.excludedDirectoryNames ?? new Set<string>();
 
-  for (const invalidRoot of workspaceResult.invalidRoots) {
-    console.warn("Skipping inaccessible workspace root", { root: invalidRoot });
+  for (const workspace of indexedWorkspaces) {
+    if (!workspace.invalid) {
+      continue;
+    }
+
+    console.warn("Skipping inaccessible workspace root", { root: workspace.path });
   }
 
+  const workspaces = indexedWorkspaces.filter((workspace) => !workspace.invalid && !workspace.ignored);
   const attachmentsByWorkspace = await Promise.all(
-    workspaceResult.workspaces.map((workspace) =>
-      scanWorkspaceAttachments(workspace, excludedExtensions, excludedDirectoryNames),
-    ),
+    workspaces.map((workspace) => scanWorkspaceAttachments(workspace, excludedExtensions, excludedDirectoryNames)),
   );
   const attachments = attachmentsByWorkspace.flat();
 
-  attachments.sort((left, right) => {
-    const byName = left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+  attachments.sort((a, b) => {
+    const byName = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     if (byName !== 0) {
       return byName;
     }
 
-    return left.path.localeCompare(right.path);
+    return a.path.localeCompare(b.path);
   });
 
   return {
     attachments,
-    workspaceCount: workspaceResult.workspaces.length,
+    workspaceCount: workspaces.length,
   };
 }
