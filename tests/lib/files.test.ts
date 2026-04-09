@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readMarkdownFrontmatter, scanMarkdownFiles, scanWorkspacePaths } from "../../src/lib/files";
+import { readMarkdownFrontmatter, scanMarkdownFiles, scanPaths } from "../../src/lib/files";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
 
 const workspaceMarker = ".octarine";
@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 describe("files", () => {
-  it("returns the root workspace without scanning its children, dedupes overlaps, and reports invalid roots", async () => {
+  it("returns the root workspace without scanning its children, dedupes overlaps, and marks invalid roots", async () => {
     tempDir = await createTempDir("octarine-workspace-roots");
 
     const root = path.join(tempDir, "root");
@@ -31,16 +31,16 @@ describe("files", () => {
     await writeTextFile(path.join(root, "SkipMe", workspaceMarker, "config.json"), "{}");
     await writeTextFile(path.join(root, "Notebooks", "Gamma", workspaceMarker, "config.json"), "{}");
 
-    const result = await scanWorkspacePaths([root, nestedRoot, invalidRoot], new Set(["skipme"]));
+    const result = await scanPaths([root, nestedRoot, invalidRoot], new Set(["skipme"]));
 
-    expect(result.invalidRoots).toEqual([invalidRoot]);
-    expect(result.paths.sort((left, right) => left.localeCompare(right))).toEqual([
-      root,
-      path.join(nestedRoot, "Beta"),
+    expect(result.sort((a, b) => a.path.localeCompare(b.path))).toEqual([
+      { path: invalidRoot, ignored: false, invalid: true },
+      { path: root, ignored: false, invalid: false },
+      { path: path.join(nestedRoot, "Beta"), ignored: false, invalid: false },
     ]);
   });
 
-  it("scans direct children when the root is not a workspace, skips excluded roots, and ignores symlink directories", async () => {
+  it("scans direct children when the root is not a workspace and ignores symlink directories", async () => {
     tempDir = await createTempDir("octarine-workspace-scan-rules");
 
     const root = path.join(tempDir, "skipme");
@@ -52,10 +52,9 @@ describe("files", () => {
     await writeTextFile(path.join(deepRoot, "Delta", workspaceMarker, "config.json"), "{}");
     await fs.symlink(realRoot, symlinkRoot);
 
-    const result = await scanWorkspacePaths([root], new Set(["skipme"]));
+    const result = await scanPaths([root], new Set(["skipme"]));
 
-    expect(result.invalidRoots).toEqual([]);
-    expect(result.paths).toEqual([realRoot]);
+    expect(result).toEqual([{ path: realRoot, ignored: false, invalid: false }]);
   });
 
   it("scans markdown files recursively and returns posix relative paths", async () => {
@@ -70,7 +69,7 @@ describe("files", () => {
 
     const files = await scanMarkdownFiles(rootPath, new Set());
 
-    expect(files.map((file) => file.relative).sort((left, right) => left.localeCompare(right))).toEqual([
+    expect(files.map((file) => file.relative).sort((a, b) => a.localeCompare(b))).toEqual([
       "docs/Guide.md",
       "docs/nested/Deep.md",
       "root.md",

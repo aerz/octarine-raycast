@@ -1,6 +1,6 @@
 import { Cache } from "@raycast/api";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getPinnedNotesCache, getWorkspacesCache, setPinnedNotesCache, setWorkspacesCache } from "../../src/lib/cache";
+import { PinnedNotesCache, WorkspacesCache } from "../../src/lib/cache";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -9,9 +9,11 @@ afterEach(() => {
 
 describe("workspace cache", () => {
   const staleOffsetMs = 24 * 60 * 60 * 1000;
+  const roots = ["/workspaces"];
+  const excludedDirectories = new Set<string>();
 
   it("returns undefined when the key is missing", () => {
-    const result = getWorkspacesCache(["/workspaces"]);
+    const result = WorkspacesCache.read(roots, excludedDirectories);
 
     expect(result).toBeUndefined();
   });
@@ -22,17 +24,16 @@ describe("workspace cache", () => {
 
     const cached = {
       workspaces: [
-        { name: "Alpha", path: "/workspaces/alpha" },
-        { name: "Beta", path: "/workspaces/beta" },
+        { name: "Alpha", path: "/workspaces/alpha", ignored: false, invalid: false },
+        { name: "Beta", path: "/workspaces/beta", ignored: false, invalid: true },
       ],
-      invalidRoots: ["/workspaces/missing"],
     };
 
-    setWorkspacesCache(cached.workspaces, ["/workspaces"], cached.invalidRoots);
+    WorkspacesCache.write(cached.workspaces, roots, excludedDirectories);
 
-    const result = getWorkspacesCache(["/workspaces"]);
+    const result = WorkspacesCache.read(roots, excludedDirectories);
 
-    expect(result).toEqual(cached);
+    expect(result).toEqual(cached.workspaces);
   });
 
   it("returns undefined when the cached value is stale", () => {
@@ -40,62 +41,68 @@ describe("workspace cache", () => {
     const nowSpy = vi.spyOn(Date, "now");
     nowSpy.mockReturnValue(now);
 
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces"], []);
+    WorkspacesCache.write([{ name: "Alpha", path: "/workspaces/alpha", ignored: false, invalid: false }], roots, excludedDirectories);
     nowSpy.mockReturnValue(now + staleOffsetMs);
 
-    expect(getWorkspacesCache(["/workspaces"])).toBeUndefined();
+    expect(WorkspacesCache.read(roots, excludedDirectories)).toBeUndefined();
   });
 
   it("returns undefined when the cached value is malformed", () => {
     vi.spyOn(Cache.prototype, "get").mockReturnValue("{");
 
-    const result = getWorkspacesCache(["/workspaces"]);
+    const result = WorkspacesCache.read(roots, excludedDirectories);
 
     expect(result).toBeUndefined();
   });
 
   it("returns undefined when the cached value is not a valid workspace payload", () => {
     vi.spyOn(Cache.prototype, "get").mockReturnValue(
-      JSON.stringify({ cachedAt: Date.now(), data: { workspaces: [{ name: "Alpha", path: 1 }], invalidRoots: [] } }),
+      JSON.stringify({ cachedAt: Date.now(), data: [{ name: "Alpha", path: 1, ignored: false, invalid: false }] }),
     );
 
-    const result = getWorkspacesCache(["/workspaces"]);
+    const result = WorkspacesCache.read(roots, excludedDirectories);
 
     expect(result).toBeUndefined();
   });
 
   it("stores workspaces under a roots-specific cache key", () => {
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces"], []);
+    WorkspacesCache.write([{ name: "Alpha", path: "/workspaces/alpha", ignored: false, invalid: false }], roots, excludedDirectories);
 
-    expect(getWorkspacesCache(["/workspaces"])).toEqual({
-      workspaces: [{ name: "Alpha", path: "/workspaces/alpha" }],
-      invalidRoots: [],
-    });
+    expect(WorkspacesCache.read(roots, excludedDirectories)).toEqual([
+      { name: "Alpha", path: "/workspaces/alpha", ignored: false, invalid: false },
+    ]);
   });
 
   it("keeps caches for different workspace roots separate", () => {
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces-a"], []);
-    setWorkspacesCache([{ name: "Beta", path: "/workspaces/beta" }], ["/workspaces-b"], ["/workspaces-b/missing"]);
+    WorkspacesCache.write(
+      [{ name: "Alpha", path: "/workspaces/alpha", ignored: false, invalid: false }],
+      ["/workspaces-a"],
+      excludedDirectories,
+    );
+    WorkspacesCache.write(
+      [{ name: "Beta", path: "/workspaces/beta", ignored: true, invalid: false }],
+      ["/workspaces-b"],
+      excludedDirectories,
+    );
 
-    expect(getWorkspacesCache(["/workspaces-a"])).toEqual({
-      workspaces: [{ name: "Alpha", path: "/workspaces/alpha" }],
-      invalidRoots: [],
-    });
-    expect(getWorkspacesCache(["/workspaces-b"])).toEqual({
-      workspaces: [{ name: "Beta", path: "/workspaces/beta" }],
-      invalidRoots: ["/workspaces-b/missing"],
-    });
+    expect(WorkspacesCache.read(["/workspaces-a"], excludedDirectories)).toEqual([
+      { name: "Alpha", path: "/workspaces/alpha", ignored: false, invalid: false },
+    ]);
+    expect(WorkspacesCache.read(["/workspaces-b"], excludedDirectories)).toEqual([
+      { name: "Beta", path: "/workspaces/beta", ignored: true, invalid: false },
+    ]);
   });
 
   it("treats the same workspace roots in different orders as the same cache entry", () => {
-    setWorkspacesCache([{ name: "Alpha", path: "/workspaces/alpha" }], ["/workspaces-b", "/workspaces-a"], [
-      "/workspaces-missing",
-    ]);
+    WorkspacesCache.write(
+      [{ name: "Alpha", path: "/workspaces/alpha", ignored: false, invalid: false }],
+      ["/workspaces-b", "/workspaces-a"],
+      excludedDirectories,
+    );
 
-    expect(getWorkspacesCache(["/workspaces-a", "/workspaces-b"])).toEqual({
-      workspaces: [{ name: "Alpha", path: "/workspaces/alpha" }],
-      invalidRoots: ["/workspaces-missing"],
-    });
+    expect(WorkspacesCache.read(["/workspaces-a", "/workspaces-b"], excludedDirectories)).toEqual([
+      { name: "Alpha", path: "/workspaces/alpha", ignored: false, invalid: false },
+    ]);
   });
 });
 
@@ -107,13 +114,12 @@ describe("pinned notes cache", () => {
       id: "Alpha::Pinned.md",
       title: "Pinned",
       path: "Pinned.md",
-      workspace: workspaces[0],
+      folder: {
+        name: "",
+        path: "",
+        workspace: workspaces[0],
+      },
       pinned: true,
-      normalizedTitle: "pinned",
-      normalizedPath: "pinned.md",
-      normalizedWorkspace: "alpha",
-      normalizedDirectory: "",
-      directorySegments: [],
       searchText: "pinned pinned.md alpha",
     },
   ];
@@ -122,15 +128,15 @@ describe("pinned notes cache", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-31T10:00:00.000Z"));
 
-    setPinnedNotesCache(notes, workspaces, new Set(["archive"]));
+    PinnedNotesCache.write(notes, workspaces, new Set(["archive"]));
 
-    expect(getPinnedNotesCache(workspaces, new Set(["archive"]))).toEqual(notes);
+    expect(PinnedNotesCache.read(workspaces, new Set(["archive"]))).toEqual(notes);
   });
 
   it("returns cached empty pinned notes arrays", () => {
-    setPinnedNotesCache([], workspaces, new Set());
+    PinnedNotesCache.write([], workspaces, new Set());
 
-    expect(getPinnedNotesCache(workspaces, new Set())).toEqual([]);
+    expect(PinnedNotesCache.read(workspaces, new Set())).toEqual([]);
   });
 
   it("returns undefined when the pinned notes cache is stale", () => {
@@ -138,54 +144,53 @@ describe("pinned notes cache", () => {
     const nowSpy = vi.spyOn(Date, "now");
     nowSpy.mockReturnValue(now);
 
-    setPinnedNotesCache(notes, workspaces, new Set());
+    PinnedNotesCache.write(notes, workspaces, new Set());
     nowSpy.mockReturnValue(now + staleOffsetMs);
 
-    expect(getPinnedNotesCache(workspaces, new Set())).toBeUndefined();
+    expect(PinnedNotesCache.read(workspaces, new Set())).toBeUndefined();
   });
 
   it("returns undefined when the pinned notes cache is malformed", () => {
     vi.spyOn(Cache.prototype, "get").mockReturnValue("{");
 
-    expect(getPinnedNotesCache(workspaces, new Set())).toBeUndefined();
+    expect(PinnedNotesCache.read(workspaces, new Set())).toBeUndefined();
   });
 
   it("returns undefined when the pinned notes cache contains invalid notes", () => {
     vi.spyOn(Cache.prototype, "get").mockReturnValue(
       JSON.stringify({
         cachedAt: Date.now(),
-        notes: [{ id: "Alpha::Pinned.md", workspace: { name: "Alpha", path: 1 } }],
+        data: [{ id: "Alpha::Pinned.md", title: "Pinned", path: "Pinned.md", folder: { name: "", path: "", workspace: { name: "Alpha", path: 1 } }, pinned: true, searchText: "pinned" }],
       }),
     );
 
-    expect(getPinnedNotesCache(workspaces, new Set())).toBeUndefined();
+    expect(PinnedNotesCache.read(workspaces, new Set())).toBeUndefined();
   });
 
   it("keeps caches for different excluded directories separate", () => {
-    setPinnedNotesCache(notes, workspaces, new Set(["archive"]));
-    setPinnedNotesCache([], workspaces, new Set(["templates"]));
+    PinnedNotesCache.write(notes, workspaces, new Set(["archive"]));
+    PinnedNotesCache.write([], workspaces, new Set(["templates"]));
 
-    expect(getPinnedNotesCache(workspaces, new Set(["archive"]))).toEqual(notes);
-    expect(getPinnedNotesCache(workspaces, new Set(["templates"]))).toEqual([]);
+    expect(PinnedNotesCache.read(workspaces, new Set(["archive"]))).toEqual(notes);
+    expect(PinnedNotesCache.read(workspaces, new Set(["templates"]))).toEqual([]);
   });
 
   it("keeps caches for different workspace sets separate", () => {
     const otherWorkspace = { name: "Beta", path: "/workspaces/beta" };
 
-    setPinnedNotesCache(notes, workspaces, new Set());
-    setPinnedNotesCache(
+    PinnedNotesCache.write(notes, workspaces, new Set());
+    PinnedNotesCache.write(
       [
         {
           id: "Beta::Pinned.md",
           title: "Pinned",
           path: "Pinned.md",
-          workspace: otherWorkspace,
+          folder: {
+            name: "",
+            path: "",
+            workspace: otherWorkspace,
+          },
           pinned: true,
-          normalizedTitle: "pinned",
-          normalizedPath: "pinned.md",
-          normalizedWorkspace: "beta",
-          normalizedDirectory: "",
-          directorySegments: [],
           searchText: "pinned pinned.md beta",
         },
       ],
@@ -193,19 +198,18 @@ describe("pinned notes cache", () => {
       new Set(),
     );
 
-    expect(getPinnedNotesCache(workspaces, new Set())).toEqual(notes);
-    expect(getPinnedNotesCache([otherWorkspace], new Set())).toEqual([
+    expect(PinnedNotesCache.read(workspaces, new Set())).toEqual(notes);
+    expect(PinnedNotesCache.read([otherWorkspace], new Set())).toEqual([
       {
         id: "Beta::Pinned.md",
         title: "Pinned",
         path: "Pinned.md",
-        workspace: otherWorkspace,
+        folder: {
+          name: "",
+          path: "",
+          workspace: otherWorkspace,
+        },
         pinned: true,
-        normalizedTitle: "pinned",
-        normalizedPath: "pinned.md",
-        normalizedWorkspace: "beta",
-        normalizedDirectory: "",
-        directorySegments: [],
         searchText: "pinned pinned.md beta",
       },
     ]);

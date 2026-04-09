@@ -1,7 +1,7 @@
 import { Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { loadWorkspaces, type ScanWorkspacesResult } from "../lib/workspaces";
 import type { Workspace } from "../types/octarine";
+import { getWorkspaces } from "../lib/workspaces";
 
 const EMPTY_WORKSPACES: Workspace[] = [];
 
@@ -18,24 +18,31 @@ type Options = {
 type Result = {
   workspaces: Workspace[];
   status: LoadStatus;
-  revalidate: () => Promise<ScanWorkspacesResult>;
+  revalidate: () => Promise<Workspace[]>;
 };
 
 export function useWorkspaces(options: Options = {}): Result {
   const refresh = options.refresh ?? false;
   const enabled = options.enabled ?? true;
 
-  const { data, error, isLoading, revalidate } = usePromise(
+  const {
+    data: workspaces,
+    error,
+    isLoading,
+    revalidate,
+  } = usePromise(
     async (refresh: boolean) => {
-      const { workspaces, invalidRoots } = await loadWorkspaces({ refresh });
+      const workspaces = await getWorkspaces({ refresh });
+      const invalid = workspaces.filter((workspace) => workspace.invalid).length;
+      const visible = workspaces.filter((workspace) => !workspace.invalid && !workspace.ignored);
 
-      if (invalidRoots.length > 0) {
+      if (invalid > 0) {
         showToast({
           style: Toast.Style.Failure,
           title: "Invalid workspace root paths",
-          message: `${invalidRoots.length} paths could not be found`,
+          message: `${invalid} paths could not be found`,
         });
-      } else if (workspaces.length === 0) {
+      } else if (visible.length === 0) {
         showToast({
           style: Toast.Style.Failure,
           title: "No workspaces found",
@@ -43,10 +50,7 @@ export function useWorkspaces(options: Options = {}): Result {
         });
       }
 
-      return {
-        workspaces,
-        invalidRoots,
-      };
+      return visible;
     },
     [refresh],
     {
@@ -69,7 +73,7 @@ export function useWorkspaces(options: Options = {}): Result {
   );
 
   return {
-    workspaces: data?.workspaces ?? EMPTY_WORKSPACES,
+    workspaces: workspaces ?? EMPTY_WORKSPACES,
     status: {
       isLoading,
       failed: Boolean(error),

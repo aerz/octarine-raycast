@@ -1,48 +1,41 @@
 import path from "node:path";
-import type { Workspace } from "../types/octarine";
-import { getWorkspacesCache, setWorkspacesCache } from "./cache";
-import { scanWorkspacePaths } from "./files";
+import type { IndexedWorkspace } from "../types/workspaces";
+import { WorkspacesCache } from "./cache";
+import type { ScannedPath } from "./files";
+import { scanPaths } from "./files";
 import { extensionPreferences } from "./preferences";
 
-export type ScanWorkspacesResult = {
-  workspaces: Workspace[];
-  invalidRoots: string[];
-};
-
-async function scanWorkspaces(roots: string[], excludedWorkspaces: Set<string>): Promise<ScanWorkspacesResult> {
-  const { paths, invalidRoots } = await scanWorkspacePaths(roots, excludedWorkspaces);
-  const workspaces = paths.map((workspacePath) => ({
+function buildIndexedWorkspace({ path: workspacePath, ignored, invalid }: ScannedPath): IndexedWorkspace {
+  return {
     name: path.basename(workspacePath),
     path: workspacePath,
-  }));
+    ignored,
+    invalid,
+  };
+}
 
-  workspaces.sort((a, b) => {
+async function scanWorkspaces(roots: string[], excludedDirectories: Set<string>): Promise<IndexedWorkspace[]> {
+  const paths = await scanPaths(roots, excludedDirectories);
+  const workspaces = paths.map(buildIndexedWorkspace);
+
+  return [...workspaces].sort((a, b) => {
     const byName = a.name.localeCompare(b.name);
     return byName !== 0 ? byName : a.path.localeCompare(b.path);
   });
-
-  return { workspaces, invalidRoots };
 }
 
-export async function loadWorkspaces(options?: { refresh?: boolean }): Promise<ScanWorkspacesResult> {
-  const { workspaceRoots, excludedWorkspaces } = extensionPreferences();
+export async function getWorkspaces(options?: { refresh?: boolean }): Promise<IndexedWorkspace[]> {
+  const { workspaceRoots, excludedWorkspaces: excludedDirectories } = extensionPreferences();
   const refresh = options?.refresh ?? false;
 
   if (!refresh) {
-    const cache = getWorkspacesCache(workspaceRoots);
+    const cache = WorkspacesCache.read(workspaceRoots, excludedDirectories);
     if (cache) {
-      return {
-        workspaces: cache.workspaces,
-        invalidRoots: cache.invalidRoots,
-      };
+      return cache;
     }
   }
 
-  const { workspaces, invalidRoots } = await scanWorkspaces(workspaceRoots, excludedWorkspaces);
-  setWorkspacesCache(workspaces, workspaceRoots, invalidRoots);
-
-  return {
-    workspaces,
-    invalidRoots,
-  };
+  const workspaces = await scanWorkspaces(workspaceRoots, excludedDirectories);
+  WorkspacesCache.write(workspaces, workspaceRoots, excludedDirectories);
+  return workspaces;
 }

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
-import { loadWorkspaces } from "../../src/lib/workspaces";
+import { getWorkspaces } from "../../src/lib/workspaces";
 
-const { scanWorkspacePaths } = vi.hoisted(() => ({
-  scanWorkspacePaths: vi.fn(),
+const { scanPaths } = vi.hoisted(() => ({
+  scanPaths: vi.fn(),
 }));
 
 vi.mock("../../src/lib/utils", async (importOriginal) => {
@@ -29,20 +29,22 @@ vi.mock("../../src/lib/files", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/lib/files")>();
   return {
     ...actual,
-    scanWorkspacePaths,
+    scanPaths,
   };
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
   vi.useRealTimers();
-  scanWorkspacePaths.mockReset();
+  scanPaths.mockReset();
 });
 
-describe("loadWorkspaces", () => {
+describe("getWorkspaces", () => {
   const staleOffsetMs = 24 * 60 * 60 * 1000;
+  const validPath = (path: string, ignored = false) => ({ path, ignored, invalid: false });
+  const invalidPath = (path: string) => ({ path, ignored: false, invalid: true });
 
-  it("maps discovered paths into sorted workspaces and passes invalid roots through", async () => {
+  it("maps discovered paths into sorted indexed workspaces", async () => {
     const root = "/tmp/root";
     const nestedRoot = "/tmp/root/nested";
     const invalidRoot = "/tmp/missing";
@@ -52,22 +54,24 @@ describe("loadWorkspaces", () => {
       excludedWorkspaces: "skipme",
       excludedFoldersInWorkspaces: "",
     });
-    scanWorkspacePaths.mockResolvedValue({
-      paths: ["/tmp/root/Beta", "/tmp/other/Alpha", "/tmp/root/Alpha"],
-      invalidRoots: [invalidRoot],
-    });
+    scanPaths.mockResolvedValue([
+      validPath("/tmp/root/Beta"),
+      validPath("/tmp/other/Alpha"),
+      validPath("/tmp/root/Alpha"),
+      invalidPath(invalidRoot),
+    ]);
 
-    const result = await loadWorkspaces();
-    const [roots, excludedWorkspaces] = scanWorkspacePaths.mock.calls[0];
+    const result = await getWorkspaces();
+    const [roots, excludedDirectories] = scanPaths.mock.calls[0];
 
-    expect(result.invalidRoots).toEqual([invalidRoot]);
-    expect(result.workspaces).toEqual([
-      { name: "Alpha", path: "/tmp/other/Alpha" },
-      { name: "Alpha", path: "/tmp/root/Alpha" },
-      { name: "Beta", path: "/tmp/root/Beta" },
+    expect(result).toEqual([
+      { name: "Alpha", path: "/tmp/other/Alpha", ignored: false, invalid: false },
+      { name: "Alpha", path: "/tmp/root/Alpha", ignored: false, invalid: false },
+      { name: "Beta", path: "/tmp/root/Beta", ignored: false, invalid: false },
+      { name: "missing", path: invalidRoot, ignored: false, invalid: true },
     ]);
     expect(roots).toEqual([root, nestedRoot, invalidRoot]);
-    expect(excludedWorkspaces).toEqual(new Set(["skipme"]));
+    expect(excludedDirectories).toEqual(new Set(["skipme"]));
   });
 
   it("reuses the cache until a refresh is requested", async () => {
@@ -78,33 +82,21 @@ describe("loadWorkspaces", () => {
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
     });
-    scanWorkspacePaths.mockResolvedValueOnce({
-      paths: ["/tmp/root/Alpha"],
-      invalidRoots: [],
-    });
+    scanPaths.mockResolvedValueOnce([validPath("/tmp/root/Alpha")]);
 
-    const initial = await loadWorkspaces();
-    scanWorkspacePaths.mockResolvedValueOnce({
-      paths: ["/tmp/root/Alpha", "/tmp/root/Beta"],
-      invalidRoots: [],
-    });
+    const initial = await getWorkspaces();
+    scanPaths.mockResolvedValueOnce([validPath("/tmp/root/Alpha"), validPath("/tmp/root/Beta")]);
 
-    const cachedResult = await loadWorkspaces();
-    const refreshed = await loadWorkspaces({ refresh: true });
+    const cachedResult = await getWorkspaces();
+    const refreshed = await getWorkspaces({ refresh: true });
 
-    expect(initial).toEqual({
-      workspaces: [{ name: "Alpha", path: "/tmp/root/Alpha" }],
-      invalidRoots: [],
-    });
-    expect(cachedResult).toEqual({
-      workspaces: [{ name: "Alpha", path: "/tmp/root/Alpha" }],
-      invalidRoots: [],
-    });
-    expect(refreshed.workspaces).toEqual([
-      { name: "Alpha", path: "/tmp/root/Alpha" },
-      { name: "Beta", path: "/tmp/root/Beta" },
+    expect(initial).toEqual([{ name: "Alpha", path: "/tmp/root/Alpha", ignored: false, invalid: false }]);
+    expect(cachedResult).toEqual([{ name: "Alpha", path: "/tmp/root/Alpha", ignored: false, invalid: false }]);
+    expect(refreshed).toEqual([
+      { name: "Alpha", path: "/tmp/root/Alpha", ignored: false, invalid: false },
+      { name: "Beta", path: "/tmp/root/Beta", ignored: false, invalid: false },
     ]);
-    expect(scanWorkspacePaths).toHaveBeenCalledTimes(2);
+    expect(scanPaths).toHaveBeenCalledTimes(2);
   });
 
   it("ignores cached workspaces when workspaceRoots changes", async () => {
@@ -116,33 +108,48 @@ describe("loadWorkspaces", () => {
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
     });
-    scanWorkspacePaths.mockResolvedValueOnce({
-      paths: ["/tmp/first-root/Alpha"],
-      invalidRoots: [],
-    });
+    scanPaths.mockResolvedValueOnce([validPath("/tmp/first-root/Alpha")]);
 
-    const initial = await loadWorkspaces();
+    const initial = await getWorkspaces();
 
     setMockPreferences({
       workspaceRoots: secondRoot,
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
     });
-    scanWorkspacePaths.mockResolvedValueOnce({
-      paths: ["/tmp/second-root/Beta"],
-      invalidRoots: [],
-    });
+    scanPaths.mockResolvedValueOnce([validPath("/tmp/second-root/Beta")]);
 
-    const changedRoots = await loadWorkspaces();
+    const changedRoots = await getWorkspaces();
 
-    expect(initial).toEqual({
-      workspaces: [{ name: "Alpha", path: "/tmp/first-root/Alpha" }],
-      invalidRoots: [],
+    expect(initial).toEqual([{ name: "Alpha", path: "/tmp/first-root/Alpha", ignored: false, invalid: false }]);
+    expect(changedRoots).toEqual([{ name: "Beta", path: "/tmp/second-root/Beta", ignored: false, invalid: false }]);
+  });
+
+  it("ignores cached workspaces when excludedWorkspaces changes", async () => {
+    const root = "/tmp/root";
+    const skipped = "/tmp/root/SkipMe";
+
+    setMockPreferences({
+      workspaceRoots: root,
+      excludedWorkspaces: "",
+      excludedFoldersInWorkspaces: "",
     });
-    expect(changedRoots).toEqual({
-      workspaces: [{ name: "Beta", path: "/tmp/second-root/Beta" }],
-      invalidRoots: [],
+    scanPaths.mockResolvedValueOnce([validPath(skipped)]);
+
+    const initial = await getWorkspaces();
+
+    setMockPreferences({
+      workspaceRoots: root,
+      excludedWorkspaces: "skipme",
+      excludedFoldersInWorkspaces: "",
     });
+    scanPaths.mockResolvedValueOnce([validPath(skipped, true)]);
+
+    const changedExcludedWorkspaces = await getWorkspaces();
+
+    expect(initial).toEqual([{ name: "SkipMe", path: skipped, ignored: false, invalid: false }]);
+    expect(changedExcludedWorkspaces).toEqual([{ name: "SkipMe", path: skipped, ignored: true, invalid: false }]);
+    expect(scanPaths).toHaveBeenCalledTimes(2);
   });
 
   it("rescans when the workspace cache is stale", async () => {
@@ -156,30 +163,18 @@ describe("loadWorkspaces", () => {
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
     });
-    scanWorkspacePaths.mockResolvedValueOnce({
-      paths: ["/tmp/root/Alpha"],
-      invalidRoots: [],
-    });
+    scanPaths.mockResolvedValueOnce([validPath("/tmp/root/Alpha")]);
 
-    const initial = await loadWorkspaces();
-    scanWorkspacePaths.mockResolvedValueOnce({
-      paths: ["/tmp/root/Alpha", "/tmp/root/Beta"],
-      invalidRoots: [],
-    });
+    const initial = await getWorkspaces();
+    scanPaths.mockResolvedValueOnce([validPath("/tmp/root/Alpha"), validPath("/tmp/root/Beta")]);
     nowSpy.mockReturnValue(now + staleOffsetMs);
 
-    const stale = await loadWorkspaces();
+    const stale = await getWorkspaces();
 
-    expect(initial).toEqual({
-      workspaces: [{ name: "Alpha", path: "/tmp/root/Alpha" }],
-      invalidRoots: [],
-    });
-    expect(stale).toEqual({
-      workspaces: [
-        { name: "Alpha", path: "/tmp/root/Alpha" },
-        { name: "Beta", path: "/tmp/root/Beta" },
-      ],
-      invalidRoots: [],
-    });
+    expect(initial).toEqual([{ name: "Alpha", path: "/tmp/root/Alpha", ignored: false, invalid: false }]);
+    expect(stale).toEqual([
+      { name: "Alpha", path: "/tmp/root/Alpha", ignored: false, invalid: false },
+      { name: "Beta", path: "/tmp/root/Beta", ignored: false, invalid: false },
+    ]);
   });
 });

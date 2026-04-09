@@ -1,13 +1,12 @@
 import { Action, ActionPanel, Clipboard, Icon, List, openExtensionPreferences } from "@raycast/api";
 import type { ReactNode } from "react";
 import type { Workspace } from "../types/octarine";
-import type { ScanWorkspacesResult } from "../lib/workspaces";
 import { WorkspaceListEmptyView } from "./empty-views/workspace";
 
 type Props = {
   isLoading: boolean;
   workspaces: Workspace[];
-  onRefresh: () => void | Promise<ScanWorkspacesResult>;
+  onRefresh: () => void | Promise<Workspace[]>;
   children: (workspace: Workspace) => ReactNode;
 };
 

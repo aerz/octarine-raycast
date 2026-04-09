@@ -2,19 +2,20 @@ import { Dirent, promises as fs } from "node:fs";
 import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 
-const WORKSPACE_DIR_NAME = ".octarine";
+const OCTARINE_WORKSPACE_DIRECTORY = ".octarine";
 
 export type MarkdownFile = {
   absolute: string;
   relative: string;
 };
 
-export type ScanWorkspacePathsResult = {
-  paths: string[];
-  invalidRoots: string[];
+export type ScannedPath = {
+  path: string;
+  ignored: boolean;
+  invalid: boolean;
 };
 
-export type ScannedDirectory = {
+export type FolderEntry = {
   name: string;
   absolute: string;
   relative: string;
@@ -49,16 +50,23 @@ function extractFrontmatter(content: string): string | undefined {
   return undefined;
 }
 
-export async function scanWorkspacePaths(
-  roots: string[],
-  excludedWorkspaces: Set<string>,
-): Promise<ScanWorkspacePathsResult> {
-  const invalidRoots: string[] = [];
-  const discovered = new Set<string>();
+export async function scanPaths(roots: string[], excluded: Set<string>): Promise<ScannedPath[]> {
+  const discovered = new Map<string, ScannedPath>();
 
   const addWorkspace = (workspacePath: string) => {
-    const name = path.basename(workspacePath).toLowerCase();
-    if (!excludedWorkspaces.has(name)) discovered.add(workspacePath);
+    discovered.set(workspacePath, {
+      path: workspacePath,
+      ignored: excluded.has(path.basename(workspacePath).toLowerCase()),
+      invalid: false,
+    });
+  };
+
+  const addInvalidPath = (workspacePath: string) => {
+    discovered.set(workspacePath, {
+      path: workspacePath,
+      ignored: false,
+      invalid: true,
+    });
   };
 
   await Promise.all(
@@ -69,11 +77,11 @@ export async function scanWorkspacePaths(
       try {
         entries = await fs.readdir(resolvedRoot, { withFileTypes: true });
       } catch {
-        invalidRoots.push(root);
+        addInvalidPath(resolvedRoot);
         return;
       }
 
-      if (entries.some((e) => e.isDirectory() && e.name === WORKSPACE_DIR_NAME)) {
+      if (entries.some((e) => e.isDirectory() && e.name === OCTARINE_WORKSPACE_DIRECTORY)) {
         addWorkspace(resolvedRoot);
         return;
       }
@@ -84,7 +92,7 @@ export async function scanWorkspacePaths(
         directories.map(async (dir) => {
           const childPath = path.join(resolvedRoot, dir.name);
           try {
-            const stat = await fs.stat(path.join(childPath, WORKSPACE_DIR_NAME));
+            const stat = await fs.stat(path.join(childPath, OCTARINE_WORKSPACE_DIRECTORY));
             if (stat.isDirectory()) addWorkspace(childPath);
           } catch {
             return;
@@ -94,10 +102,7 @@ export async function scanWorkspacePaths(
     }),
   );
 
-  return {
-    paths: Array.from(discovered),
-    invalidRoots,
-  };
+  return Array.from(discovered.values());
 }
 
 export async function scanMarkdownFiles(root: string, excluded: Set<string>): Promise<MarkdownFile[]> {
@@ -139,9 +144,9 @@ export async function scanMarkdownFiles(root: string, excluded: Set<string>): Pr
   return files;
 }
 
-export async function scanDirectories(root: string, excludedDirectories: Set<string>): Promise<ScannedDirectory[]> {
+export async function scanFolders(root: string, excluded: Set<string>): Promise<FolderEntry[]> {
   const pending: Array<{ absolute: string; relative: string }> = [{ absolute: root, relative: "" }];
-  const directories: ScannedDirectory[] = [];
+  const directories: FolderEntry[] = [];
 
   while (pending.length > 0) {
     const { absolute: currentAbsolute, relative: currentRelative } = pending.pop()!;
@@ -154,7 +159,7 @@ export async function scanDirectories(root: string, excludedDirectories: Set<str
     }
 
     for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".") || excludedDirectories.has(entry.name.toLowerCase())) {
+      if (!entry.isDirectory() || entry.name.startsWith(".") || excluded.has(entry.name.toLowerCase())) {
         continue;
       }
 
