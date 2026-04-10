@@ -89,10 +89,6 @@ export async function scanWorkspaceFolders(
   });
 }
 
-function withDefaultExcluded(directories: Set<string>): Set<string> {
-  return new Set([...DEFAULT_EXCLUDED_DIRECTORY_NAMES, ...directories]);
-}
-
 async function scanWorkspaceNotes(workspace: Workspace, excludedDirectories: Set<string>): Promise<IndexedNote[]> {
   const files = await scanMarkdownFiles(workspace.path, excludedDirectories);
 
@@ -154,4 +150,8 @@ function buildRootIndexedFolder(workspace: Workspace): IndexedFolder {
     name: "Root (No folder)",
     searchName: "root",
   });
+}
+
+function withDefaultExcluded(directories: Set<string>): Set<string> {
+  return new Set([...DEFAULT_EXCLUDED_DIRECTORY_NAMES, ...directories]);
 }

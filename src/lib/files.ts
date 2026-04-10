@@ -22,35 +22,6 @@ export type FolderEntry = {
   relative: string;
 };
 
-function toPosixPath(p: string): string {
-  return p.split(path.sep).join(path.posix.sep);
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function normalizeStart(content: string): string {
-  return content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
-}
-
-function extractFrontmatter(content: string): string | undefined {
-  const normalized = normalizeStart(content);
-  const lines = normalized.split(/\r?\n/);
-
-  if (lines[0]?.trim() !== "---") {
-    return undefined;
-  }
-
-  for (let index = 1; index < lines.length; index += 1) {
-    if (/^\s*(---|\.\.\.)\s*$/.test(lines[index])) {
-      return lines.slice(0, index + 1).join("\n");
-    }
-  }
-
-  return undefined;
-}
-
 export async function scanPaths(roots: string[], excluded: Set<string>): Promise<ScannedPath[]> {
   const discovered = new Map<string, ScannedPath>();
 
@@ -237,4 +208,33 @@ export async function readViewsFile(workspacePath: string): Promise<unknown | un
   } catch {
     throw new Error(`Failed to parse file ${filePath}`);
   }
+}
+
+function toPosixPath(p: string): string {
+  return p.split(path.sep).join(path.posix.sep);
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function extractFrontmatter(content: string): string | undefined {
+  const normalized = normalizeStart(content);
+  const lines = normalized.split(/\r?\n/);
+
+  if (lines[0]?.trim() !== "---") {
+    return undefined;
+  }
+
+  for (let index = 1; index < lines.length; index += 1) {
+    if (/^\s*(---|\.\.\.)\s*$/.test(lines[index])) {
+      return lines.slice(0, index + 1).join("\n");
+    }
+  }
+
+  return undefined;
+}
+
+function normalizeStart(content: string): string {
+  return content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
 }

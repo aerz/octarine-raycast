@@ -10,6 +10,54 @@ type ViewData = {
   desc?: unknown;
 };
 
+export async function getViews(workspaces: Workspace[], options?: { refresh?: boolean }): Promise<IndexedView[]> {
+  const refresh = options?.refresh ?? false;
+
+  if (!refresh) {
+    const cached = ViewsCache.read(workspaces);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  const views = await scanViews(workspaces);
+  ViewsCache.write(views, workspaces);
+  return views;
+}
+
+async function scanViews(workspaces: Workspace[]): Promise<IndexedView[]> {
+  const views = await Promise.all(
+    workspaces.map(async (workspace) => {
+      const data = await readViewsFile(workspace.path);
+      if (data === undefined) {
+        return [];
+      }
+
+      const views = buildIndexedViews(data, workspace);
+      return views ?? [];
+    }),
+  );
+
+  return views.flat();
+}
+
+function buildIndexedViews(value: unknown, workspace: Workspace): IndexedView[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const views = value.flatMap((item, index) => {
+    const view = buildIndexedView(item, workspace, index);
+    return view ? [view] : [];
+  });
+
+  if (views.length !== value.length) {
+    return undefined;
+  }
+
+  return views.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+}
+
 function buildIndexedView(value: unknown, workspace: Workspace, index: number): IndexedView | undefined {
   if (!value || typeof value !== "object") {
     return undefined;
@@ -34,52 +82,4 @@ function buildIndexedView(value: unknown, workspace: Workspace, index: number): 
     workspace,
     searchText: buildSearchText(name, description, workspace.name),
   };
-}
-
-function buildIndexedViews(value: unknown, workspace: Workspace): IndexedView[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-
-  const views = value.flatMap((item, index) => {
-    const view = buildIndexedView(item, workspace, index);
-    return view ? [view] : [];
-  });
-
-  if (views.length !== value.length) {
-    return undefined;
-  }
-
-  return views.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-}
-
-async function scanViews(workspaces: Workspace[]): Promise<IndexedView[]> {
-  const views = await Promise.all(
-    workspaces.map(async (workspace) => {
-      const data = await readViewsFile(workspace.path);
-      if (data === undefined) {
-        return [];
-      }
-
-      const views = buildIndexedViews(data, workspace);
-      return views ?? [];
-    }),
-  );
-
-  return views.flat();
-}
-
-export async function getViews(workspaces: Workspace[], options?: { refresh?: boolean }): Promise<IndexedView[]> {
-  const refresh = options?.refresh ?? false;
-
-  if (!refresh) {
-    const cached = ViewsCache.read(workspaces);
-    if (cached) {
-      return cached;
-    }
-  }
-
-  const views = await scanViews(workspaces);
-  ViewsCache.write(views, workspaces);
-  return views;
 }

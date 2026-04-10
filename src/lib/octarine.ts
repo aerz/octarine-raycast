@@ -65,29 +65,6 @@ type AppendDailyOptions = {
   content: string;
 };
 
-function buildUri({ action, ...params }: Scheme): string {
-  const entries = Object.entries(params)
-    .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => [key, String(value)]);
-
-  const query = new URLSearchParams(Object.fromEntries(entries)).toString();
-  return `octarine://${action}${query ? `?${query}` : ""}`;
-}
-
-function buildOpenWorkspaceUri(workspace: string): string {
-  return buildUri({
-    action: Action.Daily,
-    date: "today",
-    workspace,
-  });
-}
-
-async function openUri(uri: string): Promise<void> {
-  await open(uri);
-  await popToRoot({ clearSearchBar: true });
-  await closeMainWindow({ clearRootSearch: true });
-}
-
 export function openWorkspace(name: string): Promise<void> {
   return openUri(buildOpenWorkspaceUri(name));
 }
@@ -191,4 +168,27 @@ export async function openView(workspace: string, view: string): Promise<void> {
   await execAsync("osascript", ["-e", OPEN_VIEW_APPLE_SCRIPT, view]);
   await popToRoot({ clearSearchBar: true });
   await closeMainWindow({ clearRootSearch: true });
+}
+
+async function openUri(uri: string): Promise<void> {
+  await open(uri);
+  await popToRoot({ clearSearchBar: true });
+  await closeMainWindow({ clearRootSearch: true });
+}
+
+function buildOpenWorkspaceUri(workspace: string): string {
+  return buildUri({
+    action: Action.Daily,
+    date: "today",
+    workspace,
+  });
+}
+
+function buildUri({ action, ...params }: Scheme): string {
+  const entries = Object.entries(params)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => [key, String(value)]);
+
+  const query = new URLSearchParams(Object.fromEntries(entries)).toString();
+  return `octarine://${action}${query ? `?${query}` : ""}`;
 }
