@@ -1,6 +1,7 @@
 import { Cache } from "@raycast/api";
 import { isIndexedNote, type IndexedNote } from "../types/notes";
 import type { Workspace } from "../types/octarine";
+import { isIndexedView, type IndexedView } from "../types/views";
 import { isIndexedWorkspace, type IndexedWorkspace } from "../types/workspaces";
 
 const CACHE_TTL = 15 * 60 * 1000;
@@ -54,6 +55,10 @@ function isIndexedNoteArray(value: unknown): value is IndexedNote[] {
   return Array.isArray(value) && value.every(isIndexedNote);
 }
 
+function isIndexedViewArray(value: unknown): value is IndexedView[] {
+  return Array.isArray(value) && value.every(isIndexedView);
+}
+
 export const WorkspacesCache = createCache<IndexedWorkspace[], [string[], Set<string>]>({
   key(roots, excludedDirectories) {
     const prefix = "octarine.workspaces.v2";
@@ -88,4 +93,15 @@ export const PinnedNotesCache = createCache<IndexedNote[], [Workspace[], Set<str
   },
 
   isValid: isIndexedNoteArray,
+});
+
+export const ViewsCache = createCache<IndexedView[], [Workspace[]]>({
+  key(workspaces) {
+    const prefix = "octarine.views.v1";
+    return `${prefix}.${JSON.stringify({
+      workspaces: workspaces.map((workspace) => workspace.path).sort(),
+    })}`;
+  },
+
+  isValid: isIndexedViewArray,
 });
