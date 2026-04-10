@@ -133,8 +133,9 @@ function DefaultActionPanel({ onRefresh, children }: { onRefresh: () => void; ch
 function ViewsEmptyView({ actions }: { actions?: ReactNode }) {
   return (
     <List.EmptyView
-      title="No Views Found"
-      description="No workspace contains a .octarine/views.json file with views."
+      icon={Icon.AppWindowGrid2x2}
+      title="No Views Available"
+      description="No workspace contains an .octarine/views.json file."
       actions={actions}
     />
   );
