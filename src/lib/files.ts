@@ -218,7 +218,7 @@ export async function readMarkdownFrontmatter(filePath: string): Promise<string 
   }
 }
 
-export async function readWorkspaceViewsFile(workspacePath: string): Promise<unknown | undefined> {
+export async function readViewsFile(workspacePath: string): Promise<unknown | undefined> {
   const filePath = path.join(workspacePath, OCTARINE_WORKSPACE_DIRECTORY, OCTARINE_VIEWS_FILE);
   let text: string;
   try {

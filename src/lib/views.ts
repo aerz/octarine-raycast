@@ -1,6 +1,6 @@
 import type { Workspace } from "../types/octarine";
 import { ViewsCache } from "./cache";
-import { readWorkspaceViewsFile } from "./files";
+import { readViewsFile } from "./files";
 import { buildSearchText } from "./search";
 import type { IndexedView } from "../types/views";
 
@@ -56,7 +56,7 @@ function buildIndexedViews(value: unknown, workspace: Workspace): IndexedView[] 
 async function scanViews(workspaces: Workspace[]): Promise<IndexedView[]> {
   const views = await Promise.all(
     workspaces.map(async (workspace) => {
-      const data = await readWorkspaceViewsFile(workspace.path);
+      const data = await readViewsFile(workspace.path);
       if (data === undefined) {
         return [];
       }
