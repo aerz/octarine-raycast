@@ -74,10 +74,10 @@ export function openTodayNotePreferences() {
 }
 
 export function searchViewsPreferences() {
-  const preferences = getPreferenceValues<Preferences.SearchViews>();
+  const { showWorkspaceViewCount } = getPreferenceValues<Preferences.SearchViews>();
 
   return {
-    showWorkspaceViewCount: preferences.showWorkspaceViewCount,
+    showWorkspaceViewCount,
   };
 }
 
