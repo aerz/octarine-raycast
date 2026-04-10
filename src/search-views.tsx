@@ -31,7 +31,7 @@ export default function SearchViewsCommand() {
   } = useWorkspaces({ refresh });
   const { dropdown, sections, isLoading, revalidate } = useViews({
     workspaces,
-    isWorkspacesLoading,
+    enabled: !isWorkspacesLoading,
     searchText,
     selectedWorkspace,
     refresh,

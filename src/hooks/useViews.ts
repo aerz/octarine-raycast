@@ -14,7 +14,7 @@ export type WorkspaceViewSection = {
 
 type Options = {
   workspaces: Workspace[];
-  isWorkspacesLoading?: boolean;
+  enabled?: boolean;
   searchText: string;
   selectedWorkspace: string;
   refresh?: boolean;
@@ -29,12 +29,11 @@ type Result = {
 
 export function useViews({
   workspaces,
-  isWorkspacesLoading = false,
+  enabled = true,
   searchText,
   selectedWorkspace,
   refresh = false,
 }: Options): Result {
-  const enabled = !isWorkspacesLoading;
   const { data: views, isLoading, revalidate } = useCachedPromise(
     (refresh: boolean, workspaces: Workspace[]) => getViews(workspaces, { refresh }),
     [refresh, workspaces],
