@@ -12,12 +12,3 @@ export function WorkspaceAttachmentsEmptyView() {
 export function WorkspaceNotesEmptyView() {
   return <List.EmptyView title="No Notes Found" />;
 }
-
-export function WorkspaceViewsEmptyView() {
-  return (
-    <List.EmptyView
-      title="No Views Found"
-      description="No workspace contains a .octarine/views.json file with views."
-    />
-  );
-}

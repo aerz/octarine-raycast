@@ -1,266 +1,117 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { skippedRootsToast, viewsLoadToast } from "../components/toasts";
-import { extensionPreferences } from "../lib/preferences";
+import { Toast, showToast } from "@raycast/api";
+import { useCachedPromise } from "@raycast/utils";
+import { useMemo } from "react";
+import { viewsLoadToast } from "../components/toasts";
 import { querySearchText } from "../lib/search";
-import {
-  loadCachedViews,
-  saveCachedViews,
-  type IndexedView,
-  type WorkspaceViews,
-  scanViewsFromWorkspaces,
-} from "../lib/views";
+import { getViews } from "../lib/views";
+import type { Workspace } from "../types/octarine";
+import type { IndexedView } from "../types/views";
 
 export type WorkspaceViewSection = {
   workspace: string;
   views: IndexedView[];
 };
 
-type RenderState =
-  | "loading"
-  | "noConfiguredWorkspaces"
-  | "noAvailableViews"
-  | "noMatchingViews"
-  | "showByWorkspace"
-  | "showFlat";
-
 type Options = {
+  workspaces: Workspace[];
+  isWorkspacesLoading?: boolean;
   searchText: string;
   selectedWorkspace: string;
+  refresh?: boolean;
 };
 
 type Result = {
-  workspaceNames: string[];
-  matchingViews: IndexedView[];
+  dropdown: string[];
   sections: WorkspaceViewSection[];
-  renderState: RenderState;
-};
-
-type SearchResultsInput = {
-  views: WorkspaceViews[];
-  search: string;
-  workspace: string;
-};
-
-type RenderStateInput = {
-  loading: boolean;
-  hasConfiguredRoots: boolean;
-  hasWorkspaces: boolean;
-  availableCount: number;
-  matchedCount: number;
-  workspace: string;
-};
-
-export function useViews({ searchText, selectedWorkspace }: Options): Result {
-  const prefs = extensionPreferences();
-
-  const { workspaceViews, isLoading, loadError, skippedRootsCount } = useViewsSource({
-    hasConfiguredRoots: prefs.hasConfiguredRoots,
-    workspaceDiscoverySignature: prefs.workspaceDiscoverySignature,
-  });
-  useViewsToasts({ loadError, skippedRootsCount });
-
-  const workspaceNames = useMemo(() => workspaceViews.map((entry) => entry.workspace.name), [workspaceViews]);
-  const hasWorkspaces = workspaceViews.length > 0;
-  const searchResultsInput: SearchResultsInput = {
-    views: workspaceViews,
-    search: searchText,
-    workspace: selectedWorkspace,
-  };
-  const { availableCount, matchingViews, sections } = useMemo(
-    () => buildSearchResults(searchResultsInput),
-    [workspaceViews, searchText, selectedWorkspace],
-  );
-  const renderStateInput: RenderStateInput = {
-    loading: isLoading,
-    hasConfiguredRoots: prefs.hasConfiguredRoots,
-    hasWorkspaces,
-    availableCount,
-    matchedCount: matchingViews.length,
-    workspace: selectedWorkspace,
-  };
-
-  return {
-    workspaceNames,
-    matchingViews,
-    sections,
-    renderState: getRenderState(renderStateInput),
-  };
-}
-
-function useViewsSource({
-  hasConfiguredRoots,
-  workspaceDiscoverySignature,
-}: {
-  hasConfiguredRoots: boolean;
-  workspaceDiscoverySignature: string;
-}): {
-  workspaceViews: WorkspaceViews[];
   isLoading: boolean;
-  loadError: Error | undefined;
-  skippedRootsCount: number;
-} {
-  const [workspaceViews, setWorkspaceViews] = useState<WorkspaceViews[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<Error | undefined>(undefined);
-  const [skippedRootsCount, setSkippedRootsCount] = useState(0);
+  revalidate: () => void;
+};
 
-  useEffect(() => {
-    let canceled = false;
+export function useViews({
+  workspaces,
+  isWorkspacesLoading = false,
+  searchText,
+  selectedWorkspace,
+  refresh = false,
+}: Options): Result {
+  const enabled = !isWorkspacesLoading;
+  const { data: views, isLoading, revalidate } = useCachedPromise(
+    (refresh: boolean, workspaces: Workspace[]) => getViews(workspaces, { refresh }),
+    [refresh, workspaces],
+    {
+      execute: enabled,
+      initialData: [] satisfies IndexedView[],
+      keepPreviousData: true,
+      onError: async (error) => {
+        console.error("Failed to scan Octarine views", error);
+        await viewsLoadToast();
+      },
+      onData: () => {
+        if (refresh) {
+          showToast({
+            style: Toast.Style.Success,
+            title: "Views refreshed",
+          });
+        }
+      },
+    },
+  );
 
-    const applyViews = (views: WorkspaceViews[]) => {
-      if (canceled) {
-        return;
-      }
+  const { dropdown, sections } = useMemo(() => {
+    const grouped = groupByWorkspace(views);
 
-      startTransition(() => {
-        setWorkspaceViews(views);
-      });
+    return {
+      dropdown: workspaceNames(grouped),
+      sections: buildWorkspaceSections(grouped, { selectedWorkspace, searchText }),
     };
-
-    const loadViews = async () => {
-      setIsLoading(true);
-      setLoadError(undefined);
-      setSkippedRootsCount(0);
-
-      try {
-        if (!hasConfiguredRoots) {
-          applyViews([]);
-          return;
-        }
-
-        const cached = await loadCachedViews(workspaceDiscoverySignature);
-        applyViews(cached?.workspaceViews ?? []);
-
-        const refreshed = await scanViewsFromWorkspaces({ forceRefresh: true });
-        if (canceled) {
-          return;
-        }
-
-        await saveCachedViews(
-          refreshed.workspaceViews.map((entry) => entry.workspace),
-          refreshed.workspaceViews,
-          workspaceDiscoverySignature,
-        );
-        if (canceled) {
-          return;
-        }
-
-        setSkippedRootsCount(refreshed.skippedRootsCount);
-        applyViews(refreshed.workspaceViews);
-      } catch (error) {
-        if (!canceled) {
-          setLoadError(toError(error));
-        }
-      } finally {
-        if (!canceled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadViews();
-
-    return () => {
-      canceled = true;
-    };
-  }, [hasConfiguredRoots, workspaceDiscoverySignature]);
+  }, [views, searchText, selectedWorkspace]);
 
   return {
-    workspaceViews,
-    isLoading,
-    loadError,
-    skippedRootsCount,
+    dropdown,
+    sections,
+    isLoading: !enabled || isLoading,
+    revalidate,
   };
 }
 
-function useViewsToasts({
-  loadError,
-  skippedRootsCount,
-}: {
-  loadError: Error | undefined;
-  skippedRootsCount: number;
-}): void {
-  const previousSkippedRootsCount = useRef(0);
+function groupByWorkspace(views: IndexedView[]): WorkspaceViewSection[] {
+  const grouped = new Map<string, WorkspaceViewSection>();
 
-  useEffect(() => {
-    if (!loadError) {
-      return;
+  for (const view of views) {
+    const section = grouped.get(view.workspace.path);
+
+    if (section) {
+      section.views.push(view);
+    } else {
+      grouped.set(view.workspace.path, {
+        workspace: view.workspace.name,
+        views: [view],
+      });
     }
+  }
 
-    console.error("Failed to scan Octarine views", loadError);
-    void viewsLoadToast();
-  }, [loadError]);
-
-  useEffect(() => {
-    if (skippedRootsCount > 0 && skippedRootsCount !== previousSkippedRootsCount.current) {
-      void skippedRootsToast(skippedRootsCount);
-    }
-
-    previousSkippedRootsCount.current = skippedRootsCount;
-  }, [skippedRootsCount]);
+  return Array.from(grouped.values());
 }
 
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
+function workspaceNames(sections: WorkspaceViewSection[]): string[] {
+  return Array.from(new Set(sections.map((section) => section.workspace)));
 }
 
-function buildSearchResults({ views, search, workspace }: SearchResultsInput) {
-  const matchingViews: IndexedView[] = [];
-  const sections: WorkspaceViewSection[] = [];
-  let availableCount = 0;
-
-  for (const entry of views) {
-    const matchesWorkspace = workspace === "all" || entry.workspace.name === workspace;
-
-    if (!matchesWorkspace) {
-      continue;
-    }
-
-    availableCount += entry.views.length;
-
-    const workspaceMatchingViews = entry.views.filter((view) => querySearchText(view, search));
-
-    if (workspaceMatchingViews.length === 0) {
-      continue;
-    }
-
-    matchingViews.push(...workspaceMatchingViews);
-    sections.push({
-      workspace: entry.workspace.name,
-      views: workspaceMatchingViews,
-    });
-  }
-
-  return { availableCount, matchingViews, sections };
-}
-
-function getRenderState({
-  loading,
-  hasConfiguredRoots,
-  hasWorkspaces,
-  availableCount,
-  matchedCount,
-  workspace,
-}: RenderStateInput): RenderState {
-  if (loading && availableCount === 0) {
-    return "loading";
-  }
-
-  if (!hasConfiguredRoots || !hasWorkspaces) {
-    return "noConfiguredWorkspaces";
-  }
-
-  if (availableCount === 0) {
-    return "noAvailableViews";
-  }
-
-  if (matchedCount === 0) {
-    return "noMatchingViews";
-  }
-
-  if (workspace === "all") {
-    return "showByWorkspace";
-  }
-
-  return "showFlat";
+function buildWorkspaceSections(
+  sections: WorkspaceViewSection[],
+  {
+    selectedWorkspace,
+    searchText,
+  }: {
+    selectedWorkspace: string;
+    searchText: string;
+  },
+): WorkspaceViewSection[] {
+  return sections
+    .filter((section) => selectedWorkspace === "all" || section.workspace === selectedWorkspace)
+    .map((section) => ({
+      workspace: section.workspace,
+      views: searchText ? section.views.filter((view) => querySearchText(view, searchText)) : section.views,
+    }))
+    .filter((section) => section.views.length > 0);
 }
