@@ -1,7 +1,6 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
-import { viewsLoadToast } from "../components/toasts";
 import { querySearchText } from "../lib/search";
 import { getViews } from "../lib/views";
 import type { Workspace } from "../types/octarine";
@@ -34,7 +33,11 @@ export function useViews({
   selectedWorkspace,
   refresh = false,
 }: Options): Result {
-  const { data: views, isLoading, revalidate } = useCachedPromise(
+  const {
+    data: views,
+    isLoading,
+    revalidate,
+  } = useCachedPromise(
     (refresh: boolean, workspaces: Workspace[]) => getViews(workspaces, { refresh }),
     [refresh, workspaces],
     {
@@ -42,8 +45,11 @@ export function useViews({
       initialData: [] satisfies IndexedView[],
       keepPreviousData: true,
       onError: async (error) => {
-        console.error("Failed to scan Octarine views", error);
-        await viewsLoadToast();
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Failed to scan Octarine Views",
+          message: error instanceof Error ? error.message : String(error),
+        });
       },
       onData: () => {
         if (refresh) {
