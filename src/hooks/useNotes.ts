@@ -18,6 +18,7 @@ type Scope = "all" | "pinned";
 type Options = {
   scope?: Scope;
   workspaces: Workspace[];
+  enabled?: boolean;
   searchText: string;
   selectedWorkspace: string;
   showPinnedNotesFirst?: boolean;
@@ -34,6 +35,7 @@ type Result = {
 export function useNotes({
   scope = "all",
   workspaces,
+  enabled = true,
   searchText,
   selectedWorkspace,
   showPinnedNotesFirst = false,
@@ -55,6 +57,7 @@ export function useNotes({
     },
     [refresh, workspaces, scope],
     {
+      execute: enabled,
       initialData: [] satisfies IndexedNote[],
       keepPreviousData: true,
       onError: async (error) => {
@@ -88,7 +91,7 @@ export function useNotes({
   return {
     dropdown,
     sections,
-    isLoading,
+    isLoading: !enabled || isLoading,
     revalidate,
   };
 }
