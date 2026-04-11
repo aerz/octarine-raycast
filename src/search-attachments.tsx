@@ -1,95 +1,107 @@
 import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
-import { useMemo, useState } from "react";
+import { useState, type ReactNode } from "react";
 import { SearchAttachmentsEmptyView } from "./components/empty-views/search-results";
-import { WorkspaceAttachmentsEmptyView } from "./components/empty-views/workspace-missing-files";
 import { type AttachmentSection, useAttachments } from "./hooks/useAttachments";
 import { openAttachment } from "./lib/octarine";
 import { searchAttachmentsPreferences } from "./lib/preferences";
 import type { IndexedAttachment } from "./types/attachments";
 
-const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
+type WorkspaceDropdownProps = {
+  sections: string[];
+  value: string;
+  onChange: (value: string) => void;
+};
+
+type AttachmentsGridProps = {
+  sections: AttachmentSection[];
+  grouped?: boolean;
+  showWorkspaceAttachmentCount?: boolean;
+};
 
 export default function SearchAttachmentsCommand() {
   const preferences = searchAttachmentsPreferences();
-  const excludedExtensions = useMemo(
-    () => Array.from(preferences.excludedExtensions).sort((a, b) => a.localeCompare(b)),
-    [preferences.excludedExtensionsSignature],
-  );
   const [selectedExtension, setSelectedExtension] = useState("all");
   const [searchText, setSearchText] = useState("");
   const { dropdown, sections, isLoading } = useAttachments({
-    excludedExtensions,
+    excludedExtensions: preferences.excludedExtensions,
     excludedExtensionsSignature: preferences.excludedExtensionsSignature,
     searchText,
     selectedExtension,
   });
-  const hasResults = sections.length > 0;
+  const hasResults = sections.some((section) => section.files.length > 0);
 
   return (
     <Grid
       columns={5}
       fit={Grid.Fit.Fill}
-      filtering={selectedExtension === "all"}
+      filtering={false}
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search attachments"
       searchBarAccessory={
-        <Grid.Dropdown tooltip="Filter by file extension" value={selectedExtension} onChange={setSelectedExtension}>
-          <Grid.Dropdown.Item title="All Extensions" value="all" />
-          {dropdown.map((extension) => (
-            <Grid.Dropdown.Item key={extension} title={extension.toUpperCase()} value={extension} />
-          ))}
-        </Grid.Dropdown>
+        <WorkspaceDropdown sections={dropdown} value={selectedExtension} onChange={setSelectedExtension} />
       }
     >
       {dropdown.length === 0 ? (
-        <WorkspaceAttachmentsEmptyView />
+        <AttachmentsEmptyView actions={<DefaultActionPanel />} />
       ) : !hasResults ? (
-        <NoMatchingResultsView
-          onClear={() => {
-            setSelectedExtension("all");
-            setSearchText("");
-          }}
-        />
+        <SearchAttachmentsEmptyView />
       ) : selectedExtension === "all" ? (
-        <WorkspaceSectionGrid
+        <AttachmentsGrid
+          grouped
           sections={sections}
           showWorkspaceAttachmentCount={preferences.showWorkspaceAttachmentCount}
         />
       ) : (
-        sections.flatMap((section) => section.files.map((file) => <AttachmentGridItem key={file.path} file={file} />))
+        <AttachmentsGrid sections={sections} />
       )}
     </Grid>
   );
 }
 
-function NoMatchingResultsView({ onClear }: { onClear: () => void }) {
+function DefaultActionPanel({ children }: { children?: ReactNode }) {
+  return <ActionPanel>{children}</ActionPanel>;
+}
+
+function WorkspaceDropdown({ sections, value, onChange }: WorkspaceDropdownProps) {
   return (
-    <SearchAttachmentsEmptyView>
-      <Action title="Clear Extension Filter" onAction={onClear} />
-    </SearchAttachmentsEmptyView>
+    <Grid.Dropdown tooltip="Filter by file extension" value={value} onChange={onChange}>
+      <Grid.Dropdown.Item title="All Extensions" value="all" />
+      {sections.map((section) => (
+        <Grid.Dropdown.Item key={section} title={section.toUpperCase()} value={section} />
+      ))}
+    </Grid.Dropdown>
   );
 }
 
-function WorkspaceSectionGrid({
-  sections,
-  showWorkspaceAttachmentCount,
-}: {
-  sections: AttachmentSection[];
-  showWorkspaceAttachmentCount: boolean;
-}) {
-  return sections.map((section) => (
-    <Grid.Section
-      key={section.workspacePath}
-      title={
-        showWorkspaceAttachmentCount ? `${section.workspaceName} (${section.files.length})` : section.workspaceName
-      }
-    >
-      {section.files.map((file) => (
-        <AttachmentGridItem key={file.path} file={file} />
-      ))}
-    </Grid.Section>
-  ));
+function AttachmentsEmptyView({ actions }: { actions?: ReactNode }) {
+  return (
+    <Grid.EmptyView
+      icon={Icon.Paperclip}
+      title="No Attachments Found"
+      description="Attach a file to any note in Octarine to see it here."
+      actions={actions}
+    />
+  );
+}
+
+function AttachmentsGrid({ sections, grouped = false, showWorkspaceAttachmentCount = false }: AttachmentsGridProps) {
+  if (grouped) {
+    return sections.map((section) => (
+      <Grid.Section
+        key={section.workspacePath}
+        title={
+          showWorkspaceAttachmentCount ? `${section.workspaceName} (${section.files.length})` : section.workspaceName
+        }
+      >
+        {section.files.map((file) => (
+          <AttachmentGridItem key={file.path} file={file} />
+        ))}
+      </Grid.Section>
+    ));
+  }
+
+  return sections.flatMap((section) => section.files.map((file) => <AttachmentGridItem key={file.path} file={file} />));
 }
 
 function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
@@ -97,7 +109,7 @@ function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
     <Grid.Item
       title={file.name}
       subtitle={file.extension.toUpperCase()}
-      content={attachmentContent(file)}
+      content={attachmentPreview(file)}
       quickLook={{ name: file.name, path: file.path }}
       keywords={[file.workspace.name, file.extension]}
       actions={
@@ -120,8 +132,10 @@ function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
   );
 }
 
-function attachmentContent(file: IndexedAttachment): Grid.Item.Props["content"] {
-  if (IMAGE_EXTENSIONS.has(file.extension)) {
+function attachmentPreview(file: IndexedAttachment): Grid.Item.Props["content"] {
+  const extensions = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
+
+  if (extensions.has(file.extension)) {
     return file.path;
   }
 

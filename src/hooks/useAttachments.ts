@@ -191,14 +191,9 @@ function buildVisibleAttachments({
   selectedExtension: string;
   searchText: string;
 }): IndexedAttachment[] {
-  if (selectedExtension === "all") {
-    // Raycast built-in filtering handles search text only when the type filter is inactive
-    return attachments;
-  }
-
   return attachments
-    .filter((file) => file.extension === selectedExtension)
-    .filter((file) => querySearchText(file, searchText));
+    .filter((file) => selectedExtension === "all" || file.extension === selectedExtension)
+    .filter((file) => !searchText || querySearchText(file, searchText));
 }
 
 function buildAttachmentSections(visibleAttachments: IndexedAttachment[]): AttachmentSection[] {
