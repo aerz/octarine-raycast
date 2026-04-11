@@ -2,12 +2,10 @@ import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import { useMemo, useState } from "react";
 import { SearchAttachmentsEmptyView } from "./components/empty-views/search-results";
 import { WorkspaceAttachmentsEmptyView } from "./components/empty-views/workspace-missing-files";
-import { WorkspaceGridEmptyView } from "./components/empty-views/workspace";
 import { type AttachmentSection, useAttachments } from "./hooks/useAttachments";
 import { openAttachment } from "./lib/octarine";
 import { searchAttachmentsPreferences } from "./lib/preferences";
 import type { IndexedAttachment } from "./types/attachments";
-import { match } from "./utils/match";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
 
@@ -17,15 +15,15 @@ export default function SearchAttachmentsCommand() {
     () => Array.from(preferences.excludedExtensions).sort((a, b) => a.localeCompare(b)),
     [preferences.excludedExtensionsSignature],
   );
-  const [selectedExtension, setSelectedExtension] = useState<string>("all");
+  const [selectedExtension, setSelectedExtension] = useState("all");
   const [searchText, setSearchText] = useState("");
-  const { visibleAttachments, sections, filters, renderState, isLoading } = useAttachments({
+  const { dropdown, sections, isLoading } = useAttachments({
     excludedExtensions,
     excludedExtensionsSignature: preferences.excludedExtensionsSignature,
     searchText,
     selectedExtension,
-    flattenWorkspaceSections: preferences.flattenWorkspaceSections,
   });
+  const hasResults = sections.length > 0;
 
   return (
     <Grid
@@ -34,36 +32,33 @@ export default function SearchAttachmentsCommand() {
       filtering={selectedExtension === "all"}
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search attachments..."
+      searchBarPlaceholder="Search attachments"
       searchBarAccessory={
         <Grid.Dropdown tooltip="Filter by file extension" value={selectedExtension} onChange={setSelectedExtension}>
           <Grid.Dropdown.Item title="All Extensions" value="all" />
-          {filters.map((extension) => (
+          {dropdown.map((extension) => (
             <Grid.Dropdown.Item key={extension} title={extension.toUpperCase()} value={extension} />
           ))}
         </Grid.Dropdown>
       }
     >
-      {match(renderState, {
-        loading: () => null,
-        noConfiguredWorkspaces: () => <WorkspaceGridEmptyView />,
-        noAvailableAttachments: () => <WorkspaceAttachmentsEmptyView />,
-        noMatchingAttachments: () => (
-          <NoMatchingResultsView
-            onClear={() => {
-              setSelectedExtension("all");
-              setSearchText("");
-            }}
-          />
-        ),
-        showFlat: () => visibleAttachments.map((file) => <AttachmentGridItem key={file.path} file={file} />),
-        showByWorkspace: () => (
-          <WorkspaceSectionGrid
-            sections={sections}
-            showWorkspaceAttachmentCount={preferences.showWorkspaceAttachmentCount}
-          />
-        ),
-      })}
+      {dropdown.length === 0 ? (
+        <WorkspaceAttachmentsEmptyView />
+      ) : !hasResults ? (
+        <NoMatchingResultsView
+          onClear={() => {
+            setSelectedExtension("all");
+            setSearchText("");
+          }}
+        />
+      ) : selectedExtension === "all" ? (
+        <WorkspaceSectionGrid
+          sections={sections}
+          showWorkspaceAttachmentCount={preferences.showWorkspaceAttachmentCount}
+        />
+      ) : (
+        sections.flatMap((section) => section.files.map((file) => <AttachmentGridItem key={file.path} file={file} />))
+      )}
     </Grid>
   );
 }

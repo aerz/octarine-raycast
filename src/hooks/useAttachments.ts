@@ -17,34 +17,21 @@ export type AttachmentSection = {
   files: IndexedAttachment[];
 };
 
-type RenderState =
-  | "loading"
-  | "noConfiguredWorkspaces"
-  | "noAvailableAttachments"
-  | "noMatchingAttachments"
-  | "showByWorkspace"
-  | "showFlat";
-
 type Options = {
   excludedExtensions: string[];
   excludedExtensionsSignature: string;
   searchText: string;
   selectedExtension: string;
-  flattenWorkspaceSections: boolean;
 };
 
 type Result = {
-  attachments: IndexedAttachment[];
-  visibleAttachments: IndexedAttachment[];
+  dropdown: string[];
   sections: AttachmentSection[];
-  filters: string[];
-  renderState: RenderState;
   isLoading: boolean;
 };
 
 type AttachmentResults = {
-  filters: string[];
-  visibleAttachments: IndexedAttachment[];
+  dropdown: string[];
   sections: AttachmentSection[];
 };
 
@@ -161,44 +148,6 @@ function useAttachmentsEffects({ isLoading, loadError }: { isLoading: boolean; l
   }, [loadError]);
 }
 
-function getRenderState({
-  isLoading,
-  hasConfiguredRoots,
-  hasValidWorkspaces,
-  attachmentCount,
-  visibleAttachmentCount,
-  flattenWorkspaceSections,
-}: {
-  isLoading: boolean;
-  hasConfiguredRoots: boolean;
-  hasValidWorkspaces: boolean;
-  attachmentCount: number;
-  visibleAttachmentCount: number;
-  flattenWorkspaceSections: boolean;
-}): RenderState {
-  if (isLoading && attachmentCount === 0) {
-    return "loading";
-  }
-
-  if (!hasConfiguredRoots || !hasValidWorkspaces) {
-    return "noConfiguredWorkspaces";
-  }
-
-  if (attachmentCount === 0) {
-    return "noAvailableAttachments";
-  }
-
-  if (visibleAttachmentCount === 0) {
-    return "noMatchingAttachments";
-  }
-
-  if (flattenWorkspaceSections) {
-    return "showFlat";
-  }
-
-  return "showByWorkspace";
-}
-
 function buildAttachmentResults({
   attachments,
   selectedExtension,
@@ -208,7 +157,7 @@ function buildAttachmentResults({
   selectedExtension: string;
   searchText: string;
 }): AttachmentResults {
-  const filters = buildAttachmentFilters(attachments);
+  const dropdown = buildAttachmentDropdown(attachments);
   const visibleAttachments = buildVisibleAttachments({
     attachments,
     selectedExtension,
@@ -216,13 +165,12 @@ function buildAttachmentResults({
   });
 
   return {
-    filters,
-    visibleAttachments,
+    dropdown,
     sections: buildAttachmentSections(visibleAttachments),
   };
 }
 
-function buildAttachmentFilters(attachments: IndexedAttachment[]): string[] {
+function buildAttachmentDropdown(attachments: IndexedAttachment[]): string[] {
   const uniqueExtensions = new Set<string>();
 
   for (const file of attachments) {
@@ -281,7 +229,6 @@ export function useAttachments({
   excludedExtensionsSignature,
   searchText,
   selectedExtension,
-  flattenWorkspaceSections,
 }: Options): Result {
   const preferences = extensionPreferences();
 
@@ -307,32 +254,19 @@ export function useAttachments({
 
   useAttachmentsEffects({ isLoading, loadError });
 
-  const attachments = scanResult.attachments;
-  const hasValidWorkspaces = scanResult.workspaceCount > 0;
-  const { filters, visibleAttachments, sections } = useMemo(
+  const { dropdown, sections } = useMemo(
     () =>
       buildAttachmentResults({
-        attachments,
+        attachments: scanResult.attachments,
         selectedExtension,
         searchText,
       }),
-    [attachments, searchText, selectedExtension],
+    [scanResult.attachments, searchText, selectedExtension],
   );
-  const renderState = getRenderState({
-    isLoading,
-    hasConfiguredRoots: preferences.hasConfiguredRoots,
-    hasValidWorkspaces,
-    attachmentCount: attachments.length,
-    visibleAttachmentCount: visibleAttachments.length,
-    flattenWorkspaceSections,
-  });
 
   return {
-    attachments,
-    visibleAttachments,
+    dropdown,
     sections,
-    filters,
-    renderState,
     isLoading,
   };
 }
