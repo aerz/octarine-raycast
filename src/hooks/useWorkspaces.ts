@@ -3,8 +3,6 @@ import { usePromise } from "@raycast/utils";
 import type { Workspace } from "../types/octarine";
 import { getWorkspaces } from "../lib/workspaces";
 
-const EMPTY_WORKSPACES: Workspace[] = [];
-
 export type LoadStatus = {
   isLoading: boolean;
   failed: boolean;
@@ -73,7 +71,7 @@ export function useWorkspaces(options: Options = {}): Result {
   );
 
   return {
-    workspaces: workspaces ?? EMPTY_WORKSPACES,
+    workspaces: workspaces ?? [],
     status: {
       isLoading,
       failed: Boolean(error),
