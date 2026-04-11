@@ -54,12 +54,13 @@ export function searchNotesPreferences() {
 }
 
 export function searchAttachmentsPreferences() {
-  const preferences = getPreferenceValues<Preferences.SearchAttachments>();
-  const excludedExtensions = normalizeExtensions(preferences.excludeFileExtensions);
+  const { showWorkspaceAttachmentCount, flattenWorkspaceSections, excludeFileExtensions } =
+    getPreferenceValues<Preferences.SearchAttachments>();
+  const excludedExtensions = normalizeExtensions(excludeFileExtensions);
 
   return {
-    showWorkspaceAttachmentCount: preferences.showWorkspaceAttachmentCount,
-    flattenWorkspaceSections: preferences.flattenWorkspaceSections,
+    showWorkspaceAttachmentCount,
+    flattenWorkspaceSections,
     excludedExtensions,
     excludedExtensionsSignature: buildSortedSignature(excludedExtensions),
   };
