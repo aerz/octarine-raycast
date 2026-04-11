@@ -24,9 +24,13 @@ export default function SearchNotesCommand() {
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const [refresh, setRefresh] = useState(false);
-  const { workspaces } = useWorkspaces({ refresh });
+  const {
+    workspaces,
+    status: { isLoading: isWorkspacesLoading },
+  } = useWorkspaces({ refresh });
   const { dropdown, sections, isLoading, revalidate } = useNotes({
     workspaces,
+    enabled: !isWorkspacesLoading,
     searchText,
     selectedWorkspace,
     showPinnedNotesFirst: preferences.showPinnedNotesFirst,

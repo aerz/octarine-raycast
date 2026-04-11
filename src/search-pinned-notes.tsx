@@ -29,10 +29,14 @@ export default function SearchPinnedNotesCommand() {
   const [searchText, setSearchText] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("all");
   const [refresh, setRefresh] = useState(false);
-  const { workspaces } = useWorkspaces({ refresh });
+  const {
+    workspaces,
+    status: { isLoading: isWorkspacesLoading },
+  } = useWorkspaces({ refresh });
   const { dropdown, sections, isLoading, revalidate } = useNotes({
     scope: "pinned",
     workspaces,
+    enabled: !isWorkspacesLoading,
     searchText,
     selectedWorkspace,
     refresh,
