@@ -67,7 +67,6 @@ describe("preferences", () => {
     expect(preferences.showWorkspaceAttachmentCount).toBe(true);
     expect(preferences.flattenWorkspaceSections).toBe(false);
     expect(preferences.excludedExtensions).toEqual(new Set(["png", "pdf", "txt"]));
-    expect(preferences.excludedExtensionsSignature).toBe("pdf|png|txt");
   });
 
   it("returns trimmed command preferences and booleans", () => {

@@ -1,28 +1,12 @@
-import { LocalStorage } from "@raycast/api";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  loadCachedAttachments,
-  saveCachedAttachments,
-  scanAttachments,
-  type AttachmentsSnapshot,
-} from "../../src/lib/attachments";
-import { getWorkspaces } from "../../src/lib/workspaces";
+import { getAttachments } from "../../src/lib/attachments";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
-
-vi.mock("../../src/lib/workspaces", () => ({
-  getWorkspaces: vi.fn(),
-}));
-
-const ATTACHMENTS_CACHE_KEY = "octarine.attachments.v1";
-const getWorkspacesMock = vi.mocked(getWorkspaces);
 
 let tempDir: string | undefined;
 
 afterEach(async () => {
   vi.restoreAllMocks();
-  getWorkspacesMock.mockReset();
-  await LocalStorage.clear();
 
   if (tempDir) {
     await removeDir(tempDir);
@@ -39,8 +23,6 @@ describe("attachments", () => {
       path: path.join(tempDir, "Work"),
     };
 
-    getWorkspacesMock.mockResolvedValue([{ ...workspace, ignored: false, invalid: false }]);
-
     await writeTextFile(path.join(workspace.path, ".attachments", "docs", "report.pdf"), "report");
     await writeTextFile(path.join(workspace.path, ".attachments", "images", "logo.png"), "png");
     await writeTextFile(path.join(workspace.path, ".files", "notes", "readme.md"), "readme");
@@ -48,74 +30,33 @@ describe("attachments", () => {
     await writeTextFile(path.join(workspace.path, ".files", ".DS_Store"), "system");
     await writeTextFile(path.join(workspace.path, ".files", "Archive", "ignored.txt"), "ignored");
 
-    const result = await scanAttachments({
-      excludedExtensions: new Set(["png"]),
-      excludedDirectoryNames: new Set(["archive"]),
-    });
+    const result = await getAttachments([workspace], new Set(["png"]), new Set(["archive"]), { refresh: true });
 
-    expect(result.workspaceCount).toBe(1);
-    expect(result.attachments.map((attachment) => attachment.name)).toEqual(["readme.md", "report.pdf"]);
-    expect(result.attachments.map((attachment) => attachment.searchText)).toEqual([
-      "readme.md work md",
-      "report.pdf work pdf",
-    ]);
+    expect(result.map((attachment) => attachment.name)).toEqual(["readme.md", "report.pdf"]);
+    expect(result.map((attachment) => attachment.searchText)).toEqual(["readme.md work md", "report.pdf work pdf"]);
   });
 
-  it("loads cached attachments when both signatures match", async () => {
-    const cached = buildCachedResult();
+  it("returns cached attachments on a warm cache", async () => {
+    tempDir = await createTempDir("octarine-attachments-cache");
 
-    await saveCachedAttachments(cached, "workspace-signature", "extensions-signature");
+    const workspace = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
 
-    expect(await loadCachedAttachments("workspace-signature", "extensions-signature")).toEqual(cached);
+    await writeTextFile(path.join(workspace.path, ".attachments", "Inbox.pdf"), "initial");
+
+    const initial = await getAttachments([workspace], new Set(), new Set());
+
+    await writeTextFile(path.join(workspace.path, ".attachments", "Archive.pdf"), "new");
+
+    const cached = await getAttachments([workspace], new Set(), new Set());
+
+    expect(initial.map((attachment) => attachment.name)).toEqual(["Inbox.pdf"]);
+    expect(cached.map((attachment) => attachment.name)).toEqual(["Inbox.pdf"]);
   });
 
-  it("ignores cached attachments when the excluded extensions signature changes", async () => {
-    const cached = buildCachedResult();
-
-    await saveCachedAttachments(cached, "workspace-signature", "extensions-a");
-
-    expect(await loadCachedAttachments("workspace-signature", "extensions-b")).toBeUndefined();
-  });
-
-  it("ignores cached attachments when the workspace signature changes", async () => {
-    const cached = buildCachedResult();
-
-    await saveCachedAttachments(cached, "workspace-a", "extensions-signature");
-
-    expect(await loadCachedAttachments("workspace-b", "extensions-signature")).toBeUndefined();
-  });
-
-  it("ignores invalid cached payloads", async () => {
-    await LocalStorage.setItem(
-      ATTACHMENTS_CACHE_KEY,
-      JSON.stringify({
-        version: 1,
-        workspaceSearchSignature: "workspace-signature",
-        excludedExtensionsSignature: "extensions-signature",
-        workspaceCount: 1,
-        attachments: [{ name: "report.pdf", path: "/tmp/work/.attachments/report.pdf", extension: "pdf" }],
-      }),
-    );
-
-    expect(await loadCachedAttachments("workspace-signature", "extensions-signature")).toBeUndefined();
-  });
-
-  it("ignores cached attachments with the wrong cache version", async () => {
-    await LocalStorage.setItem(
-      ATTACHMENTS_CACHE_KEY,
-      JSON.stringify({
-        version: 99,
-        workspaceSearchSignature: "workspace-signature",
-        excludedExtensionsSignature: "extensions-signature",
-        workspaceCount: 0,
-        attachments: [],
-      }),
-    );
-
-    expect(await loadCachedAttachments("workspace-signature", "extensions-signature")).toBeUndefined();
-  });
-
-  it("picks up on-disk changes after a forced refresh and updates the stored cache", async () => {
+  it("bypasses the cache on refresh and stores refreshed attachments", async () => {
     tempDir = await createTempDir("octarine-attachments-refresh");
 
     const workspace = {
@@ -123,44 +64,60 @@ describe("attachments", () => {
       path: path.join(tempDir, "Work"),
     };
 
-    getWorkspacesMock.mockResolvedValue([{ ...workspace, ignored: false, invalid: false }]);
-
     await writeTextFile(path.join(workspace.path, ".attachments", "Inbox.pdf"), "initial");
 
-    const initial = await scanAttachments();
-    await saveCachedAttachments(initial, "workspace-signature", "extensions-signature");
+    const initial = await getAttachments([workspace], new Set(), new Set());
 
-    await writeTextFile(path.join(workspace.path, ".attachments", "Archive.pdf"), "updated");
+    await writeTextFile(path.join(workspace.path, ".attachments", "Archive.pdf"), "new");
 
-    const cachedBeforeRefresh = await loadCachedAttachments("workspace-signature", "extensions-signature");
-    const refreshed = await scanAttachments({ forceRefresh: true });
-    await saveCachedAttachments(refreshed, "workspace-signature", "extensions-signature");
+    const refreshed = await getAttachments([workspace], new Set(), new Set(), { refresh: true });
+    const cachedAfterRefresh = await getAttachments([workspace], new Set(), new Set());
 
-    expect(initial.attachments.map((attachment) => attachment.name)).toEqual(["Inbox.pdf"]);
-    expect(cachedBeforeRefresh?.attachments.map((attachment) => attachment.name)).toEqual(["Inbox.pdf"]);
-    expect(refreshed.attachments.map((attachment) => attachment.name)).toEqual(["Archive.pdf", "Inbox.pdf"]);
-    expect(await loadCachedAttachments("workspace-signature", "extensions-signature")).toEqual({
-      workspaceCount: 1,
-      attachments: refreshed.attachments,
-    });
-    expect(getWorkspacesMock).toHaveBeenNthCalledWith(1, { refresh: undefined });
-    expect(getWorkspacesMock).toHaveBeenNthCalledWith(2, { refresh: true });
+    expect(initial.map((attachment) => attachment.name)).toEqual(["Inbox.pdf"]);
+    expect(refreshed.map((attachment) => attachment.name)).toEqual(["Archive.pdf", "Inbox.pdf"]);
+    expect(cachedAfterRefresh.map((attachment) => attachment.name)).toEqual(["Archive.pdf", "Inbox.pdf"]);
+  });
+
+  it("keeps caches for different excluded extensions and directories separate", async () => {
+    tempDir = await createTempDir("octarine-attachments-exclusions");
+
+    const workspace = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
+
+    await writeTextFile(path.join(workspace.path, ".attachments", "report.pdf"), "pdf");
+    await writeTextFile(path.join(workspace.path, ".attachments", "logo.png"), "png");
+    await writeTextFile(path.join(workspace.path, ".attachments", "archive", "secret.txt"), "secret");
+
+    const withoutPng = await getAttachments([workspace], new Set(["png"]), new Set());
+    const withPng = await getAttachments([workspace], new Set(), new Set());
+    const withoutArchive = await getAttachments([workspace], new Set(), new Set(["archive"]));
+
+    expect(withoutPng.map((attachment) => attachment.name)).toEqual(["report.pdf", "secret.txt"]);
+    expect(withPng.map((attachment) => attachment.name)).toEqual(["logo.png", "report.pdf", "secret.txt"]);
+    expect(withoutArchive.map((attachment) => attachment.name)).toEqual(["logo.png", "report.pdf"]);
+  });
+
+  it("keeps caches for different workspace sets separate", async () => {
+    tempDir = await createTempDir("octarine-attachments-workspaces");
+
+    const alpha = {
+      name: "Alpha",
+      path: path.join(tempDir, "Alpha"),
+    };
+    const beta = {
+      name: "Beta",
+      path: path.join(tempDir, "Beta"),
+    };
+
+    await writeTextFile(path.join(alpha.path, ".attachments", "alpha.pdf"), "alpha");
+    await writeTextFile(path.join(beta.path, ".attachments", "beta.pdf"), "beta");
+
+    const alphaOnly = await getAttachments([alpha], new Set(), new Set());
+    const both = await getAttachments([alpha, beta], new Set(), new Set());
+
+    expect(alphaOnly.map((attachment) => attachment.name)).toEqual(["alpha.pdf"]);
+    expect(both.map((attachment) => attachment.name)).toEqual(["alpha.pdf", "beta.pdf"]);
   });
 });
-
-function buildCachedResult(): AttachmentsSnapshot {
-  const workspace = { name: "Work", path: "/tmp/work" };
-
-  return {
-    workspaceCount: 1,
-    attachments: [
-      {
-        name: "report.pdf",
-        path: "/tmp/work/.attachments/report.pdf",
-        extension: "pdf",
-        workspace,
-        searchText: "report.pdf work pdf",
-      },
-    ],
-  };
-}

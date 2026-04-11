@@ -1,7 +1,8 @@
 import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import { useState, type ReactNode } from "react";
 import { SearchAttachmentsEmptyView } from "./components/empty-views/search-results";
-import { type AttachmentSection, useAttachments } from "./hooks/useAttachments";
+import { type WorkspaceAttachmentsSection, useAttachments } from "./hooks/useAttachments";
+import { useWorkspaces } from "./hooks/useWorkspaces";
 import { openAttachment } from "./lib/octarine";
 import { searchAttachmentsPreferences } from "./lib/preferences";
 import type { IndexedAttachment } from "./types/attachments";
@@ -13,7 +14,7 @@ type WorkspaceDropdownProps = {
 };
 
 type AttachmentsGridProps = {
-  sections: AttachmentSection[];
+  sections: WorkspaceAttachmentsSection[];
   grouped?: boolean;
   showWorkspaceAttachmentCount?: boolean;
 };
@@ -22,13 +23,18 @@ export default function SearchAttachmentsCommand() {
   const preferences = searchAttachmentsPreferences();
   const [selectedExtension, setSelectedExtension] = useState("all");
   const [searchText, setSearchText] = useState("");
+  const {
+    workspaces,
+    status: { isLoading: isWorkspacesLoading },
+  } = useWorkspaces();
   const { dropdown, sections, isLoading } = useAttachments({
+    workspaces,
+    enabled: !isWorkspacesLoading,
     excludedExtensions: preferences.excludedExtensions,
-    excludedExtensionsSignature: preferences.excludedExtensionsSignature,
     searchText,
     selectedExtension,
   });
-  const hasResults = sections.some((section) => section.files.length > 0);
+  const hasResults = sections.some((section) => section.attachments.length > 0);
 
   return (
     <Grid
@@ -89,19 +95,23 @@ function AttachmentsGrid({ sections, grouped = false, showWorkspaceAttachmentCou
   if (grouped) {
     return sections.map((section) => (
       <Grid.Section
-        key={section.workspacePath}
+        key={section.workspace.path}
         title={
-          showWorkspaceAttachmentCount ? `${section.workspaceName} (${section.files.length})` : section.workspaceName
+          showWorkspaceAttachmentCount
+            ? `${section.workspace.name} (${section.attachments.length})`
+            : section.workspace.name
         }
       >
-        {section.files.map((file) => (
+        {section.attachments.map((file) => (
           <AttachmentGridItem key={file.path} file={file} />
         ))}
       </Grid.Section>
     ));
   }
 
-  return sections.flatMap((section) => section.files.map((file) => <AttachmentGridItem key={file.path} file={file} />));
+  return sections.flatMap((section) =>
+    section.attachments.map((file) => <AttachmentGridItem key={file.path} file={file} />),
+  );
 }
 
 function AttachmentGridItem({ file }: { file: IndexedAttachment }) {

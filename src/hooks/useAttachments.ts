@@ -1,267 +1,139 @@
 import { Toast, showToast } from "@raycast/api";
-import { startTransition, useEffect, useMemo, useState } from "react";
-import {
-  type AttachmentsSnapshot,
-  loadCachedAttachments,
-  saveCachedAttachments,
-  scanAttachments,
-} from "../lib/attachments";
+import { useCachedPromise } from "@raycast/utils";
+import { useMemo } from "react";
+import { getAttachments } from "../lib/attachments";
 import { extensionPreferences } from "../lib/preferences";
 import { querySearchText } from "../lib/search";
+import type { Workspace } from "../types/octarine";
 import type { IndexedAttachment } from "../types/attachments";
 import { useLoadingToast } from "./useLoadingToast";
 
-export type AttachmentSection = {
-  workspacePath: string;
-  workspaceName: string;
-  files: IndexedAttachment[];
+export type WorkspaceAttachmentsSection = {
+  workspace: Workspace;
+  attachments: IndexedAttachment[];
 };
 
 type Options = {
-  excludedExtensions: string[];
-  excludedExtensionsSignature: string;
+  workspaces: Workspace[];
+  enabled?: boolean;
+  excludedExtensions: Set<string>;
   searchText: string;
   selectedExtension: string;
+  refresh?: boolean;
 };
 
 type Result = {
   dropdown: string[];
-  sections: AttachmentSection[];
+  sections: WorkspaceAttachmentsSection[];
   isLoading: boolean;
+  revalidate: () => void;
 };
 
-type AttachmentResults = {
-  dropdown: string[];
-  sections: AttachmentSection[];
-};
-
-const EMPTY_SCAN_RESULT: AttachmentsSnapshot = {
-  attachments: [],
-  workspaceCount: 0,
-};
-
-function useAttachmentsSource({
-  hasConfiguredRoots,
-  workspaceSearchSignature,
-  excludedExtensionsSignature,
-  excludedExtensionsSet,
-  excludedDirectoryNamesSet,
-}: {
-  hasConfiguredRoots: boolean;
-  workspaceSearchSignature: string;
-  excludedExtensionsSignature: string;
-  excludedExtensionsSet: Set<string>;
-  excludedDirectoryNamesSet: Set<string>;
-}): {
-  scanResult: AttachmentsSnapshot;
-  isLoading: boolean;
-  loadError: Error | undefined;
-} {
-  const [scanResult, setScanResult] = useState<AttachmentsSnapshot>(EMPTY_SCAN_RESULT);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<Error | undefined>(undefined);
-
-  useEffect(() => {
-    let canceled = false;
-
-    const applyScanResult = (nextScanResult: AttachmentsSnapshot) => {
-      if (canceled) {
-        return;
-      }
-
-      startTransition(() => {
-        setScanResult(nextScanResult);
-      });
-    };
-
-    const loadAttachments = async () => {
-      setIsLoading(true);
-      setLoadError(undefined);
-
-      try {
-        if (!hasConfiguredRoots) {
-          applyScanResult(EMPTY_SCAN_RESULT);
-          return;
-        }
-
-        const cached = await loadCachedAttachments(workspaceSearchSignature, excludedExtensionsSignature);
-        applyScanResult(cached ?? EMPTY_SCAN_RESULT);
-
-        const refreshed = await scanAttachments({
-          forceRefresh: true,
-          excludedExtensions: excludedExtensionsSet,
-          excludedDirectoryNames: excludedDirectoryNamesSet,
-        });
-        if (canceled) {
-          return;
-        }
-
-        await saveCachedAttachments(refreshed, workspaceSearchSignature, excludedExtensionsSignature);
-        applyScanResult(refreshed);
-      } catch (error) {
-        if (!canceled) {
-          setLoadError(toError(error));
-        }
-      } finally {
-        if (!canceled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadAttachments();
-
-    return () => {
-      canceled = true;
-    };
-  }, [
-    excludedDirectoryNamesSet,
-    excludedExtensionsSet,
-    excludedExtensionsSignature,
-    hasConfiguredRoots,
-    workspaceSearchSignature,
-  ]);
-
-  return {
-    scanResult,
-    isLoading,
-    loadError,
-  };
-}
-
-function useAttachmentsEffects({ isLoading, loadError }: { isLoading: boolean; loadError: Error | undefined }): void {
-  useLoadingToast({
-    isLoading,
-    title: "Scanning attachments…",
-  });
-
-  useEffect(() => {
-    if (!loadError) {
-      return;
-    }
-
-    void showToast({
-      style: Toast.Style.Failure,
-      title: "Failed to scan attachments",
-      message: loadError.message,
-    });
-  }, [loadError]);
-}
-
-function buildAttachmentResults({
-  attachments,
-  selectedExtension,
-  searchText,
-}: {
-  attachments: IndexedAttachment[];
+type BuildAttachmentSectionsInput = {
   selectedExtension: string;
   searchText: string;
-}): AttachmentResults {
-  const dropdown = buildAttachmentDropdown(attachments);
-  const visibleAttachments = buildVisibleAttachments({
-    attachments,
-    selectedExtension,
-    searchText,
-  });
+};
 
-  return {
-    dropdown,
-    sections: buildAttachmentSections(visibleAttachments),
-  };
-}
+function extensionNames(attachments: IndexedAttachment[]): string[] {
+  const extensions = new Set<string>();
 
-function buildAttachmentDropdown(attachments: IndexedAttachment[]): string[] {
-  const uniqueExtensions = new Set<string>();
-
-  for (const file of attachments) {
-    if (file.extension) {
-      uniqueExtensions.add(file.extension);
+  for (const attachment of attachments) {
+    if (attachment.extension) {
+      extensions.add(attachment.extension);
     }
   }
 
-  return Array.from(uniqueExtensions).sort((a, b) => a.localeCompare(b));
+  return Array.from(extensions).sort((a, b) => a.localeCompare(b));
 }
 
-function buildVisibleAttachments({
-  attachments,
-  selectedExtension,
-  searchText,
-}: {
-  attachments: IndexedAttachment[];
-  selectedExtension: string;
-  searchText: string;
-}): IndexedAttachment[] {
-  return attachments
-    .filter((file) => selectedExtension === "all" || file.extension === selectedExtension)
-    .filter((file) => !searchText || querySearchText(file, searchText));
-}
+function buildAttachmentSections(
+  attachments: IndexedAttachment[],
+  input: BuildAttachmentSectionsInput,
+): WorkspaceAttachmentsSection[] {
+  const { selectedExtension, searchText } = input;
+  const grouped = new Map<string, WorkspaceAttachmentsSection>();
 
-function buildAttachmentSections(visibleAttachments: IndexedAttachment[]): AttachmentSection[] {
-  const grouped = new Map<string, AttachmentSection>();
-
-  for (const file of visibleAttachments) {
-    const existing = grouped.get(file.workspace.path);
-    if (existing) {
-      existing.files.push(file);
-    } else {
-      grouped.set(file.workspace.path, {
-        workspacePath: file.workspace.path,
-        workspaceName: file.workspace.name,
-        files: [file],
-      });
+  for (const attachment of attachments) {
+    if (selectedExtension !== "all" && attachment.extension !== selectedExtension) {
+      continue;
     }
+
+    if (searchText && !querySearchText(attachment, searchText)) {
+      continue;
+    }
+
+    let section = grouped.get(attachment.workspace.path);
+    if (!section) {
+      section = {
+        workspace: attachment.workspace,
+        attachments: [],
+      };
+      grouped.set(attachment.workspace.path, section);
+    }
+
+    section.attachments.push(attachment);
   }
 
-  return Array.from(grouped.values()).sort((a, b) => a.workspaceName.localeCompare(b.workspaceName));
-}
-
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
+  return Array.from(grouped.values()).sort((a, b) => a.workspace.name.localeCompare(b.workspace.name));
 }
 
 export function useAttachments({
+  workspaces,
+  enabled = true,
   excludedExtensions,
-  excludedExtensionsSignature,
   searchText,
   selectedExtension,
+  refresh = false,
 }: Options): Result {
   const preferences = extensionPreferences();
+  const excludedDirectoryNames = preferences.excludedFoldersInWorkspaces;
 
-  const excludedDirectoryNames = useMemo(
-    () => Array.from(preferences.excludedFoldersInWorkspaces).sort((a, b) => a.localeCompare(b)),
-    [preferences.workspaceSearchSignature],
+  const {
+    data: attachments,
+    isLoading,
+    revalidate,
+  } = useCachedPromise(
+    (refresh: boolean, workspaces: Workspace[], excludedExtensions: Set<string>, excludedDirectoryNames: Set<string>) =>
+      getAttachments(workspaces, excludedExtensions, excludedDirectoryNames, { refresh }),
+    [refresh, workspaces, excludedExtensions, excludedDirectoryNames],
+    {
+      execute: enabled,
+      initialData: [] satisfies IndexedAttachment[],
+      keepPreviousData: true,
+      onError: async (error) => {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Failed to scan attachments",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      },
+      onData: () => {
+        if (refresh) {
+          void showToast({
+            style: Toast.Style.Success,
+            title: "Attachments refreshed",
+          });
+        }
+      },
+    },
   );
 
-  const excludedExtensionsSet = useMemo(() => new Set(excludedExtensions), [excludedExtensionsSignature]);
-
-  const excludedDirectoryNamesSet = useMemo(
-    () => new Set(excludedDirectoryNames),
-    [preferences.workspaceSearchSignature],
-  );
-
-  const { scanResult, isLoading, loadError } = useAttachmentsSource({
-    hasConfiguredRoots: preferences.hasConfiguredRoots,
-    workspaceSearchSignature: preferences.workspaceSearchSignature,
-    excludedExtensionsSignature,
-    excludedExtensionsSet,
-    excludedDirectoryNamesSet,
+  useLoadingToast({
+    isLoading: enabled && isLoading,
+    title: "Scanning attachments…",
   });
 
-  useAttachmentsEffects({ isLoading, loadError });
-
-  const { dropdown, sections } = useMemo(
-    () =>
-      buildAttachmentResults({
-        attachments: scanResult.attachments,
-        selectedExtension,
-        searchText,
-      }),
-    [scanResult.attachments, searchText, selectedExtension],
-  );
+  const { dropdown, sections } = useMemo(() => {
+    return {
+      dropdown: extensionNames(attachments),
+      sections: buildAttachmentSections(attachments, { selectedExtension, searchText }),
+    };
+  }, [attachments, searchText, selectedExtension]);
 
   return {
     dropdown,
     sections,
-    isLoading,
+    isLoading: !enabled || isLoading,
+    revalidate,
   };
 }

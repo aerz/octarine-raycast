@@ -1,6 +1,6 @@
 import { Cache } from "@raycast/api";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PinnedNotesCache, WorkspacesCache } from "../../src/lib/cache";
+import { AttachmentsCache, PinnedNotesCache, WorkspacesCache } from "../../src/lib/cache";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -213,5 +213,91 @@ describe("pinned notes cache", () => {
         searchText: "pinned pinned.md beta",
       },
     ]);
+  });
+});
+
+describe("attachments cache", () => {
+  const staleOffsetMs = 24 * 60 * 60 * 1000;
+  const workspaces = [{ name: "Alpha", path: "/workspaces/alpha" }];
+  const attachments = [
+    {
+      name: "report.pdf",
+      path: "/workspaces/alpha/.attachments/report.pdf",
+      extension: "pdf",
+      workspace: workspaces[0],
+      searchText: "report.pdf alpha pdf",
+    },
+  ];
+
+  it("returns cached attachments when the cached value is valid", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-31T10:00:00.000Z"));
+
+    AttachmentsCache.write(attachments, workspaces, new Set(["archive"]), new Set(["png"]));
+
+    expect(AttachmentsCache.read(workspaces, new Set(["archive"]), new Set(["png"]))).toEqual(attachments);
+  });
+
+  it("returns undefined when the attachments cache is stale", () => {
+    const now = new Date("2026-03-31T10:00:00.000Z").valueOf();
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValue(now);
+
+    AttachmentsCache.write(attachments, workspaces, new Set(), new Set());
+    nowSpy.mockReturnValue(now + staleOffsetMs);
+
+    expect(AttachmentsCache.read(workspaces, new Set(), new Set())).toBeUndefined();
+  });
+
+  it("returns undefined when the attachments cache is malformed", () => {
+    vi.spyOn(Cache.prototype, "get").mockReturnValue("{");
+
+    expect(AttachmentsCache.read(workspaces, new Set(), new Set())).toBeUndefined();
+  });
+
+  it("returns undefined when the attachments cache contains invalid attachments", () => {
+    vi.spyOn(Cache.prototype, "get").mockReturnValue(
+      JSON.stringify({
+        cachedAt: Date.now(),
+        data: [{ name: "report.pdf", path: "/workspaces/alpha/.attachments/report.pdf", extension: "pdf" }],
+      }),
+    );
+
+    expect(AttachmentsCache.read(workspaces, new Set(), new Set())).toBeUndefined();
+  });
+
+  it("keeps caches for different excluded extensions separate", () => {
+    AttachmentsCache.write(attachments, workspaces, new Set(), new Set(["png"]));
+    AttachmentsCache.write([], workspaces, new Set(), new Set(["pdf"]));
+
+    expect(AttachmentsCache.read(workspaces, new Set(), new Set(["png"]))).toEqual(attachments);
+    expect(AttachmentsCache.read(workspaces, new Set(), new Set(["pdf"]))).toEqual([]);
+  });
+
+  it("keeps caches for different excluded directories separate", () => {
+    AttachmentsCache.write(attachments, workspaces, new Set(["archive"]), new Set());
+    AttachmentsCache.write([], workspaces, new Set(["drafts"]), new Set());
+
+    expect(AttachmentsCache.read(workspaces, new Set(["archive"]), new Set())).toEqual(attachments);
+    expect(AttachmentsCache.read(workspaces, new Set(["drafts"]), new Set())).toEqual([]);
+  });
+
+  it("keeps caches for different workspace sets separate", () => {
+    const otherWorkspace = { name: "Beta", path: "/workspaces/beta" };
+    const otherAttachments = [
+      {
+        name: "diagram.png",
+        path: "/workspaces/beta/.attachments/diagram.png",
+        extension: "png",
+        workspace: otherWorkspace,
+        searchText: "diagram.png beta png",
+      },
+    ];
+
+    AttachmentsCache.write(attachments, workspaces, new Set(), new Set());
+    AttachmentsCache.write(otherAttachments, [otherWorkspace], new Set(), new Set());
+
+    expect(AttachmentsCache.read(workspaces, new Set(), new Set())).toEqual(attachments);
+    expect(AttachmentsCache.read([otherWorkspace], new Set(), new Set())).toEqual(otherAttachments);
   });
 });

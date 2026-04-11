@@ -56,13 +56,12 @@ export function searchNotesPreferences() {
 export function searchAttachmentsPreferences() {
   const { showWorkspaceAttachmentCount, flattenWorkspaceSections, excludeFileExtensions } =
     getPreferenceValues<Preferences.SearchAttachments>();
-  const excludedExtensions = Array.from(normalizeExtensions(excludeFileExtensions)).sort((a, b) => a.localeCompare(b));
+  const excludedExtensions = normalizeExtensions(excludeFileExtensions);
 
   return {
     showWorkspaceAttachmentCount,
     flattenWorkspaceSections,
     excludedExtensions,
-    excludedExtensionsSignature: buildSortedSignature(excludedExtensions),
   };
 }
 

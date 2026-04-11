@@ -4,6 +4,18 @@ import { StringDecoder } from "node:string_decoder";
 
 const OCTARINE_WORKSPACE_DIRECTORY = ".octarine";
 const OCTARINE_VIEWS_FILE = "views.json";
+const ATTACHMENT_DIRECTORIES = [".attachments", ".files"] as const;
+const SYSTEM_GENERATED_FILE_NAMES = new Set([
+  ".ds_store",
+  "thumbs.db",
+  "desktop.ini",
+  ".spotlight-v100",
+  ".trashes",
+  ".fseventsd",
+  ".temporaryitems",
+  "ehthumbs.db",
+  "ehthumbs_vista.db",
+]);
 
 export type MarkdownFile = {
   absolute: string;
@@ -17,6 +29,12 @@ export type ScannedPath = {
 };
 
 export type FolderEntry = {
+  name: string;
+  absolute: string;
+  relative: string;
+};
+
+export type ScannedAttachmentFile = {
   name: string;
   absolute: string;
   relative: string;
@@ -151,6 +169,22 @@ export async function scanFolders(root: string, excluded: Set<string>): Promise<
   return directories;
 }
 
+export async function scanWorkspaceAttachmentFiles(workspacePath: string): Promise<ScannedAttachmentFile[]> {
+  const byDirectory = await Promise.all(
+    ATTACHMENT_DIRECTORIES.map((dir) => scanAttachmentDirectory(workspacePath, dir)),
+  );
+
+  return byDirectory.flat();
+}
+
+export async function isDirectoryPath(targetPath: string): Promise<boolean> {
+  try {
+    return (await fs.stat(targetPath)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 export async function readMarkdownFrontmatter(filePath: string): Promise<string | undefined> {
   try {
     const fd = await fs.open(filePath, "r");
@@ -208,6 +242,89 @@ export async function readViewsFile(workspacePath: string): Promise<unknown | un
   } catch {
     throw new Error(`Failed to parse file ${filePath}`);
   }
+}
+
+export function isSystemGeneratedFile(name: string): boolean {
+  const normalizedName = name.toLowerCase();
+  return normalizedName.startsWith("~$") || SYSTEM_GENERATED_FILE_NAMES.has(normalizedName);
+}
+
+async function scanAttachmentDirectory(
+  workspacePath: string,
+  directoryName: (typeof ATTACHMENT_DIRECTORIES)[number],
+): Promise<ScannedAttachmentFile[]> {
+  const root = path.join(workspacePath, directoryName);
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch (error) {
+    const code = error instanceof Error && "code" in error ? (error as NodeJS.ErrnoException).code : undefined;
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      return [];
+    }
+
+    console.warn("Skipping unreadable attachment directory", {
+      workspacePath,
+      attachmentsPath: root,
+      directoryName,
+      error,
+    });
+    return [];
+  }
+
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const files: ScannedAttachmentFile[] = [];
+  const pending: Array<{ absolute: string; relative: string; entries?: Dirent[] }> = [
+    { absolute: root, relative: "", entries },
+  ];
+
+  while (pending.length > 0) {
+    const next = pending.pop();
+    if (!next) {
+      continue;
+    }
+
+    let currentEntries = next.entries;
+    if (!currentEntries) {
+      try {
+        currentEntries = await fs.readdir(next.absolute, { withFileTypes: true });
+      } catch (error) {
+        console.warn("Skipping unreadable attachments directory", {
+          directory: next.absolute,
+          workspacePath,
+          error,
+        });
+        continue;
+      }
+    }
+
+    for (const entry of currentEntries) {
+      const absolute = path.resolve(next.absolute, entry.name);
+      const relative = next.relative ? path.posix.join(next.relative, entry.name) : entry.name;
+
+      if (entry.isDirectory()) {
+        if (!entry.isSymbolicLink()) {
+          pending.push({ absolute, relative });
+        }
+        continue;
+      }
+
+      if (!entry.isFile() || isSystemGeneratedFile(entry.name)) {
+        continue;
+      }
+
+      files.push({
+        name: entry.name,
+        absolute,
+        relative,
+      });
+    }
+  }
+
+  return files;
 }
 
 function toPosixPath(p: string): string {

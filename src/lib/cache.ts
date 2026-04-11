@@ -1,4 +1,5 @@
 import { Cache } from "@raycast/api";
+import { isIndexedAttachment, type IndexedAttachment } from "../types/attachments";
 import { isIndexedNote, type IndexedNote } from "../types/notes";
 import type { Workspace } from "../types/octarine";
 import { isIndexedView, type IndexedView } from "../types/views";
@@ -55,6 +56,10 @@ function isIndexedNoteArray(value: unknown): value is IndexedNote[] {
   return Array.isArray(value) && value.every(isIndexedNote);
 }
 
+function isIndexedAttachmentArray(value: unknown): value is IndexedAttachment[] {
+  return Array.isArray(value) && value.every(isIndexedAttachment);
+}
+
 function isIndexedViewArray(value: unknown): value is IndexedView[] {
   return Array.isArray(value) && value.every(isIndexedView);
 }
@@ -93,6 +98,19 @@ export const PinnedNotesCache = createCache<IndexedNote[], [Workspace[], Set<str
   },
 
   isValid: isIndexedNoteArray,
+});
+
+export const AttachmentsCache = createCache<IndexedAttachment[], [Workspace[], Set<string>, Set<string>]>({
+  key(workspaces, excludedDirectories, excludedExtensions) {
+    const prefix = "octarine.attachments.v1";
+    return `${prefix}.${JSON.stringify({
+      workspaces: workspaces.map((workspace) => workspace.path).sort(),
+      excludedDirectories: [...excludedDirectories].sort(),
+      excludedExtensions: [...excludedExtensions].sort(),
+    })}`;
+  },
+
+  isValid: isIndexedAttachmentArray,
 });
 
 export const ViewsCache = createCache<IndexedView[], [Workspace[]]>({
