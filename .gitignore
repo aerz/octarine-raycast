@@ -1,6 +1,7 @@
 # global
 .DS_Store
 AGENTS.md
+.ignore
 
 # dependencies
 /node_modules
