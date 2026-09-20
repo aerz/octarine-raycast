@@ -1,5 +1,4 @@
 import { closeMainWindow, open, popToRoot } from "@raycast/api";
-import { compressToBase64 } from "lz-string";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -7,20 +6,7 @@ enum Action {
   Open = "open",
   Search = "search",
   Daily = "daily",
-  Create = "create",
 }
-
-type InsertPosition = "top" | "bottom";
-
-type WriteParams = {
-  workspace?: string;
-  content?: string;
-  template?: string;
-  fresh?: boolean;
-  position?: InsertPosition;
-  separator?: string;
-  openAfter?: boolean;
-};
 
 type OpenScheme = {
   action: Action.Open;
@@ -34,36 +20,13 @@ type SearchScheme = {
   query: string;
 };
 
-type DailyScheme = WriteParams & {
+type DailyScheme = {
   action: Action.Daily;
   workspace?: string;
   date: string;
 };
 
-type CreateScheme = WriteParams & {
-  action: Action.Create;
-  workspace?: string;
-  path: string;
-  contentReference?: string;
-  compressedContent?: string;
-};
-
-type Scheme = OpenScheme | SearchScheme | DailyScheme | CreateScheme;
-
-type AppendNoteOptions = {
-  path: string;
-  workspace?: string;
-  content: string;
-  openAfter?: boolean;
-  position?: InsertPosition;
-  separator?: string;
-};
-
-type AppendDailyOptions = {
-  date: string;
-  workspace?: string;
-  content: string;
-};
+type Scheme = OpenScheme | SearchScheme | DailyScheme;
 
 export function openWorkspace(name: string): Promise<void> {
   return openUri(buildOpenWorkspaceUri(name));
@@ -103,37 +66,6 @@ export function openDailyDeskNote(date: string, workspace: string): Promise<void
 
 export function openTodayNote(workspace: string): Promise<void> {
   return openDailyDeskNote("today", workspace);
-}
-
-export async function appendNoteContent({
-  path,
-  workspace,
-  content,
-  openAfter = true,
-  position = "bottom",
-  separator = "\n\n",
-}: AppendNoteOptions): Promise<void> {
-  const compressedContent = compressToBase64(content);
-  const uri = buildUri({
-    action: Action.Create,
-    path,
-    workspace,
-    compressedContent,
-    position,
-    separator,
-    openAfter,
-  });
-  return openUri(uri);
-}
-
-export async function appendDailyNoteContent({ date, workspace, content }: AppendDailyOptions): Promise<void> {
-  const uri = buildUri({
-    action: Action.Daily,
-    date,
-    workspace,
-    content,
-  });
-  return openUri(uri);
 }
 
 export async function openView(workspace: string, view: string): Promise<void> {

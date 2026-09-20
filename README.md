@@ -17,11 +17,6 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 - [Search Attachments](#search-attachments)
 - [Search Pinned Notes](#search-pinned-notes)
 - [Search Views](#search-views)
-- [Quick Capture](#quick-capture)
-  - [Capture Website](#capture-website)
-  - [Capture Clipboard](#capture-clipboard)
-  - [Capture Selected Text](#capture-selected-text)
-  - [Capture Content](#capture-content)
 
 ## Open Workspace
 
@@ -129,23 +124,3 @@ Search and open any [view](https://docs.octarine.app/organization/views) across 
 **Preferences**
 
 - **Show workspace view count**. Show a view counter for each workspace section.
-
-## Quick Capture
-
-Capture content into your Octarine notes from anywhere, using Raycast's capabilities in a variety of ways.
-
-### Capture Website
-
-Requires the [Raycast browser extension](https://www.raycast.com/browser-extension). Captures the full content of the active browser tab and saves it as a new note in Markdown.
-
-### Capture Clipboard
-
-Appends whatever is in your clipboard directly to a note of your choice. Ideal for quickly saving links or snippets without leaving Raycast.
-
-### Capture Selected Text
-
-Select any text in any app, then run this command to save it to a note of your choice.
-
-### Capture Content
-
-Select a note, type your content into the form, and save. You can close and reopen the form while drafting — your input is preserved until you're ready.

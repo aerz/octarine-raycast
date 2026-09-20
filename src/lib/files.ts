@@ -28,12 +28,6 @@ export type ScannedPath = {
   invalid: boolean;
 };
 
-export type FolderEntry = {
-  name: string;
-  absolute: string;
-  relative: string;
-};
-
 export type ScannedAttachmentFile = {
   name: string;
   absolute: string;
@@ -132,41 +126,6 @@ export async function scanMarkdownFiles(root: string, excluded: Set<string>): Pr
   }
 
   return files;
-}
-
-export async function scanFolders(root: string, excluded: Set<string>): Promise<FolderEntry[]> {
-  const pending: Array<{ absolute: string; relative: string }> = [{ absolute: root, relative: "" }];
-  const directories: FolderEntry[] = [];
-
-  while (pending.length > 0) {
-    const { absolute: currentAbsolute, relative: currentRelative } = pending.pop()!;
-
-    let entries: Dirent[];
-    try {
-      entries = await fs.readdir(currentAbsolute, { withFileTypes: true });
-    } catch (error) {
-      throw new Error(`Failed to read directory ${currentAbsolute}: ${toErrorMessage(error)}`);
-    }
-
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".") || excluded.has(entry.name.toLowerCase())) {
-        continue;
-      }
-
-      const absolute = path.join(currentAbsolute, entry.name);
-      const relative = currentRelative ? path.posix.join(currentRelative, entry.name) : entry.name;
-
-      directories.push({
-        name: entry.name,
-        absolute,
-        relative,
-      });
-
-      pending.push({ absolute, relative });
-    }
-  }
-
-  return directories;
 }
 
 export async function scanWorkspaceAttachmentFiles(workspacePath: string): Promise<ScannedAttachmentFile[]> {

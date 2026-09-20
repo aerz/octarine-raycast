@@ -1,5 +1,4 @@
 import { closeMainWindow, open, popToRoot } from "@raycast/api";
-import { compressToBase64 } from "lz-string";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const execFileMock = vi.hoisted(() =>
@@ -13,8 +12,6 @@ vi.mock("node:child_process", () => ({
 }));
 
 import {
-  appendDailyNoteContent,
-  appendNoteContent,
   openAttachment,
   openDailyDeskNote,
   openNote,
@@ -67,37 +64,6 @@ describe("octarine", () => {
     expect(parsed.action).toBe("daily");
     expect(parsed.params.get("date")).toBe("2026-03-26");
     expect(parsed.params.get("workspace")).toBe("Work");
-  });
-
-  it("builds create URIs when appending note content", async () => {
-    await appendNoteContent({
-      path: "docs/plan.md",
-      workspace: "Work",
-      content: "Hello",
-    });
-    const parsed = getOpenedUri();
-
-    expect(parsed.action).toBe("create");
-    expect(parsed.params.get("path")).toBe("docs/plan.md");
-    expect(parsed.params.get("workspace")).toBe("Work");
-    expect(parsed.params.get("compressedContent")).toBe(compressToBase64("Hello"));
-    expect(parsed.params.get("position")).toBe("bottom");
-    expect(parsed.params.get("separator")).toBe("\n\n");
-    expect(parsed.params.get("openAfter")).toBe("true");
-  });
-
-  it("builds daily URIs when appending daily note content", async () => {
-    await appendDailyNoteContent({
-      date: "2026-03-26",
-      workspace: "Work",
-      content: "Hello",
-    });
-    const parsed = getOpenedUri();
-
-    expect(parsed.action).toBe("daily");
-    expect(parsed.params.get("date")).toBe("2026-03-26");
-    expect(parsed.params.get("workspace")).toBe("Work");
-    expect(parsed.params.get("content")).toBe("Hello");
   });
 
   it("opens a workspace and runs AppleScript when opening a view", async () => {

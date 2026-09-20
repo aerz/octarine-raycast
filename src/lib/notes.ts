@@ -1,12 +1,11 @@
 import path from "node:path";
 import { type Folder, type Workspace } from "../types/octarine";
-import { type IndexedNote, type IndexedFolder } from "../types/notes";
+import { type IndexedNote } from "../types/notes";
 import { PinnedNotesCache, NotesCache } from "./cache";
-import { readMarkdownFrontmatter, scanFolders, scanMarkdownFiles } from "./files";
+import { readMarkdownFrontmatter, scanMarkdownFiles } from "./files";
 import { buildSearchText } from "./search";
 
 const DEFAULT_EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
-const DAILY_FOLDER_RELATIVE_PATH = "daily";
 const ROOT_FOLDER_PATH = "";
 
 type BuildIndexedNoteInput = {
@@ -65,30 +64,6 @@ export async function scanNotes(workspaces: Workspace[], excludedDirectories: Se
   );
 }
 
-export async function scanWorkspaceFolders(
-  workspaces: Workspace[],
-  excludedDirectories: Set<string>,
-): Promise<IndexedFolder[]> {
-  const excluded = withDefaultExcluded(excludedDirectories);
-  const byWorkspace = await Promise.all(
-    workspaces.map(async (workspace) => {
-      const directories = await scanFolders(workspace.path, excluded);
-
-      return [
-        buildRootIndexedFolder(workspace),
-        ...directories
-          .filter((dir) => dir.relative !== DAILY_FOLDER_RELATIVE_PATH)
-          .map((directory) => buildIndexedFolder(buildFolder(workspace, directory.relative))),
-      ];
-    }),
-  );
-
-  return byWorkspace.flat().sort((a, b) => {
-    const byWorkspace = a.workspace.name.localeCompare(b.workspace.name);
-    return byWorkspace !== 0 ? byWorkspace : a.path.localeCompare(b.path);
-  });
-}
-
 async function scanWorkspaceNotes(workspace: Workspace, excludedDirectories: Set<string>): Promise<IndexedNote[]> {
   const files = await scanMarkdownFiles(workspace.path, excludedDirectories);
 
@@ -132,24 +107,6 @@ function buildFolder(workspace: Workspace, folderPath: string): Folder {
     path: folderPath,
     workspace,
   };
-}
-
-function buildIndexedFolder(folder: Folder, options: { name?: string; searchName?: string } = {}): IndexedFolder {
-  const { name = folder.name, searchName = name } = options;
-
-  return {
-    ...folder,
-    id: `${folder.workspace.path}::${folder.path || "."}`,
-    name,
-    searchText: buildSearchText(searchName, folder.path, folder.workspace.name),
-  };
-}
-
-function buildRootIndexedFolder(workspace: Workspace): IndexedFolder {
-  return buildIndexedFolder(buildFolder(workspace, ROOT_FOLDER_PATH), {
-    name: "Root (No folder)",
-    searchName: "root",
-  });
 }
 
 function withDefaultExcluded(directories: Set<string>): Set<string> {

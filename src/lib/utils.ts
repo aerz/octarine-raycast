@@ -1,38 +1,6 @@
 import os from "node:os";
 import path from "node:path";
 
-type ScopeMatch = {
-  remainder: string;
-  scopes: string[];
-};
-
-/**
- * Finds the longest candidate prefix at the start of a query and returns the remaining text.
- * At least one word must follow the scope prefix; a query that is exactly a scope name returns `undefined`.
- *
- * @param candidates Scope names to match against the query prefix.
- * @param query Full query text to inspect.
- * @returns Matching scopes with the remaining query text, or `undefined` when no prefix match is found.
- * @example
- * extractScopeFromQuery(["Daily Desk", "Projects"], "Daily Desk today")
- * // => { remainder: "today", scopes: ["Daily Desk"] }
- */
-export function extractScopeFromQuery(candidates: string[], query: string): ScopeMatch | undefined {
-  const words = tokenize(query.trim());
-  const normCandidates = candidates.map(normalizeText);
-
-  for (let len = words.length - 1; len >= 1; len--) {
-    const norm = normalizeText(words.slice(0, len).join(" "));
-    const scopes = candidates.filter((_, i) => normCandidates[i] === norm || normCandidates[i].startsWith(`${norm} `));
-
-    if (scopes.length > 0) {
-      return { remainder: words.slice(len).join(" "), scopes };
-    }
-  }
-
-  return undefined;
-}
-
 /**
  * Trims leading and trailing whitespace from a text value.
  *

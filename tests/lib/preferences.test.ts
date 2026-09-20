@@ -47,9 +47,6 @@ describe("preferences", () => {
     ]);
     expect(preferences.excludedWorkspaces).toEqual(new Set(["work", "personal"]));
     expect(preferences.excludedFoldersInWorkspaces).toEqual(new Set(["archive", "templates"]));
-    expect(preferences.hasConfiguredRoots).toBe(true);
-    expect(preferences.workspaceDiscoverySignature).toContain("::personal|work");
-    expect(preferences.workspaceSearchSignature).toContain("::archive|templates");
   });
 
   it("parses command-specific attachment preferences", () => {

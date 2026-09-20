@@ -5,42 +5,18 @@ export type ExtensionPreferences = {
   workspaceRoots: string[];
   excludedWorkspaces: Set<string>;
   excludedFoldersInWorkspaces: Set<string>;
-  hasConfiguredRoots: boolean;
-  workspaceDiscoverySignature: string;
-  workspaceSearchSignature: string;
 };
-
-function buildSortedSignature(values: Iterable<string>): string {
-  return Array.from(values).sort().join("|");
-}
-
-function buildWorkspaceDiscoverySignature(workspaceRoots: string[], excludedWorkspaces: Set<string>): string {
-  const rootsSignature = buildSortedSignature(workspaceRoots);
-  const excludedWorkspacesSignature = buildSortedSignature(excludedWorkspaces);
-  return `${rootsSignature}::${excludedWorkspacesSignature}`;
-}
-
-function buildWorkspaceSearchSignature(
-  workspaceDiscoverySignature: string,
-  excludedFoldersInWorkspaces: Set<string>,
-): string {
-  return `${workspaceDiscoverySignature}::${buildSortedSignature(excludedFoldersInWorkspaces)}`;
-}
 
 export function extensionPreferences(): ExtensionPreferences {
   const prefs = getPreferenceValues<Preferences>();
   const workspaceRoots = normalizeWorkspaceRoots(prefs.workspaceRoots);
   const excludedFoldersInWorkspaces = splitLowerList(prefs.excludedFoldersInWorkspaces);
   const excludedWorkspaces = splitLowerList(prefs.excludedWorkspaces);
-  const workspaceDiscoverySignature = buildWorkspaceDiscoverySignature(workspaceRoots, excludedWorkspaces);
 
   return {
     workspaceRoots,
     excludedWorkspaces,
     excludedFoldersInWorkspaces,
-    hasConfiguredRoots: workspaceRoots.length > 0,
-    workspaceDiscoverySignature,
-    workspaceSearchSignature: buildWorkspaceSearchSignature(workspaceDiscoverySignature, excludedFoldersInWorkspaces),
   };
 }
 
