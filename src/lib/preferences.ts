@@ -49,14 +49,6 @@ export function openTodayNotePreferences() {
   };
 }
 
-export function searchViewsPreferences() {
-  const { showWorkspaceViewCount } = getPreferenceValues<Preferences.SearchViews>();
-
-  return {
-    showWorkspaceViewCount,
-  };
-}
-
 export function searchPinnedNotesPreferences() {
   const preferences = getPreferenceValues<Preferences.SearchPinnedNotes>();
 

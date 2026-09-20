@@ -15,13 +15,6 @@ export type Note = {
   folder: Folder;
 };
 
-export type View = {
-  id: string;
-  name: string;
-  description: string;
-  workspace: Workspace;
-};
-
 export type Attachment = {
   name: string;
   path: string;
@@ -61,19 +54,6 @@ export function isNote(value: unknown): value is Note {
   }
 
   return hasStringProperty(value, "title") && hasStringProperty(value, "path") && isFolder(value.folder);
-}
-
-export function isView(value: unknown): value is View {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    hasStringProperty(value, "id") &&
-    hasStringProperty(value, "name") &&
-    hasStringProperty(value, "description") &&
-    isWorkspace(value.workspace)
-  );
 }
 
 export function isAttachment(value: unknown): value is Attachment {

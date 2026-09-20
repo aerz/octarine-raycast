@@ -1,6 +1,4 @@
 import { closeMainWindow, open, popToRoot } from "@raycast/api";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 
 enum Action {
   Open = "open",
@@ -66,40 +64,6 @@ export function openDailyDeskNote(date: string, workspace: string): Promise<void
 
 export function openTodayNote(workspace: string): Promise<void> {
   return openDailyDeskNote("today", workspace);
-}
-
-export async function openView(workspace: string, view: string): Promise<void> {
-  const execAsync = promisify(execFile);
-  const OPEN_VIEW_APPLE_SCRIPT = `
-  on run argv
-    set targetViewName to item 1 of argv
-
-    tell application "Octarine"
-      activate
-    end tell
-
-    tell application "System Events"
-      tell process "Octarine"
-        repeat until frontmost
-          delay 0.05
-        end repeat
-        delay 0.5
-
-        keystroke "k" using command down
-        delay 0.5
-
-        keystroke "View " & targetViewName
-        delay 0.5
-        keystroke return
-      end tell
-    end tell
-  end run
-  `;
-
-  await open(buildOpenWorkspaceUri(workspace));
-  await execAsync("osascript", ["-e", OPEN_VIEW_APPLE_SCRIPT, view]);
-  await popToRoot({ clearSearchBar: true });
-  await closeMainWindow({ clearRootSearch: true });
 }
 
 async function openUri(uri: string): Promise<void> {

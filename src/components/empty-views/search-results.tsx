@@ -25,13 +25,3 @@ export function SearchNotesEmptyView({ actions, children }: Props) {
     />
   );
 }
-
-export function SearchViewsEmptyView({ actions, children }: Props) {
-  return (
-    <List.EmptyView
-      title="No views found"
-      description="Try a different search"
-      actions={actions ?? (children ? <ActionPanel>{children}</ActionPanel> : undefined)}
-    />
-  );
-}

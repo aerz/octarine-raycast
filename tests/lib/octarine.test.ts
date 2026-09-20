@@ -1,22 +1,6 @@
 import { closeMainWindow, open, popToRoot } from "@raycast/api";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const execFileMock = vi.hoisted(() =>
-  vi.fn((_file: string, _args: string[], callback: (error: Error | null, stdout: string, stderr: string) => void) =>
-    callback(null, "", ""),
-  ),
-);
-
-vi.mock("node:child_process", () => ({
-  execFile: execFileMock,
-}));
-
-import {
-  openAttachment,
-  openDailyDeskNote,
-  openNote,
-  openView,
-} from "../../src/lib/octarine";
+import { describe, expect, it, vi } from "vitest";
+import { openAttachment, openDailyDeskNote, openNote } from "../../src/lib/octarine";
 
 function parseUri(uri: string) {
   const [schemeAndAction, query = ""] = uri.split("?");
@@ -31,10 +15,6 @@ function getOpenedUri(): ReturnType<typeof parseUri> {
   const [[uri]] = vi.mocked(open).mock.calls;
   return parseUri(uri);
 }
-
-beforeEach(() => {
-  execFileMock.mockClear();
-});
 
 describe("octarine", () => {
   it("opens note URIs and closes Raycast", async () => {
@@ -64,25 +44,5 @@ describe("octarine", () => {
     expect(parsed.action).toBe("daily");
     expect(parsed.params.get("date")).toBe("2026-03-26");
     expect(parsed.params.get("workspace")).toBe("Work");
-  });
-
-  it("opens a workspace and runs AppleScript when opening a view", async () => {
-    await openView("Work", "Inbox");
-    const parsed = getOpenedUri();
-    const openMock = vi.mocked(open);
-    const popToRootMock = vi.mocked(popToRoot);
-
-    expect(parsed.action).toBe("daily");
-    expect(parsed.params.get("date")).toBe("today");
-    expect(parsed.params.get("workspace")).toBe("Work");
-    expect(execFileMock).toHaveBeenCalledWith(
-      "osascript",
-      ["-e", expect.stringContaining('tell application "Octarine"'), "Inbox"],
-      expect.any(Function),
-    );
-    expect(openMock.mock.invocationCallOrder[0]).toBeLessThan(execFileMock.mock.invocationCallOrder[0]);
-    expect(execFileMock.mock.invocationCallOrder[0]).toBeLessThan(popToRootMock.mock.invocationCallOrder[0]);
-    expect(popToRoot).toHaveBeenCalledWith({ clearSearchBar: true });
-    expect(closeMainWindow).toHaveBeenCalledWith({ clearRootSearch: true });
   });
 });

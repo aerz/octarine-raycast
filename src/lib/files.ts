@@ -3,7 +3,6 @@ import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 
 const OCTARINE_WORKSPACE_DIRECTORY = ".octarine";
-const OCTARINE_VIEWS_FILE = "views.json";
 const ATTACHMENT_DIRECTORIES = [".attachments", ".files"] as const;
 const SYSTEM_GENERATED_FILE_NAMES = new Set([
   ".ds_store",
@@ -179,27 +178,6 @@ export async function readMarkdownFrontmatter(filePath: string): Promise<string 
     }
   } catch (error) {
     throw new Error(`Failed to read file ${filePath}: ${toErrorMessage(error)}`);
-  }
-}
-
-export async function readViewsFile(workspacePath: string): Promise<unknown | undefined> {
-  const filePath = path.join(workspacePath, OCTARINE_WORKSPACE_DIRECTORY, OCTARINE_VIEWS_FILE);
-  let text: string;
-  try {
-    text = await fs.readFile(filePath, "utf8");
-  } catch (error) {
-    const code = error instanceof Error && "code" in error ? (error as NodeJS.ErrnoException).code : undefined;
-    if (code === "ENOENT") {
-      return undefined;
-    }
-
-    throw new Error(`Failed to read file ${filePath}`);
-  }
-
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    throw new Error(`Failed to parse file ${filePath}`);
   }
 }
 

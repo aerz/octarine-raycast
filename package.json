@@ -156,23 +156,6 @@
       ]
     },
     {
-      "name": "search-views",
-      "title": "Search Views",
-      "description": "Browse views across Octarine workspaces",
-      "mode": "view",
-      "preferences": [
-        {
-          "name": "showWorkspaceViewCount",
-          "type": "checkbox",
-          "title": "Show Workspace View Count",
-          "description": "Show or hide view counts in workspace section titles",
-          "label": "Show view count in workspace section titles",
-          "default": false,
-          "required": false
-        }
-      ]
-    },
-    {
       "name": "open-daily-desk-note",
       "title": "Open Daily Desk Note",
       "description": "Open a note with any date from Daily Desk",
