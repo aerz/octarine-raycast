@@ -97,7 +97,7 @@ async function renderHook(options: Parameters<UseOpenTarget>[0]): Promise<void> 
 
 describe("useOpenTarget", () => {
   it("does nothing when no workspace was requested", async () => {
-    const open = vi.fn(async () => true);
+    const open = vi.fn(async () => undefined);
 
     await renderHook({
       requestedWorkspace: "",
@@ -111,7 +111,7 @@ describe("useOpenTarget", () => {
   });
 
   it("opens the matched workspace", async () => {
-    const open = vi.fn(async () => true);
+    const open = vi.fn(async () => undefined);
 
     await renderHook({
       requestedWorkspace: "Alpha",
@@ -126,7 +126,7 @@ describe("useOpenTarget", () => {
   });
 
   it("does not reopen on a rerender when dependencies are unchanged", async () => {
-    const open = vi.fn(async () => true);
+    const open = vi.fn(async () => undefined);
     const options = {
       requestedWorkspace: "Alpha",
       workspaces,
@@ -142,7 +142,7 @@ describe("useOpenTarget", () => {
   });
 
   it("shows the workspace-not-found toast once per missing workspace", async () => {
-    const open = vi.fn(async () => true);
+    const open = vi.fn(async () => undefined);
 
     await renderHook({
       requestedWorkspace: "Missing",
@@ -178,7 +178,7 @@ describe("useOpenTarget", () => {
   });
 
   it("suppresses not-found toasts while loading or after load failure", async () => {
-    const open = vi.fn(async () => true);
+    const open = vi.fn(async () => undefined);
 
     await renderHook({
       requestedWorkspace: "Missing",

@@ -113,13 +113,13 @@ describe("files", () => {
     const rootPath = path.join(tempDir, "Workspace");
     await writeTextFile(path.join(rootPath, "root.md"), "# Root");
 
-    const readdir = fs.readdir.bind(fs);
+    const { readdir } = fs;
     vi.spyOn(fs, "readdir").mockImplementation((target, options) => {
       if (target === rootPath) {
         return Promise.reject(new Error("EACCES"));
       }
 
-      return readdir(target, options as never);
+      return readdir(target, options);
     });
 
     await expect(scanMarkdownFiles(rootPath, new Set())).rejects.toThrow(`Failed to read directory ${rootPath}`);

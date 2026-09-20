@@ -69,10 +69,11 @@ async function scanAttachments(
     workspaces.map((workspace) => scanWorkspaceAttachments(workspace, excludedExtensions, excludedDirectoryNames)),
   );
 
-  return byWorkspace.flat().toSorted(
-    (a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.path.localeCompare(b.path),
-  );
+  return byWorkspace
+    .flat()
+    .toSorted(
+      (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.path.localeCompare(b.path),
+    );
 }
 
 function isVisibleWorkspace(workspace: Workspace): boolean {
