@@ -48,10 +48,6 @@ export function openNote(path: string, workspace?: string): Promise<void> {
   return openUri(uri);
 }
 
-export function openPinnedNote(path: string, workspace?: string): Promise<void> {
-  return openNote(path, workspace);
-}
-
 export function openDailyDeskNote(date: string, workspace: string): Promise<void> {
   return openUri(
     buildUri({

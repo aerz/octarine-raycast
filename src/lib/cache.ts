@@ -83,18 +83,6 @@ export const NotesCache = createCache<IndexedNote[], [Workspace[], Set<string>]>
   isValid: isIndexedNoteArray,
 });
 
-export const PinnedNotesCache = createCache<IndexedNote[], [Workspace[], Set<string>]>({
-  key(workspaces, excludedDirectories) {
-    const prefix = "octarine.pinned-notes.v1";
-    return `${prefix}.${JSON.stringify({
-      workspaces: workspaces.map((workspace) => workspace.path).sort(),
-      excludedDirectories: [...excludedDirectories].sort(),
-    })}`;
-  },
-
-  isValid: isIndexedNoteArray,
-});
-
 export const AttachmentsCache = createCache<IndexedAttachment[], [Workspace[], Set<string>, Set<string>]>({
   key(workspaces, excludedDirectories, excludedExtensions) {
     const prefix = "octarine.attachments.v1";

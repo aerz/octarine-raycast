@@ -48,11 +48,3 @@ export function openTodayNotePreferences() {
     defaultWorkspace: normalizeText(preferences.defaultWorkspace),
   };
 }
-
-export function searchPinnedNotesPreferences() {
-  const preferences = getPreferenceValues<Preferences.SearchPinnedNotes>();
-
-  return {
-    showWorkspaceNoteCount: preferences.showWorkspaceNoteCount,
-  };
-}

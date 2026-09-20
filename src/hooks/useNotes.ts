@@ -2,7 +2,7 @@ import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
 import { extensionPreferences } from "../lib/preferences";
-import { getNotes, getPinnedNotes } from "../lib/notes";
+import { getNotes } from "../lib/notes";
 import { querySearchText } from "../lib/search";
 import type { Workspace } from "../types/octarine";
 import type { IndexedNote } from "../types/notes";
@@ -13,10 +13,10 @@ export type WorkspaceSection = {
   notes: IndexedNote[];
 };
 
-type Scope = "all" | "pinned";
+export type NoteScope = "all" | "pinned";
 
 type Options = {
-  scope?: Scope;
+  scope?: NoteScope;
   workspaces: Workspace[];
   enabled?: boolean;
   searchText: string;
@@ -48,14 +48,9 @@ export function useNotes({
     isLoading,
     revalidate,
   } = useCachedPromise(
-    async (refresh: boolean, workspaces: Workspace[], scope: Scope): Promise<IndexedNote[]> => {
-      if (scope === "pinned") {
-        return getPinnedNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
-      }
-
-      return getNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh });
-    },
-    [refresh, workspaces, scope],
+    async (refresh: boolean, workspaces: Workspace[]): Promise<IndexedNote[]> =>
+      getNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh }),
+    [refresh, workspaces],
     {
       execute: enabled,
       initialData: [] satisfies IndexedNote[],
@@ -84,9 +79,9 @@ export function useNotes({
 
     return {
       dropdown: workspaceNames(grouped),
-      sections: buildWorkspaceSections(grouped, { selectedWorkspace, searchText, showPinnedNotesFirst }),
+      sections: buildWorkspaceSections(grouped, { scope, selectedWorkspace, searchText, showPinnedNotesFirst }),
     };
-  }, [notes, searchText, selectedWorkspace, showPinnedNotesFirst]);
+  }, [notes, scope, searchText, selectedWorkspace, showPinnedNotesFirst]);
 
   return {
     dropdown,
@@ -123,10 +118,12 @@ function workspaceNames(workspaces: WorkspaceSection[]): string[] {
 function buildWorkspaceSections(
   workspaces: WorkspaceSection[],
   {
+    scope,
     selectedWorkspace,
     searchText,
     showPinnedNotesFirst,
   }: {
+    scope: NoteScope;
     selectedWorkspace: string;
     searchText: string;
     showPinnedNotesFirst: boolean;
@@ -135,7 +132,10 @@ function buildWorkspaceSections(
   return workspaces
     .filter((workspace) => selectedWorkspace === "all" || workspace.name === selectedWorkspace)
     .map((workspace) => {
-      const notes = searchText ? workspace.notes.filter((note) => querySearchText(note, searchText)) : workspace.notes;
+      const notes = workspace.notes.filter((note) => {
+        if (scope === "pinned" && !note.pinned) return false;
+        return !searchText || querySearchText(note, searchText);
+      });
 
       return {
         name: workspace.name,

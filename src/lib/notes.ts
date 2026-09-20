@@ -1,7 +1,7 @@
 import path from "node:path";
 import { type Folder, type Workspace } from "../types/octarine";
 import { type IndexedNote } from "../types/notes";
-import { PinnedNotesCache, NotesCache } from "./cache";
+import { NotesCache } from "./cache";
 import { readMarkdownFrontmatter, scanMarkdownFiles } from "./files";
 import { buildSearchText } from "./search";
 
@@ -32,26 +32,6 @@ export async function getNotes(
   const notes = await scanNotes(workspaces, excludedDirectories);
   NotesCache.write(notes, workspaces, excludedDirectories);
   return notes;
-}
-
-export async function getPinnedNotes(
-  workspaces: Workspace[],
-  excludedDirectories: Set<string>,
-  options?: { refresh?: boolean },
-): Promise<IndexedNote[]> {
-  const refresh = options?.refresh ?? false;
-
-  if (!refresh) {
-    const cached = PinnedNotesCache.read(workspaces, excludedDirectories);
-    if (cached) {
-      return cached;
-    }
-  }
-
-  const notes = await getNotes(workspaces, excludedDirectories, { refresh });
-  const pinned = notes.filter((note) => note.pinned);
-  PinnedNotesCache.write(pinned, workspaces, excludedDirectories);
-  return pinned;
 }
 
 export async function scanNotes(workspaces: Workspace[], excludedDirectories: Set<string>): Promise<IndexedNote[]> {

@@ -1,6 +1,6 @@
 import { Cache } from "@raycast/api";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AttachmentsCache, PinnedNotesCache, WorkspacesCache } from "../../src/lib/cache";
+import { AttachmentsCache, NotesCache, WorkspacesCache } from "../../src/lib/cache";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -106,7 +106,7 @@ describe("workspace cache", () => {
   });
 });
 
-describe("pinned notes cache", () => {
+describe("notes cache", () => {
   const staleOffsetMs = 24 * 60 * 60 * 1000;
   const workspaces = [{ name: "Alpha", path: "/workspaces/alpha" }];
   const notes = [
@@ -124,39 +124,39 @@ describe("pinned notes cache", () => {
     },
   ];
 
-  it("returns cached pinned notes when the cached value is valid", () => {
+  it("returns cached notes when the cached value is valid", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-31T10:00:00.000Z"));
 
-    PinnedNotesCache.write(notes, workspaces, new Set(["archive"]));
+    NotesCache.write(notes, workspaces, new Set(["archive"]));
 
-    expect(PinnedNotesCache.read(workspaces, new Set(["archive"]))).toEqual(notes);
+    expect(NotesCache.read(workspaces, new Set(["archive"]))).toEqual(notes);
   });
 
-  it("returns cached empty pinned notes arrays", () => {
-    PinnedNotesCache.write([], workspaces, new Set());
+  it("returns cached empty notes arrays", () => {
+    NotesCache.write([], workspaces, new Set());
 
-    expect(PinnedNotesCache.read(workspaces, new Set())).toEqual([]);
+    expect(NotesCache.read(workspaces, new Set())).toEqual([]);
   });
 
-  it("returns undefined when the pinned notes cache is stale", () => {
+  it("returns undefined when the notes cache is stale", () => {
     const now = new Date("2026-03-31T10:00:00.000Z").valueOf();
     const nowSpy = vi.spyOn(Date, "now");
     nowSpy.mockReturnValue(now);
 
-    PinnedNotesCache.write(notes, workspaces, new Set());
+    NotesCache.write(notes, workspaces, new Set());
     nowSpy.mockReturnValue(now + staleOffsetMs);
 
-    expect(PinnedNotesCache.read(workspaces, new Set())).toBeUndefined();
+    expect(NotesCache.read(workspaces, new Set())).toBeUndefined();
   });
 
-  it("returns undefined when the pinned notes cache is malformed", () => {
+  it("returns undefined when the notes cache is malformed", () => {
     vi.spyOn(Cache.prototype, "get").mockReturnValue("{");
 
-    expect(PinnedNotesCache.read(workspaces, new Set())).toBeUndefined();
+    expect(NotesCache.read(workspaces, new Set())).toBeUndefined();
   });
 
-  it("returns undefined when the pinned notes cache contains invalid notes", () => {
+  it("returns undefined when the notes cache contains invalid notes", () => {
     vi.spyOn(Cache.prototype, "get").mockReturnValue(
       JSON.stringify({
         cachedAt: Date.now(),
@@ -164,22 +164,22 @@ describe("pinned notes cache", () => {
       }),
     );
 
-    expect(PinnedNotesCache.read(workspaces, new Set())).toBeUndefined();
+    expect(NotesCache.read(workspaces, new Set())).toBeUndefined();
   });
 
   it("keeps caches for different excluded directories separate", () => {
-    PinnedNotesCache.write(notes, workspaces, new Set(["archive"]));
-    PinnedNotesCache.write([], workspaces, new Set(["templates"]));
+    NotesCache.write(notes, workspaces, new Set(["archive"]));
+    NotesCache.write([], workspaces, new Set(["templates"]));
 
-    expect(PinnedNotesCache.read(workspaces, new Set(["archive"]))).toEqual(notes);
-    expect(PinnedNotesCache.read(workspaces, new Set(["templates"]))).toEqual([]);
+    expect(NotesCache.read(workspaces, new Set(["archive"]))).toEqual(notes);
+    expect(NotesCache.read(workspaces, new Set(["templates"]))).toEqual([]);
   });
 
   it("keeps caches for different workspace sets separate", () => {
     const otherWorkspace = { name: "Beta", path: "/workspaces/beta" };
 
-    PinnedNotesCache.write(notes, workspaces, new Set());
-    PinnedNotesCache.write(
+    NotesCache.write(notes, workspaces, new Set());
+    NotesCache.write(
       [
         {
           id: "Beta::Pinned.md",
@@ -198,8 +198,8 @@ describe("pinned notes cache", () => {
       new Set(),
     );
 
-    expect(PinnedNotesCache.read(workspaces, new Set())).toEqual(notes);
-    expect(PinnedNotesCache.read([otherWorkspace], new Set())).toEqual([
+    expect(NotesCache.read(workspaces, new Set())).toEqual(notes);
+    expect(NotesCache.read([otherWorkspace], new Set())).toEqual([
       {
         id: "Beta::Pinned.md",
         title: "Pinned",

@@ -15,7 +15,6 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 - [Open Daily Desk Note](#open-daily-desk-note)
 - [Search Notes](#search-notes)
 - [Search Attachments](#search-attachments)
-- [Search Pinned Notes](#search-pinned-notes)
 
 ## Open Workspace
 
@@ -71,6 +70,7 @@ Search and open your Octarine notes from anywhere on your computer. Instantly fi
 
 - Queries are fuzzy by default for broader matches. To scope results to a specific folder, append a trailing slash to the folder name (e.g. articles/).
 - Use the dropdown to filter by workspace.
+- Open Actions (`⌘ K`) and select **Show Pinned Notes Only** to show only [pinned notes](https://docs.octarine.app/note-management/pinned) across all workspaces or within the selected workspace. Select **Show All Notes** to remove the filter.
 
 **Preferences**
 
@@ -99,15 +99,3 @@ Type to filter by filename or extension. Use the dropdown to narrow results by f
 - **Show attachment count**. Display the number of attachments per workspace in parentheses.
 - **Flatten workspace sections**. Show all attachments in a single alphabetically sorted list.
 - **Exclude file extensions**. Comma-separated list of file extensions to omit from results.
-
-## Search Pinned Notes
-
-Search [pinned notes](https://docs.octarine.app/note-management/pinned) across all workspaces by title.
-
-**Search & Filter**
-
-Use the dropdown to filter by workspace.
-
-**Preferences**
-
-- **Show workspace note count**. Display the number of pinned notes per workspace in parentheses.
