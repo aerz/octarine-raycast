@@ -1,9 +1,9 @@
 import { Action, Icon, LaunchProps } from "@raycast/api";
 import { useState } from "react";
-import { WorkspaceList } from "./components/workspace-list";
-import { useOpenTarget } from "./hooks/useOpenTarget";
-import { useWorkspaces } from "./hooks/useWorkspaces";
-import { openWorkspace } from "./lib/octarine";
+import { WorkspaceList } from "@components/workspace-list";
+import { useOpenTarget } from "@hooks/useOpenTarget";
+import { useWorkspaces } from "@hooks/useWorkspaces";
+import { openWorkspace } from "@lib/octarine";
 
 type Arguments = {
   workspace?: string;

@@ -1,6 +1,6 @@
 import { Cache } from "@raycast/api";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AttachmentsCache, NotesCache, WorkspacesCache } from "../../src/lib/cache";
+import { AttachmentsCache, NotesCache, WorkspacesCache } from "@lib/cache";
 
 afterEach(() => {
   vi.restoreAllMocks();

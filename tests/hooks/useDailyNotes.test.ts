@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
-import type { Workspace } from "../../src/types/octarine";
+import type { Workspace } from "@type/octarine";
 
 const { getDailyNotes, setSelectedWorkspace, useCachedPromise, useNoteSections } = vi.hoisted(() => ({
   getDailyNotes: vi.fn(),
@@ -10,8 +10,8 @@ const { getDailyNotes, setSelectedWorkspace, useCachedPromise, useNoteSections }
 }));
 
 vi.mock("@raycast/utils", () => ({ useCachedPromise }));
-vi.mock("../../src/lib/notes", () => ({ getDailyNotes }));
-vi.mock("../../src/hooks/useNoteSections", () => ({ useNoteSections }));
+vi.mock("@lib/notes", () => ({ getDailyNotes }));
+vi.mock("@hooks/useNoteSections", () => ({ useNoteSections }));
 vi.mock("react", () => ({
   useEffect: (effect: () => void) => effect(),
   useMemo: (factory: () => unknown) => factory(),
@@ -19,7 +19,7 @@ vi.mock("react", () => ({
   useState: () => ["all", setSelectedWorkspace],
 }));
 
-import { useDailyNotes } from "../../src/hooks/useDailyNotes";
+import { useDailyNotes } from "@hooks/useDailyNotes";
 
 const alpha = { name: "Alpha", path: "/tmp/alpha" };
 const empty = { name: "Empty", path: "/tmp/empty" };

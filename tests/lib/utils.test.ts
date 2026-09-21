@@ -8,7 +8,7 @@ import {
   normalizeText,
   splitList,
   tokenize,
-} from "../../src/lib/utils";
+} from "@lib/utils";
 
 describe("utils", () => {
   it("normalizes text and tokenizes safely", () => {

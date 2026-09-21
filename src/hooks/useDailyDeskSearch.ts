@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { type DailySuggestion } from "../components/daily-desk/notes";
-import { formatDateLabel, formatWeekLabel, type DateQuery } from "../lib/daily-desk";
-import { findWorkspaceByName } from "../lib/workspaces";
-import { ALL_WORKSPACES, type WorkspaceSection } from "../types/notes";
-import type { Workspace } from "../types/octarine";
-import { useDailyNotes } from "./useDailyNotes";
-import { useLastWorkspace } from "./useLastWorkspace";
-import { useOpenDailyNote } from "./useOpenDailyNote";
-import { useWorkspaces } from "./useWorkspaces";
+import { type DailySuggestion } from "@components/daily-desk/notes";
+import { formatDateLabel, formatWeekLabel, type DateQuery } from "@lib/daily-desk";
+import { findWorkspaceByName } from "@lib/workspaces";
+import { ALL_WORKSPACES, type WorkspaceSection } from "@type/notes";
+import type { Workspace } from "@type/octarine";
+import { useDailyNotes } from "@hooks/useDailyNotes";
+import { useLastWorkspace } from "@hooks/useLastWorkspace";
+import { useOpenDailyNote } from "@hooks/useOpenDailyNote";
+import { useWorkspaces } from "@hooks/useWorkspaces";
 
 export type DailyDeskSuggestion = DailySuggestion & {
   sectionPath?: string;

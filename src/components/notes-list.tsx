@@ -1,6 +1,6 @@
 import { List } from "@raycast/api";
 import type { ReactNode } from "react";
-import type { IndexedNote, WorkspaceSection } from "../types/notes";
+import type { IndexedNote, WorkspaceSection } from "@type/notes";
 
 type Props = {
   sections: WorkspaceSection[];

@@ -1,14 +1,14 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
 import { useState, type ReactNode } from "react";
-import { NotesEmptyView, PinnedNotesEmptyView } from "./components/empty-views/notes";
-import { SearchNotesEmptyView } from "./components/empty-views/search";
-import { NotesList } from "./components/notes-list";
-import { WorkspaceDropdown } from "./components/workspace-dropdown";
-import { useNotes } from "./hooks/useNotes";
-import { useWorkspaces } from "./hooks/useWorkspaces";
-import { openNote } from "./lib/octarine";
-import { searchNotesPreferences } from "./lib/preferences";
-import { ALL_WORKSPACES, type IndexedNote, type NoteScope } from "./types/notes";
+import { NotesEmptyView, PinnedNotesEmptyView } from "@components/empty-views/notes";
+import { SearchNotesEmptyView } from "@components/empty-views/search";
+import { NotesList } from "@components/notes-list";
+import { WorkspaceDropdown } from "@components/workspace-dropdown";
+import { useNotes } from "@hooks/useNotes";
+import { useWorkspaces } from "@hooks/useWorkspaces";
+import { openNote } from "@lib/octarine";
+import { searchNotesPreferences } from "@lib/preferences";
+import { ALL_WORKSPACES, type IndexedNote, type NoteScope } from "@type/notes";
 
 export default function SearchNotesCommand() {
   const preferences = searchNotesPreferences();

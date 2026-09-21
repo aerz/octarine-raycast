@@ -1,6 +1,6 @@
-import type { IndexedNote, WorkspaceSection } from "../types/notes";
-import { matchesDateQuery, resolveDateQuery, type DateQuery } from "./daily-desk";
-import { createSearchMatcher } from "./search";
+import type { IndexedNote, WorkspaceSection } from "@type/notes";
+import { matchesDateQuery, resolveDateQuery, type DateQuery } from "@lib/daily-desk";
+import { createSearchMatcher } from "@lib/search";
 
 /**
  * Builds the resolved query and matcher used by the Daily Desk search.

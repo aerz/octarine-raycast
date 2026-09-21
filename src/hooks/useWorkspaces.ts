@@ -1,7 +1,7 @@
 import { Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import type { Workspace } from "../types/octarine";
-import { getWorkspaces } from "../lib/workspaces";
+import type { Workspace } from "@type/octarine";
+import { getWorkspaces } from "@lib/workspaces";
 
 export type LoadStatus = {
   isLoading: boolean;

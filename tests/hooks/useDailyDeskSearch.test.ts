@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DateQuery } from "../../src/lib/daily-desk";
-import { ALL_WORKSPACES, type WorkspaceSection } from "../../src/types/notes";
-import type { Workspace } from "../../src/types/octarine";
+import type { DateQuery } from "@lib/daily-desk";
+import { ALL_WORKSPACES, type WorkspaceSection } from "@type/notes";
+import type { Workspace } from "@type/octarine";
 
 const { useDailyNotes, useLastWorkspace, useOpenDailyNote, useWorkspaces } = vi.hoisted(() => ({
   useDailyNotes: vi.fn(),
@@ -14,12 +14,12 @@ vi.mock("react", () => ({
   useMemo: (factory: () => unknown) => factory(),
   useState: () => ["", vi.fn()],
 }));
-vi.mock("../../src/hooks/useWorkspaces", () => ({ useWorkspaces }));
-vi.mock("../../src/hooks/useLastWorkspace", () => ({ useLastWorkspace }));
-vi.mock("../../src/hooks/useDailyNotes", () => ({ useDailyNotes }));
-vi.mock("../../src/hooks/useOpenDailyNote", () => ({ useOpenDailyNote }));
+vi.mock("@hooks/useWorkspaces", () => ({ useWorkspaces }));
+vi.mock("@hooks/useLastWorkspace", () => ({ useLastWorkspace }));
+vi.mock("@hooks/useDailyNotes", () => ({ useDailyNotes }));
+vi.mock("@hooks/useOpenDailyNote", () => ({ useOpenDailyNote }));
 
-import { useDailyDeskSearch } from "../../src/hooks/useDailyDeskSearch";
+import { useDailyDeskSearch } from "@hooks/useDailyDeskSearch";
 
 const alpha: Workspace = { name: "Alpha", path: "/tmp/alpha" };
 const beta: Workspace = { name: "Beta", path: "/tmp/beta" };

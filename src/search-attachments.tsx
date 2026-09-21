@@ -1,11 +1,11 @@
 import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import { useState, type ReactNode } from "react";
-import { SearchAttachmentsEmptyView } from "./components/empty-views/search";
-import { type WorkspaceAttachmentsSection, useAttachments } from "./hooks/useAttachments";
-import { useWorkspaces } from "./hooks/useWorkspaces";
-import { openAttachment } from "./lib/octarine";
-import { searchAttachmentsPreferences } from "./lib/preferences";
-import type { IndexedAttachment } from "./types/attachments";
+import { SearchAttachmentsEmptyView } from "@components/empty-views/search";
+import { type WorkspaceAttachmentsSection, useAttachments } from "@hooks/useAttachments";
+import { useWorkspaces } from "@hooks/useWorkspaces";
+import { openAttachment } from "@lib/octarine";
+import { searchAttachmentsPreferences } from "@lib/preferences";
+import type { IndexedAttachment } from "@type/attachments";
 
 type WorkspaceDropdownProps = {
   sections: string[];

@@ -1,14 +1,14 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createDailySearch, prioritizeExactDateMatches } from "../lib/daily-search";
-import { toDailyStem, type DateQuery } from "../lib/daily-desk";
-import { getDailyNotes } from "../lib/notes";
-import { extensionPreferences } from "../lib/preferences";
-import { findWorkspaceByName } from "../lib/workspaces";
-import type { Workspace } from "../types/octarine";
-import { ALL_WORKSPACES, type IndexedNote, type WorkspaceSection } from "../types/notes";
-import { useNoteSections } from "./useNoteSections";
+import { createDailySearch, prioritizeExactDateMatches } from "@lib/daily-search";
+import { toDailyStem, type DateQuery } from "@lib/daily-desk";
+import { getDailyNotes } from "@lib/notes";
+import { extensionPreferences } from "@lib/preferences";
+import { findWorkspaceByName } from "@lib/workspaces";
+import type { Workspace } from "@type/octarine";
+import { ALL_WORKSPACES, type IndexedNote, type WorkspaceSection } from "@type/notes";
+import { useNoteSections } from "@hooks/useNoteSections";
 
 type Options = {
   workspaces: Workspace[];

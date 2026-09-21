@@ -1,7 +1,7 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
-import { getDailyNotes, getNotes, scanDailyNotes, scanNotes } from "../../src/lib/notes";
+import { getDailyNotes, getNotes, scanDailyNotes, scanNotes } from "@lib/notes";
 
 let tempDir: string | undefined;
 

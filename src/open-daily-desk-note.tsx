@@ -1,8 +1,8 @@
 import type { LaunchProps } from "@raycast/api";
-import { DailyDeskOpen } from "./components/daily-desk/open";
-import { DailyDeskSearch } from "./components/daily-desk/search";
-import { DateFormatsDetail } from "./components/notifications/date-formats";
-import { resolveDateArg } from "./lib/daily-desk";
+import { DailyDeskOpen } from "@components/daily-desk/open";
+import { DailyDeskSearch } from "@components/daily-desk/search";
+import { DateFormatsDetail } from "@components/notifications/date-formats";
+import { resolveDateArg } from "@lib/daily-desk";
 
 type Arguments = {
   date?: string;

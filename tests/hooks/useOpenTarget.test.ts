@@ -1,7 +1,7 @@
 import { Toast, showToast } from "@raycast/api";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { HookRuntime } from "../helpers/hooks";
-import type { Workspace } from "../../src/types/octarine";
+import type { Workspace } from "@type/octarine";
 
 let activeRuntime = new HookRuntime();
 
@@ -10,12 +10,12 @@ vi.mock("react", () => ({
   useRef: <T>(initialValue: T) => activeRuntime.useRef(initialValue),
 }));
 
-type UseOpenTarget = (typeof import("../../src/hooks/useOpenTarget"))["useOpenTarget"];
+type UseOpenTarget = (typeof import("@hooks/useOpenTarget"))["useOpenTarget"];
 
 let useOpenTarget: UseOpenTarget;
 
 beforeAll(async () => {
-  ({ useOpenTarget } = await import("../../src/hooks/useOpenTarget"));
+  ({ useOpenTarget } = await import("@hooks/useOpenTarget"));
 });
 
 beforeEach(() => {

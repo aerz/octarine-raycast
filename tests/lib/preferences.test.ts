@@ -3,8 +3,8 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
 
-vi.mock("../../src/lib/utils", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/lib/utils")>();
+vi.mock("@lib/utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lib/utils")>();
 
   return {
     ...actual,
@@ -27,7 +27,7 @@ import {
   openDailyDeskNotePreferences,
   searchAttachmentsPreferences,
   searchNotesPreferences,
-} from "../../src/lib/preferences";
+} from "@lib/preferences";
 
 describe("preferences", () => {
   it("parses extension preferences into normalized values and signatures", () => {

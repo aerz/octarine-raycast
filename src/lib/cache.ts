@@ -1,8 +1,8 @@
 import { Cache } from "@raycast/api";
-import { isIndexedAttachment, type IndexedAttachment } from "../types/attachments";
-import { isIndexedNote, type IndexedNote } from "../types/notes";
-import type { Workspace } from "../types/octarine";
-import { isIndexedWorkspace, type IndexedWorkspace } from "../types/workspaces";
+import { isIndexedAttachment, type IndexedAttachment } from "@type/attachments";
+import { isIndexedNote, type IndexedNote } from "@type/notes";
+import type { Workspace } from "@type/octarine";
+import { isIndexedWorkspace, type IndexedWorkspace } from "@type/workspaces";
 
 const CACHE_TTL = 15 * 60 * 1000;
 

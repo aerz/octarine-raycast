@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readMarkdownFrontmatter, scanMarkdownFiles, scanPaths } from "../../src/lib/files";
+import { readMarkdownFrontmatter, scanMarkdownFiles, scanPaths } from "@lib/files";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
 
 const workspaceMarker = ".octarine";

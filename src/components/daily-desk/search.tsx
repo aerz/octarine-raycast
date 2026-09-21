@@ -1,19 +1,19 @@
 import { Action, Icon, List, useNavigation } from "@raycast/api";
-import { DailyNoteActions, DailyNoteItem, DailyNoteSuggestion } from "./notes";
-import { DailyNotesEmptyView } from "../empty-views/notes";
-import { SearchNotesEmptyView } from "../empty-views/search";
-import { NotesList } from "../notes-list";
-import { WorkspaceDropdown } from "../workspace-dropdown";
-import { WorkspaceList } from "../workspace-list";
+import { DailyNoteActions, DailyNoteItem, DailyNoteSuggestion } from "@components/daily-desk/notes";
+import { DailyNotesEmptyView } from "@components/empty-views/notes";
+import { SearchNotesEmptyView } from "@components/empty-views/search";
+import { NotesList } from "@components/notes-list";
+import { WorkspaceDropdown } from "@components/workspace-dropdown";
+import { WorkspaceList } from "@components/workspace-list";
 import {
   type DailyDeskSearchActions,
   type DailyDeskSearchQuery,
   type DailyDeskSearchResults,
   type DailyDeskSearchWorkspace,
   useDailyDeskSearch,
-} from "../../hooks/useDailyDeskSearch";
-import { formatDateLabel } from "../../lib/daily-desk";
-import { openDailyDeskNotePreferences } from "../../lib/preferences";
+} from "@hooks/useDailyDeskSearch";
+import { formatDateLabel } from "@lib/daily-desk";
+import { openDailyDeskNotePreferences } from "@lib/preferences";
 
 type SearchProps = {
   requestedWorkspace: string;

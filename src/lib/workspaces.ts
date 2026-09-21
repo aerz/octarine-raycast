@@ -1,12 +1,12 @@
 import path from "node:path";
 import { LocalStorage } from "@raycast/api";
-import type { IndexedWorkspace } from "../types/workspaces";
-import type { Workspace } from "../types/octarine";
-import { WorkspacesCache } from "./cache";
-import type { ScannedPath } from "./files";
-import { scanPaths } from "./files";
-import { extensionPreferences } from "./preferences";
-import { normalizeText } from "./utils";
+import type { IndexedWorkspace } from "@type/workspaces";
+import type { Workspace } from "@type/octarine";
+import { WorkspacesCache } from "@lib/cache";
+import type { ScannedPath } from "@lib/files";
+import { scanPaths } from "@lib/files";
+import { extensionPreferences } from "@lib/preferences";
+import { normalizeText } from "@lib/utils";
 
 const LAST_WORKSPACE_KEY = "octarine.last-workspace.v1";
 

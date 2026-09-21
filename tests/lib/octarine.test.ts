@@ -1,6 +1,6 @@
 import { closeMainWindow, open, popToRoot } from "@raycast/api";
 import { describe, expect, it, vi } from "vitest";
-import { openAttachment, openDailyDeskNote, openNote } from "../../src/lib/octarine";
+import { openAttachment, openDailyDeskNote, openNote } from "@lib/octarine";
 
 function parseUri(uri: string) {
   const [schemeAndAction, query = ""] = uri.split("?");

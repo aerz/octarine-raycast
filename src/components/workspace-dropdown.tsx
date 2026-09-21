@@ -1,5 +1,5 @@
 import { List } from "@raycast/api";
-import { ALL_WORKSPACES } from "../types/notes";
+import { ALL_WORKSPACES } from "@type/notes";
 
 type Props = {
   sections: string[];

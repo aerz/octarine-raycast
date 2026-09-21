@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Clipboard, Icon, List, openExtensionPreferences } from "@raycast/api";
 import type { ReactNode } from "react";
-import type { Workspace } from "../types/octarine";
-import { WorkspaceListEmptyView } from "./empty-views/workspace";
+import type { Workspace } from "@type/octarine";
+import { WorkspaceListEmptyView } from "@components/empty-views/workspace";
 
 type Props = {
   isLoading: boolean;

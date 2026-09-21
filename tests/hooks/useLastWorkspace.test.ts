@@ -1,6 +1,6 @@
 import { Toast, showToast } from "@raycast/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Workspace } from "../../src/types/octarine";
+import type { Workspace } from "@type/octarine";
 
 const { usePromise } = vi.hoisted(() => ({
   usePromise: vi.fn(),
@@ -9,7 +9,7 @@ const { usePromise } = vi.hoisted(() => ({
 vi.mock("@raycast/utils", () => ({ usePromise }));
 vi.mock("react", () => ({ useCallback: (callback: unknown) => callback }));
 
-import { useLastWorkspace } from "../../src/hooks/useLastWorkspace";
+import { useLastWorkspace } from "@hooks/useLastWorkspace";
 
 const workspaces: Workspace[] = [
   { name: "Work", path: "/tmp/work" },

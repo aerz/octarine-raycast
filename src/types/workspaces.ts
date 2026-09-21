@@ -1,4 +1,4 @@
-import { isWorkspace, type Workspace } from "./octarine";
+import { isWorkspace, type Workspace } from "@type/octarine";
 
 export type IndexedWorkspace = Workspace & {
   ignored: boolean;

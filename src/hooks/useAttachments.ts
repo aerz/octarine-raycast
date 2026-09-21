@@ -1,12 +1,12 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
-import { getAttachments } from "../lib/attachments";
-import { extensionPreferences } from "../lib/preferences";
-import { querySearchText } from "../lib/search";
-import type { Workspace } from "../types/octarine";
-import type { IndexedAttachment } from "../types/attachments";
-import { useLoadingToast } from "./useLoadingToast";
+import { getAttachments } from "@lib/attachments";
+import { extensionPreferences } from "@lib/preferences";
+import { querySearchText } from "@lib/search";
+import type { Workspace } from "@type/octarine";
+import type { IndexedAttachment } from "@type/attachments";
+import { useLoadingToast } from "@hooks/useLoadingToast";
 
 export type WorkspaceAttachmentsSection = {
   workspace: Workspace;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSearchText, querySearchText } from "../../src/lib/search";
+import { buildSearchText, querySearchText } from "@lib/search";
 
 type SearchableItem = {
   searchText: string;

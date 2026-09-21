@@ -7,14 +7,14 @@ import {
   getWorkspaces,
   resolveLastWorkspace,
   saveLastWorkspace,
-} from "../../src/lib/workspaces";
+} from "@lib/workspaces";
 
 const { scanPaths } = vi.hoisted(() => ({
   scanPaths: vi.fn(),
 }));
 
-vi.mock("../../src/lib/utils", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/lib/utils")>();
+vi.mock("@lib/utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lib/utils")>();
 
   return {
     ...actual,
@@ -32,8 +32,8 @@ vi.mock("../../src/lib/utils", async (importOriginal) => {
   };
 });
 
-vi.mock("../../src/lib/files", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/lib/files")>();
+vi.mock("@lib/files", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lib/files")>();
   return {
     ...actual,
     scanPaths,

@@ -1,12 +1,12 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
-import { extensionPreferences } from "../lib/preferences";
-import { getNotes } from "../lib/notes";
-import { createSearchMatcher } from "../lib/search";
-import type { Workspace } from "../types/octarine";
-import type { IndexedNote, NoteScope, WorkspaceSection } from "../types/notes";
-import { useNoteSections } from "./useNoteSections";
+import { extensionPreferences } from "@lib/preferences";
+import { getNotes } from "@lib/notes";
+import { createSearchMatcher } from "@lib/search";
+import type { Workspace } from "@type/octarine";
+import type { IndexedNote, NoteScope, WorkspaceSection } from "@type/notes";
+import { useNoteSections } from "@hooks/useNoteSections";
 
 type Options = {
   scope?: NoteScope;

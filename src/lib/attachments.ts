@@ -1,9 +1,9 @@
 import path from "node:path";
-import { type IndexedAttachment } from "../types/attachments";
-import type { Workspace } from "../types/octarine";
-import { AttachmentsCache } from "./cache";
-import { isDirectoryPath, scanWorkspaceAttachmentFiles } from "./files";
-import { buildSearchText } from "./search";
+import { type IndexedAttachment } from "@type/attachments";
+import type { Workspace } from "@type/octarine";
+import { AttachmentsCache } from "@lib/cache";
+import { isDirectoryPath, scanWorkspaceAttachmentFiles } from "@lib/files";
+import { buildSearchText } from "@lib/search";
 
 async function scanWorkspaceAttachments(
   workspace: Workspace,

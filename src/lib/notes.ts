@@ -1,7 +1,7 @@
 import path from "node:path";
-import { type Folder, type Workspace } from "../types/octarine";
-import { type IndexedNote } from "../types/notes";
-import { DailyNotesCache, NotesCache } from "./cache";
+import { type Folder, type Workspace } from "@type/octarine";
+import { type IndexedNote } from "@type/notes";
+import { DailyNotesCache, NotesCache } from "@lib/cache";
 import {
   DAILY_DIRECTORY_NAME,
   dailyTimestamp,
@@ -10,9 +10,9 @@ import {
   formatWeekLabel,
   parseFilenameDate,
   type FilenameDate,
-} from "./daily-desk";
-import { isDirectoryPath, readMarkdownFrontmatter, scanMarkdownFiles } from "./files";
-import { buildSearchText } from "./search";
+} from "@lib/daily-desk";
+import { isDirectoryPath, readMarkdownFrontmatter, scanMarkdownFiles } from "@lib/files";
+import { buildSearchText } from "@lib/search";
 
 const DEFAULT_EXCLUDED_DIRECTORY_NAMES = new Set([".octarine", ".templates"]);
 const ROOT_FOLDER_PATH = "";

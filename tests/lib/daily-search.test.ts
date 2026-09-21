@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createDailySearch, prioritizeExactDateMatches } from "../../src/lib/daily-search";
-import type { WorkspaceSection } from "../../src/types/notes";
-import type { IndexedNote } from "../../src/types/notes";
+import { createDailySearch, prioritizeExactDateMatches } from "@lib/daily-search";
+import type { WorkspaceSection } from "@type/notes";
+import type { IndexedNote } from "@type/notes";
 
 const workspace = { name: "Work", path: "/tmp/work" };
 

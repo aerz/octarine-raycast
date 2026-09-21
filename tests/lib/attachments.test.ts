@@ -1,6 +1,6 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAttachments } from "../../src/lib/attachments";
+import { getAttachments } from "@lib/attachments";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
 
 let tempDir: string | undefined;

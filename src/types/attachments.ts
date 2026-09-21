@@ -1,4 +1,4 @@
-import { isAttachment, type Attachment } from "./octarine";
+import { isAttachment, type Attachment } from "@type/octarine";
 
 export type IndexedAttachment = Attachment & {
   searchText: string;

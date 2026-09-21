@@ -1,5 +1,5 @@
 import path from "node:path";
-import { normalizeText } from "./utils";
+import { normalizeText } from "@lib/utils";
 
 export const DAILY_DIRECTORY_NAME = "Daily";
 

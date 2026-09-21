@@ -1,9 +1,9 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCallback } from "react";
-import { openDailyDeskNote } from "../lib/octarine";
-import type { Workspace } from "../types/octarine";
-import { useOpenTarget } from "./useOpenTarget";
-import type { LoadStatus } from "./useWorkspaces";
+import { openDailyDeskNote } from "@lib/octarine";
+import type { Workspace } from "@type/octarine";
+import { useOpenTarget } from "@hooks/useOpenTarget";
+import type { LoadStatus } from "@hooks/useWorkspaces";
 
 type Options = {
   date: string;

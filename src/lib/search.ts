@@ -1,4 +1,4 @@
-import { normalizeSearchText, tokenize } from "./utils";
+import { normalizeSearchText, tokenize } from "@lib/utils";
 
 export type SearchableItem = {
   searchText: string;

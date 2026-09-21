@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
-import { ALL_WORKSPACES, type IndexedNote } from "../../src/types/notes";
-import type { Workspace } from "../../src/types/octarine";
+import { ALL_WORKSPACES, type IndexedNote } from "@type/notes";
+import type { Workspace } from "@type/octarine";
 
 const { getNotes, useCachedPromise } = vi.hoisted(() => ({
   getNotes: vi.fn(),
@@ -9,10 +9,10 @@ const { getNotes, useCachedPromise } = vi.hoisted(() => ({
 }));
 
 vi.mock("@raycast/utils", () => ({ useCachedPromise }));
-vi.mock("../../src/lib/notes", () => ({ getNotes }));
+vi.mock("@lib/notes", () => ({ getNotes }));
 vi.mock("react", () => ({ useMemo: (factory: () => unknown) => factory() }));
 
-import { useNotes } from "../../src/hooks/useNotes";
+import { useNotes } from "@hooks/useNotes";
 
 const alpha = { name: "Alpha", path: "/tmp/alpha" };
 const beta = { name: "Beta", path: "/tmp/beta" };

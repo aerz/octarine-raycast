@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ALL_WORKSPACES, type IndexedNote, type NoteScope, type WorkspaceSection } from "../types/notes";
+import { ALL_WORKSPACES, type IndexedNote, type NoteScope, type WorkspaceSection } from "@type/notes";
 
 type Options = {
   scope?: NoteScope;

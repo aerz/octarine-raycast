@@ -1,4 +1,4 @@
-import { isNote, type Note } from "./octarine";
+import { isNote, type Note } from "@type/octarine";
 
 export const ALL_WORKSPACES = "all";
 

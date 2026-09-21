@@ -9,7 +9,7 @@ import {
   resolveDateQuery,
   resolveDateArg,
   toDailyStem,
-} from "../../src/lib/daily-desk";
+} from "@lib/daily-desk";
 
 const NOW = new Date(2026, 2, 26);
 

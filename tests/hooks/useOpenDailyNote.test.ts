@@ -1,7 +1,7 @@
 import { Toast, open, popToRoot, showToast } from "@raycast/api";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { HookRuntime } from "../helpers/hooks";
-import type { Workspace } from "../../src/types/octarine";
+import type { Workspace } from "@type/octarine";
 
 let activeRuntime = new HookRuntime();
 
@@ -11,12 +11,12 @@ vi.mock("react", () => ({
   useRef: <T>(initialValue: T) => activeRuntime.useRef(initialValue),
 }));
 
-type UseOpenDailyNote = (typeof import("../../src/hooks/useOpenDailyNote"))["useOpenDailyNote"];
+type UseOpenDailyNote = (typeof import("@hooks/useOpenDailyNote"))["useOpenDailyNote"];
 
 let useOpenDailyNote: UseOpenDailyNote;
 
 beforeAll(async () => {
-  ({ useOpenDailyNote } = await import("../../src/hooks/useOpenDailyNote"));
+  ({ useOpenDailyNote } = await import("@hooks/useOpenDailyNote"));
 });
 
 beforeEach(() => {

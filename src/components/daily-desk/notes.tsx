@@ -1,9 +1,9 @@
 import { Action, ActionPanel, Icon, List, openExtensionPreferences, Toast, showToast } from "@raycast/api";
 import type { ReactNode } from "react";
-import { dailyNoteStem } from "../../lib/daily-desk";
-import { openNote } from "../../lib/octarine";
-import type { Workspace } from "../../types/octarine";
-import type { IndexedNote } from "../../types/notes";
+import { dailyNoteStem } from "@lib/daily-desk";
+import { openNote } from "@lib/octarine";
+import type { Workspace } from "@type/octarine";
+import type { IndexedNote } from "@type/notes";
 
 export type DailySuggestion = {
   label: string;

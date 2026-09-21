@@ -1,9 +1,9 @@
 import { Action, Icon } from "@raycast/api";
 import { useState } from "react";
-import { useOpenDailyNote } from "../../hooks/useOpenDailyNote";
-import { useWorkspaces } from "../../hooks/useWorkspaces";
-import { openDailyDeskNotePreferences } from "../../lib/preferences";
-import { WorkspaceList } from "../workspace-list";
+import { useOpenDailyNote } from "@hooks/useOpenDailyNote";
+import { useWorkspaces } from "@hooks/useWorkspaces";
+import { openDailyDeskNotePreferences } from "@lib/preferences";
+import { WorkspaceList } from "@components/workspace-list";
 
 type Props = {
   date: string;

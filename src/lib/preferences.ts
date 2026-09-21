@@ -1,5 +1,5 @@
 import { getPreferenceValues } from "@raycast/api";
-import { normalizeText, normalizeWorkspaceRoots, normalizeExtensions, splitLowerList } from "./utils";
+import { normalizeText, normalizeWorkspaceRoots, normalizeExtensions, splitLowerList } from "@lib/utils";
 
 export type ExtensionPreferences = {
   workspaceRoots: string[];

@@ -1,8 +1,8 @@
 import { Toast, showToast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback } from "react";
-import { clearLastWorkspace, getLastWorkspace, resolveLastWorkspace, saveLastWorkspace } from "../lib/workspaces";
-import type { Workspace } from "../types/octarine";
+import { clearLastWorkspace, getLastWorkspace, resolveLastWorkspace, saveLastWorkspace } from "@lib/workspaces";
+import type { Workspace } from "@type/octarine";
 
 type Options = {
   workspaces: Workspace[];
