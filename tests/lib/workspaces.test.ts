@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
-import { getWorkspaces } from "../../src/lib/workspaces";
+import {
+  clearLastWorkspace,
+  findWorkspaceByName,
+  getLastWorkspace,
+  getWorkspaces,
+  resolveLastWorkspace,
+  saveLastWorkspace,
+} from "../../src/lib/workspaces";
 
 const { scanPaths } = vi.hoisted(() => ({
   scanPaths: vi.fn(),
@@ -37,6 +44,29 @@ afterEach(async () => {
   vi.restoreAllMocks();
   vi.useRealTimers();
   scanPaths.mockReset();
+});
+
+const workspaces = [
+  { name: "Work", path: "/tmp/work" },
+  { name: "Personal", path: "/tmp/personal" },
+];
+
+describe("findWorkspaceByName", () => {
+  const namedWorkspaces = [
+    { name: "Work Notes", path: "/tmp/work" },
+    { name: "Personal", path: "/tmp/personal" },
+  ];
+
+  it("matches workspace names case-insensitively", () => {
+    expect(findWorkspaceByName(namedWorkspaces, "work notes")).toEqual(namedWorkspaces[0]);
+    expect(findWorkspaceByName(namedWorkspaces, "  WORK   NOTES  ")).toEqual(namedWorkspaces[0]);
+    expect(findWorkspaceByName(namedWorkspaces, "Personal")).toEqual(namedWorkspaces[1]);
+  });
+
+  it("returns undefined for empty or unknown names", () => {
+    expect(findWorkspaceByName(namedWorkspaces, "")).toBeUndefined();
+    expect(findWorkspaceByName(namedWorkspaces, "Missing")).toBeUndefined();
+  });
 });
 
 describe("getWorkspaces", () => {
@@ -176,5 +206,34 @@ describe("getWorkspaces", () => {
       { name: "Alpha", path: "/tmp/root/Alpha", ignored: false, invalid: false },
       { name: "Beta", path: "/tmp/root/Beta", ignored: false, invalid: false },
     ]);
+  });
+});
+
+describe("last workspace", () => {
+  it("stores, reads and clears the last workspace", async () => {
+    await saveLastWorkspace("Work");
+
+    expect(await getLastWorkspace()).toBe("Work");
+
+    await clearLastWorkspace();
+
+    expect(await getLastWorkspace()).toBeUndefined();
+  });
+
+  it("ignores blank stored values", async () => {
+    await saveLastWorkspace("   ");
+
+    expect(await getLastWorkspace()).toBeUndefined();
+  });
+
+  it("resolves the stored name against available workspaces", () => {
+    expect(resolveLastWorkspace(workspaces, "work")).toEqual(workspaces[0]);
+    expect(resolveLastWorkspace(workspaces, "PERSONAL")).toEqual(workspaces[1]);
+  });
+
+  it("returns undefined when there is no stored or matching workspace", () => {
+    expect(resolveLastWorkspace(workspaces, undefined)).toBeUndefined();
+    expect(resolveLastWorkspace(workspaces, "")).toBeUndefined();
+    expect(resolveLastWorkspace(workspaces, "Missing")).toBeUndefined();
   });
 });
