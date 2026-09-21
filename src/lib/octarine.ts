@@ -60,10 +60,6 @@ export function openDailyDeskNote(date: string, workspace: string, afterOpen?: A
   );
 }
 
-export function openTodayNote(workspace: string): Promise<void> {
-  return openDailyDeskNote("today", workspace);
-}
-
 async function openUri(uri: string, afterOpen?: AfterOpen): Promise<void> {
   await open(uri);
   try {

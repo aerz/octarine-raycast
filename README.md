@@ -11,7 +11,6 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 ## Overview
 
 - [Open Workspace](#open-workspace)
-- [Open Today's Note](#open-todays-note)
 - [Open Daily Desk Note](#open-daily-desk-note)
 - [Search Notes](#search-notes)
 - [Search Attachments](#search-attachments)
@@ -24,26 +23,28 @@ Browse and open any of your [workspaces](https://docs.octarine.app/core-concepts
 
 - **Workspace** *(optional)*. Type a workspace name to open it directly, skipping manual selection.
 
-## Open Today's Note
+## Open Daily Desk Note
 
-Opens today's Daily Desk note instantly, switching to the right workspace automatically.
+Browse or open any [Daily Desk](https://docs.octarine.app/daily-desk/) note. Type a date in natural language to open it instantly, or run the command with no arguments to browse every note in the `Daily` folder of each workspace.
 
 **Arguments**
 
-- **Workspace** *(optional)*. The workspace to open today's note in. Overrides the default workspace.
+- **Date** *(optional)*. Use a smart date format to open a specific date (see formats below). The date is normalized, so `22 Dec, 2026` opens the `2026-12-22` note.
+- **Workspace** *(optional)*. The workspace name to open the daily desk note in.
+
+When no date is provided, the command lists all daily and weekly notes across workspaces, grouped into sections and ordered from newest to oldest. Use the dropdown to filter by workspace, or type a date to jump to a note. Typing a date makes fuzzy results available, so `feb 2` also shows notes from February 20-29, while exact date matches are listed before fuzzy ones.
+
+**Opening a Missing Date**
+
+While typing a supported date, an **Open [date]** item is placed as the first item of its workspace section (the last used workspace, or **No Workspace**), without duplicating the section. If that workspace has no other results, the item gets its own section. Pressing `Enter` validates the date and opens a workspace selector; picking a workspace creates or opens that note in Octarine.
+
+When **Use Last Workspace** is enabled and a workspace was used before, the section shows that workspace name and `Enter` opens the note there directly. Use **Choose Workspace…** to pick another one, or **Clear Last Workspace** to forget it. If the workspace dropdown is filtering by a specific workspace, the suggestion always opens the note in that workspace.
 
 **Preferences**
 
-- **Default Workspace**. The workspace used when no argument is provided. If unset, a workspace selector will appear.
-
-## Open Daily Desk Note
-
-Open any [Daily Desk](https://docs.octarine.app/daily-desk/) note by typing a date in natural language. The command switches to the right workspace automatically, and if it can't find it, a selector lets you pick from all available ones.
-
-**Arguments**
-
-- **Date**. Use a smart date format to provide a date (see formats below).
-- **Workspace** *(optional)*. The workspace name to open the daily desk note in.
+- **Default Workspace**. The workspace used when a date is provided without a workspace argument. If unset, a workspace selector will appear.
+- **Show Filename**. Shows file names such as `2023-02-18` instead of natural language dates like `February 18, 2023`.
+- **Use Last Workspace**. Remembers the last workspace used and opens suggested dates there instead of asking every time.
 
 **Supported Date Formats**
 
@@ -54,6 +55,7 @@ Open any [Daily Desk](https://docs.octarine.app/daily-desk/) note by typing a da
 | Natural language       | `today`, `yesterday`, `tomorrow`           |
 | Relative dates         | `2 days ago`, `next monday`, `last friday` |
 | Partial dates          | `jan 15`, `december 25`, `nov 3`           |
+| Full dates             | `jan 15 2026`, `22 Dec, 2026`              |
 | Natural language weeks | `this week`, `last week`, `next week`      |
 | Relative weeks         | `2 weeks ago`, `in 2 weeks`                |
 

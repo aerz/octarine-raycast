@@ -55,29 +55,6 @@
       ]
     },
     {
-      "name": "open-today-note",
-      "title": "Open Today's Note",
-      "description": "Opens today's note in Daily Desk",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "workspace",
-          "type": "text",
-          "required": false,
-          "placeholder": "Workspace name"
-        }
-      ],
-      "preferences": [
-        {
-          "name": "defaultWorkspace",
-          "type": "textfield",
-          "title": "Default Workspace",
-          "required": false,
-          "description": "Set default workspace. If empty, a selector will be shown."
-        }
-      ]
-    },
-    {
       "name": "search-notes",
       "title": "Search Notes",
       "description": "Search notes across Octarine workspaces",
@@ -141,13 +118,13 @@
     {
       "name": "open-daily-desk-note",
       "title": "Open Daily Desk Note",
-      "description": "Open a note with any date from Daily Desk",
+      "description": "Browse or open Daily Desk notes by date",
       "mode": "view",
       "arguments": [
         {
           "name": "date",
           "type": "text",
-          "required": true,
+          "required": false,
           "placeholder": "feb 3"
         },
         {
@@ -155,6 +132,33 @@
           "type": "text",
           "required": false,
           "placeholder": "Workspace name"
+        }
+      ],
+      "preferences": [
+        {
+          "name": "defaultWorkspace",
+          "type": "textfield",
+          "title": "Default Workspace",
+          "required": false,
+          "description": "Set default workspace. If empty, a selector will be shown."
+        },
+        {
+          "name": "showFilename",
+          "type": "checkbox",
+          "title": "Show Filename",
+          "label": "Show filename (e.g. 2023-02-18) instead of natural dates",
+          "required": false,
+          "default": false,
+          "description": "Display notes using their file name format instead of natural language dates"
+        },
+        {
+          "name": "useLastWorkspace",
+          "type": "checkbox",
+          "title": "Use Last Workspace",
+          "label": "Open suggested notes in the last used workspace",
+          "required": false,
+          "default": true,
+          "description": "Remember the last workspace used and open suggested dates there instead of asking every time"
         }
       ]
     }

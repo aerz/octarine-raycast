@@ -24,7 +24,7 @@ vi.mock("../../src/lib/utils", async (importOriginal) => {
 
 import {
   extensionPreferences,
-  openTodayNotePreferences,
+  openDailyDeskNotePreferences,
   searchAttachmentsPreferences,
   searchNotesPreferences,
 } from "../../src/lib/preferences";
@@ -72,15 +72,35 @@ describe("preferences", () => {
       excludedWorkspaces: "",
       excludedFoldersInWorkspaces: "",
       defaultWorkspace: "  Work Notes  ",
+      showFilename: true,
+      useLastWorkspace: false,
       showWorkspaceNoteCount: true,
       showPinnedNotesFirst: true,
     });
 
-    expect(openTodayNotePreferences()).toEqual({ defaultWorkspace: "work notes" });
+    expect(openDailyDeskNotePreferences()).toEqual({
+      defaultWorkspace: "work notes",
+      showFilename: true,
+      useLastWorkspace: false,
+    });
 
     expect(searchNotesPreferences()).toEqual({
       showWorkspaceNoteCount: true,
       showPinnedNotesFirst: true,
+    });
+  });
+
+  it("enables the last workspace by default when the preference is unset", () => {
+    setMockPreferences({
+      workspaceRoots: "",
+      excludedWorkspaces: "",
+      excludedFoldersInWorkspaces: "",
+    });
+
+    expect(openDailyDeskNotePreferences()).toEqual({
+      defaultWorkspace: "",
+      showFilename: false,
+      useLastWorkspace: true,
     });
   });
 });

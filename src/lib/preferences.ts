@@ -41,10 +41,12 @@ export function searchAttachmentsPreferences() {
   };
 }
 
-export function openTodayNotePreferences() {
-  const preferences = getPreferenceValues<Preferences.OpenTodayNote>();
+export function openDailyDeskNotePreferences() {
+  const preferences = getPreferenceValues<Preferences.OpenDailyDeskNote>();
 
   return {
     defaultWorkspace: normalizeText(preferences.defaultWorkspace),
+    showFilename: Boolean(preferences.showFilename),
+    useLastWorkspace: preferences.useLastWorkspace !== false,
   };
 }
