@@ -1,32 +1,20 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
 import { useState, type ReactNode } from "react";
-import { SearchNotesEmptyView } from "./components/empty-views/search-results";
-import { type NoteScope, type WorkspaceSection, useNotes } from "./hooks/useNotes";
+import { NotesEmptyView, PinnedNotesEmptyView } from "./components/empty-views/notes";
+import { SearchNotesEmptyView } from "./components/empty-views/search";
+import { NotesList } from "./components/notes-list";
+import { WorkspaceDropdown } from "./components/workspace-dropdown";
+import { useNotes } from "./hooks/useNotes";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { openNote } from "./lib/octarine";
 import { searchNotesPreferences } from "./lib/preferences";
-import { type IndexedNote } from "./types/notes";
-
-type WorkspaceDropdownProps = {
-  sections: string[];
-  value: string;
-  onChange: (value: string) => void;
-};
-
-type NotesListProps = {
-  workspaces: WorkspaceSection[];
-  grouped?: boolean;
-  counter?: boolean;
-  scope: NoteScope;
-  onScopeChange: (scope: NoteScope) => void;
-  onRefresh: () => void;
-};
+import { ALL_WORKSPACES, type IndexedNote, type NoteScope } from "./types/notes";
 
 export default function SearchNotesCommand() {
   const preferences = searchNotesPreferences();
   const [searchText, setSearchText] = useState("");
   const [scope, setScope] = useState<NoteScope>("all");
-  const [selectedWorkspace, setSelectedWorkspace] = useState("all");
+  const [selectedWorkspace, setSelectedWorkspace] = useState(ALL_WORKSPACES);
   const [refresh, setRefresh] = useState(false);
   const {
     workspaces,
@@ -63,51 +51,17 @@ export default function SearchNotesCommand() {
         ) : (
           <SearchNotesEmptyView actions={emptyActions} />
         )
-      ) : selectedWorkspace === "all" ? (
-        <NotesList
-          workspaces={sections}
-          grouped
-          counter={preferences.showWorkspaceNoteCount}
-          scope={scope}
-          onScopeChange={setScope}
-          onRefresh={onRefresh}
-        />
       ) : (
-        <NotesList workspaces={sections} scope={scope} onScopeChange={setScope} onRefresh={onRefresh} />
+        <NotesList
+          sections={sections}
+          grouped={selectedWorkspace === ALL_WORKSPACES}
+          counter={preferences.showWorkspaceNoteCount}
+          renderNote={(note) => (
+            <NoteItem key={note.id} note={note} scope={scope} onScopeChange={setScope} onRefresh={onRefresh} />
+          )}
+        />
       )}
     </List>
-  );
-}
-
-function WorkspaceDropdown({ sections, value, onChange }: WorkspaceDropdownProps) {
-  return (
-    <List.Dropdown tooltip="Filter by workspace" value={value} onChange={onChange}>
-      <List.Dropdown.Item title="All Workspaces" value="all" />
-      {sections.map((section) => (
-        <List.Dropdown.Item title={section} key={section} value={section} />
-      ))}
-    </List.Dropdown>
-  );
-}
-
-function NotesList({ workspaces, grouped = false, counter = false, scope, onScopeChange, onRefresh }: NotesListProps) {
-  if (grouped) {
-    return workspaces.map((workspace) => (
-      <List.Section
-        key={workspace.path}
-        title={counter ? `${workspace.name} (${workspace.notes.length})` : workspace.name}
-      >
-        {workspace.notes.map((note) => (
-          <NoteItem key={note.id} note={note} scope={scope} onScopeChange={onScopeChange} onRefresh={onRefresh} />
-        ))}
-      </List.Section>
-    ));
-  }
-
-  return workspaces.flatMap((workspace) =>
-    workspace.notes.map((note) => (
-      <NoteItem key={note.id} note={note} scope={scope} onScopeChange={onScopeChange} onRefresh={onRefresh} />
-    )),
   );
 }
 
@@ -160,27 +114,5 @@ function DefaultActionPanel({
       />
       <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
     </ActionPanel>
-  );
-}
-
-function NotesEmptyView({ actions }: { actions?: ReactNode }) {
-  return (
-    <List.EmptyView
-      icon={Icon.Document}
-      title="No notes in any workspace"
-      description="Create a note in Octarine to see it here"
-      actions={actions}
-    />
-  );
-}
-
-function PinnedNotesEmptyView({ actions }: { actions?: ReactNode }) {
-  return (
-    <List.EmptyView
-      icon={Icon.Tack}
-      title="No pinned notes"
-      description="Pin a note in Octarine to see it here"
-      actions={actions}
-    />
   );
 }

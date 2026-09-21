@@ -1,10 +1,20 @@
 import { isNote, type Note } from "./octarine";
 
+export const ALL_WORKSPACES = "all";
+
 export type IndexedNote = Note & {
   id: string;
   pinned: boolean;
   searchText: string;
 };
+
+export type WorkspaceSection = {
+  name: string;
+  path: string;
+  notes: IndexedNote[];
+};
+
+export type NoteScope = "all" | "pinned";
 
 export function isIndexedNote(value: unknown): value is IndexedNote {
   return (

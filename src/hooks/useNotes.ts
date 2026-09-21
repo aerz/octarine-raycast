@@ -3,17 +3,10 @@ import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
 import { extensionPreferences } from "../lib/preferences";
 import { getNotes } from "../lib/notes";
-import { querySearchText } from "../lib/search";
+import { createSearchMatcher } from "../lib/search";
 import type { Workspace } from "../types/octarine";
-import type { IndexedNote } from "../types/notes";
-
-export type WorkspaceSection = {
-  name: string;
-  path: string;
-  notes: IndexedNote[];
-};
-
-export type NoteScope = "all" | "pinned";
+import type { IndexedNote, NoteScope, WorkspaceSection } from "../types/notes";
+import { useNoteSections } from "./useNoteSections";
 
 type Options = {
   scope?: NoteScope;
@@ -42,15 +35,18 @@ export function useNotes({
   refresh = false,
 }: Options): Result {
   const preferences = extensionPreferences();
+  const excludedKey = JSON.stringify([...preferences.excludedFoldersInWorkspaces].sort());
 
   const {
     data: notes,
     isLoading,
     revalidate,
   } = useCachedPromise(
-    async (refresh: boolean, workspaces: Workspace[]): Promise<IndexedNote[]> =>
-      getNotes(workspaces, preferences.excludedFoldersInWorkspaces, { refresh }),
-    [refresh, workspaces],
+    async (refresh: boolean, workspaces: Workspace[], excludedKey: string): Promise<IndexedNote[]> => {
+      const excludedDirectories = new Set(JSON.parse(excludedKey) as string[]);
+      return getNotes(workspaces, excludedDirectories, { refresh });
+    },
+    [refresh, workspaces, excludedKey],
     {
       execute: enabled,
       initialData: [] satisfies IndexedNote[],
@@ -74,14 +70,13 @@ export function useNotes({
     },
   );
 
-  const { dropdown, sections } = useMemo(() => {
-    const grouped = groupByWorkspace(notes);
-
-    return {
-      dropdown: workspaceNames(grouped),
-      sections: buildWorkspaceSections(grouped, { scope, selectedWorkspace, searchText, showPinnedNotesFirst }),
-    };
-  }, [notes, scope, searchText, selectedWorkspace, showPinnedNotesFirst]);
+  const matches = useMemo(() => createSearchMatcher(searchText), [searchText]);
+  const { dropdown, sections } = useNoteSections(notes, {
+    scope,
+    selectedWorkspace,
+    matches,
+    showPinnedNotesFirst,
+  });
 
   return {
     dropdown,
@@ -89,82 +84,4 @@ export function useNotes({
     isLoading: !enabled || isLoading,
     revalidate,
   };
-}
-
-function groupByWorkspace(notes: IndexedNote[]): WorkspaceSection[] {
-  const grouped = new Map<string, WorkspaceSection>();
-
-  for (const note of notes) {
-    const section = grouped.get(note.folder.workspace.path);
-
-    if (section) {
-      section.notes.push(note);
-    } else {
-      grouped.set(note.folder.workspace.path, {
-        name: note.folder.workspace.name,
-        path: note.folder.workspace.path,
-        notes: [note],
-      });
-    }
-  }
-
-  return Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function workspaceNames(workspaces: WorkspaceSection[]): string[] {
-  return Array.from(new Set(workspaces.map((workspace) => workspace.name)));
-}
-
-function buildWorkspaceSections(
-  workspaces: WorkspaceSection[],
-  {
-    scope,
-    selectedWorkspace,
-    searchText,
-    showPinnedNotesFirst,
-  }: {
-    scope: NoteScope;
-    selectedWorkspace: string;
-    searchText: string;
-    showPinnedNotesFirst: boolean;
-  },
-): WorkspaceSection[] {
-  return workspaces
-    .filter((workspace) => selectedWorkspace === "all" || workspace.name === selectedWorkspace)
-    .map((workspace) => {
-      const notes = workspace.notes.filter((note) => {
-        if (scope === "pinned" && !note.pinned) return false;
-        return !searchText || querySearchText(note, searchText);
-      });
-
-      return {
-        name: workspace.name,
-        path: workspace.path,
-        notes: sortPinnedNotesFirst(notes, showPinnedNotesFirst),
-      };
-    })
-    .filter((workspace) => workspace.notes.length > 0);
-}
-
-function sortPinnedNotesFirst(notes: IndexedNote[], showPinnedNotesFirst: boolean): IndexedNote[] {
-  if (!showPinnedNotesFirst || notes.length < 2) {
-    return notes;
-  }
-
-  const pinned: IndexedNote[] = [];
-  const unpinned: IndexedNote[] = [];
-
-  for (const note of notes) {
-    if (note.pinned) {
-      pinned.push(note);
-    } else {
-      unpinned.push(note);
-    }
-  }
-
-  if (pinned.length === 0 || unpinned.length === 0) {
-    return notes;
-  }
-
-  return [...pinned, ...unpinned];
 }

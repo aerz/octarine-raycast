@@ -1,6 +1,6 @@
 import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import { useState, type ReactNode } from "react";
-import { SearchAttachmentsEmptyView } from "./components/empty-views/search-results";
+import { SearchAttachmentsEmptyView } from "./components/empty-views/search";
 import { type WorkspaceAttachmentsSection, useAttachments } from "./hooks/useAttachments";
 import { useWorkspaces } from "./hooks/useWorkspaces";
 import { openAttachment } from "./lib/octarine";

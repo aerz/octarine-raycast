@@ -12,12 +12,22 @@ export function buildSearchText(...parts: Array<string | undefined>): string {
     .toLowerCase();
 }
 
-export function querySearchText(item: SearchableItem, query: string): boolean {
+/**
+ * Builds a reusable matcher so the query is normalized and tokenized once.
+ *
+ * @param query Raw search query.
+ */
+export function createSearchMatcher(query: string): (item: SearchableItem) => boolean {
   const normalized = normalizeSearchText(query);
 
   if (!normalized) {
-    return true;
+    return () => true;
   }
 
-  return tokenize(normalized).every((token) => item.searchText.includes(token));
+  const tokens = tokenize(normalized);
+  return (item) => tokens.every((token) => item.searchText.includes(token));
+}
+
+export function querySearchText(item: SearchableItem, query: string): boolean {
+  return createSearchMatcher(query)(item);
 }
