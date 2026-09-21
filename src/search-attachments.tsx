@@ -124,18 +124,23 @@ function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
       keywords={[file.workspace.name, file.extension]}
       actions={
         <ActionPanel>
-          <Action
-            title="Search Attachments"
-            icon={Icon.Globe}
-            onAction={() => openAttachment(file.name, file.workspace.name)}
-          />
-          <Action.Open title="Open File" target={file.path} shortcut={{ modifiers: ["cmd"], key: "return" }} />
-          <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />
-          <Action.CopyToClipboard
-            title="Copy File Path"
-            content={file.path}
-            shortcut={{ modifiers: ["cmd"], key: "." }}
-          />
+          <Action.Open title="Open File" target={file.path} />
+          <ActionPanel.Section title="Octarine">
+            <Action
+              title="Search in Octarine"
+              icon={Icon.MagnifyingGlass}
+              shortcut={{ modifiers: ["cmd"], key: "return" }}
+              onAction={() => void openAttachment(file.name, file.workspace.name)}
+            />
+          </ActionPanel.Section>
+          <ActionPanel.Section title="File">
+            <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />
+            <Action.CopyToClipboard
+              title="Copy File Path"
+              content={file.path}
+              shortcut={{ modifiers: ["cmd"], key: "." }}
+            />
+          </ActionPanel.Section>
         </ActionPanel>
       }
     />
