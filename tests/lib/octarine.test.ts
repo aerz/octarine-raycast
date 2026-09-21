@@ -28,6 +28,25 @@ describe("octarine", () => {
     expect(closeMainWindow).toHaveBeenCalledWith({ clearRootSearch: true });
   });
 
+  it("runs the post-open callback before closing Raycast", async () => {
+    const events: string[] = [];
+    vi.mocked(open).mockImplementationOnce(async () => {
+      events.push("open");
+    });
+    vi.mocked(popToRoot).mockImplementationOnce(async () => {
+      events.push("popToRoot");
+    });
+    vi.mocked(closeMainWindow).mockImplementationOnce(async () => {
+      events.push("closeMainWindow");
+    });
+
+    await openNote("docs/plan.md", "Work", async () => {
+      events.push("afterOpen");
+    });
+
+    expect(events).toEqual(["open", "afterOpen", "popToRoot", "closeMainWindow"]);
+  });
+
   it("opens attachment search URIs", async () => {
     await openAttachment("team standup", "Work");
     const parsed = getOpenedUri();

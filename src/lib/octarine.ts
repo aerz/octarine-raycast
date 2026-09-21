@@ -25,6 +25,7 @@ type DailyScheme = {
 };
 
 type Scheme = OpenScheme | SearchScheme | DailyScheme;
+type AfterOpen = () => void | Promise<void>;
 
 export function openWorkspace(name: string): Promise<void> {
   return openUri(buildOpenWorkspaceUri(name));
@@ -39,22 +40,23 @@ export function openAttachment(name: string, workspace?: string): Promise<void> 
   return openUri(uri);
 }
 
-export function openNote(path: string, workspace?: string): Promise<void> {
+export function openNote(path: string, workspace?: string, afterOpen?: AfterOpen): Promise<void> {
   const uri = buildUri({
     action: Action.Open,
     path,
     workspace,
   });
-  return openUri(uri);
+  return openUri(uri, afterOpen);
 }
 
-export function openDailyDeskNote(date: string, workspace: string): Promise<void> {
+export function openDailyDeskNote(date: string, workspace: string, afterOpen?: AfterOpen): Promise<void> {
   return openUri(
     buildUri({
       action: Action.Daily,
       date,
       workspace,
     }),
+    afterOpen,
   );
 }
 
@@ -62,10 +64,27 @@ export function openTodayNote(workspace: string): Promise<void> {
   return openDailyDeskNote("today", workspace);
 }
 
-async function openUri(uri: string): Promise<void> {
+async function openUri(uri: string, afterOpen?: AfterOpen): Promise<void> {
   await open(uri);
-  await popToRoot({ clearSearchBar: true });
-  await closeMainWindow({ clearRootSearch: true });
+  try {
+    await afterOpen?.();
+  } finally {
+    await dismissRaycast();
+  }
+}
+
+async function dismissRaycast(): Promise<void> {
+  try {
+    await popToRoot({ clearSearchBar: true });
+  } catch (error) {
+    console.warn("Failed to return to Raycast root", error);
+  }
+
+  try {
+    await closeMainWindow({ clearRootSearch: true });
+  } catch (error) {
+    console.warn("Failed to close Raycast window", error);
+  }
 }
 
 function buildOpenWorkspaceUri(workspace: string): string {

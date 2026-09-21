@@ -1,68 +1,7 @@
 import { Toast, showToast } from "@raycast/api";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { HookRuntime } from "../helpers/hooks";
 import type { Workspace } from "../../src/types/octarine";
-
-class HookRuntime {
-  private refSlots: unknown[] = [];
-  private effectSlots: Array<readonly unknown[] | undefined> = [];
-  private queuedEffects: Array<() => void> = [];
-  private hookIndex = 0;
-  private effectIndex = 0;
-
-  beginRender(): void {
-    this.hookIndex = 0;
-    this.effectIndex = 0;
-    this.queuedEffects = [];
-  }
-
-  useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void {
-    const index = this.effectIndex++;
-    const previousDeps = this.effectSlots[index];
-
-    if (!haveDepsChanged(previousDeps, deps)) {
-      return;
-    }
-
-    this.effectSlots[index] = deps;
-    this.queuedEffects.push(() => {
-      effect();
-    });
-  }
-
-  useRef<T>(initialValue: T): { current: T } {
-    const index = this.hookIndex++;
-
-    if (this.refSlots[index] === undefined) {
-      this.refSlots[index] = { current: initialValue };
-    }
-
-    return this.refSlots[index] as { current: T };
-  }
-
-  flushEffects(): void {
-    const effects = [...this.queuedEffects];
-    this.queuedEffects = [];
-
-    for (const effect of effects) {
-      effect();
-    }
-  }
-}
-
-function haveDepsChanged(
-  previousDeps: readonly unknown[] | undefined,
-  nextDeps: readonly unknown[] | undefined,
-): boolean {
-  if (previousDeps === undefined || nextDeps === undefined) {
-    return true;
-  }
-
-  if (previousDeps.length !== nextDeps.length) {
-    return true;
-  }
-
-  return nextDeps.some((dependency, index) => !Object.is(dependency, previousDeps[index]));
-}
 
 let activeRuntime = new HookRuntime();
 
@@ -123,6 +62,25 @@ describe("useOpenTarget", () => {
     expect(open).toHaveBeenCalledTimes(1);
     expect(open).toHaveBeenCalledWith("Alpha");
     expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it("reports failures when opening the matched workspace", async () => {
+    const open = vi.fn(async () => {
+      throw new Error("Open failed");
+    });
+
+    await renderHook({
+      requestedWorkspace: "Alpha",
+      workspaces,
+      status: { isLoading: false, failed: false },
+      open,
+    });
+
+    expect(showToast).toHaveBeenCalledWith({
+      style: Toast.Style.Failure,
+      title: "Failed to Open Workspace",
+      message: "Open failed",
+    });
   });
 
   it("does not reopen on a rerender when dependencies are unchanged", async () => {

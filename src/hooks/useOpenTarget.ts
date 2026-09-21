@@ -29,10 +29,17 @@ export function useOpenTarget({ requestedWorkspace, workspaces, status, open }: 
   }, [workspaceNotFound, requestedWorkspace]);
 
   useEffect(() => {
-    if (!requestedWorkspace || !workspace) {
+    if (!workspace) {
       return;
     }
 
-    void open(workspace.name);
-  }, [workspace, open, requestedWorkspace]);
+    void open(workspace.name).catch((error) => {
+      console.error("Failed to open workspace", error);
+      void showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to Open Workspace",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }, [workspace, open]);
 }
