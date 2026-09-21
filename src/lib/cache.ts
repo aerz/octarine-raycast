@@ -59,6 +59,13 @@ function isIndexedAttachmentArray(value: unknown): value is IndexedAttachment[] 
   return Array.isArray(value) && value.every(isIndexedAttachment);
 }
 
+function notesCacheKey(prefix: string, workspaces: Workspace[], excludedDirectories: Set<string>): string {
+  return `${prefix}.${JSON.stringify({
+    workspaces: workspaces.map((workspace) => workspace.path).sort(),
+    excludedDirectories: [...excludedDirectories].sort(),
+  })}`;
+}
+
 export const WorkspacesCache = createCache<IndexedWorkspace[], [string[], Set<string>]>({
   key(roots, excludedDirectories) {
     const prefix = "octarine.workspaces.v2";
@@ -73,11 +80,15 @@ export const WorkspacesCache = createCache<IndexedWorkspace[], [string[], Set<st
 
 export const NotesCache = createCache<IndexedNote[], [Workspace[], Set<string>]>({
   key(workspaces, excludedDirectories) {
-    const prefix = "octarine.notes.v1";
-    return `${prefix}.${JSON.stringify({
-      workspaces: workspaces.map((workspace) => workspace.path).sort(),
-      excludedDirectories: [...excludedDirectories].sort(),
-    })}`;
+    return notesCacheKey("octarine.notes.v1", workspaces, excludedDirectories);
+  },
+
+  isValid: isIndexedNoteArray,
+});
+
+export const DailyNotesCache = createCache<IndexedNote[], [Workspace[], Set<string>]>({
+  key(workspaces, excludedDirectories) {
+    return notesCacheKey("octarine.daily-notes.v1", workspaces, excludedDirectories);
   },
 
   isValid: isIndexedNoteArray,

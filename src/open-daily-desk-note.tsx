@@ -4,7 +4,7 @@ import { DateFormatsDetail } from "./components/notifications/date-formats";
 import { WorkspaceList } from "./components/workspace-list";
 import { useOpenTarget } from "./hooks/useOpenTarget";
 import { useWorkspaces } from "./hooks/useWorkspaces";
-import { isSupportedDate } from "./lib/daily-desk";
+import { resolveDateArg } from "./lib/daily-desk";
 import { openDailyDeskNote } from "./lib/octarine";
 
 type Arguments = {
@@ -15,7 +15,7 @@ type Arguments = {
 export default function OpenDailyDeskNoteCommand(props: LaunchProps<{ arguments: Arguments }>) {
   const requestedDate = props.arguments.date?.trim() ?? "";
   const requestedWorkspace = props.arguments.workspace?.trim() ?? "";
-  const supportedDate = isSupportedDate(requestedDate);
+  const supportedDate = Boolean(resolveDateArg(requestedDate));
   const [refresh, setRefresh] = useState(false);
   const { workspaces, status, revalidate } = useWorkspaces({ enabled: supportedDate, refresh });
   const onRefresh = () => (refresh ? revalidate() : setRefresh(true));

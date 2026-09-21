@@ -1,7 +1,7 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
-import { getNotes, scanNotes } from "../../src/lib/notes";
+import { getDailyNotes, getNotes, scanDailyNotes, scanNotes } from "../../src/lib/notes";
 
 let tempDir: string | undefined;
 
@@ -168,5 +168,69 @@ describe("notes", () => {
     };
 
     await expect(scanNotes([missing, laterMissing], new Set())).rejects.toThrow(/Failed to read directory .+/);
+  });
+});
+
+describe("daily notes", () => {
+  it("scans only the Daily directory and builds natural language titles", async () => {
+    tempDir = await createTempDir("octarine-daily-notes");
+
+    const workspace = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
+
+    await writeTextFile(path.join(workspace.path, "Daily", "2023-02-18.md"), "# Note");
+    await writeTextFile(path.join(workspace.path, "Daily", "2026-W03.md"), "# Week");
+    await writeTextFile(path.join(workspace.path, "Daily", "project.md"), "# Not a daily note");
+    await writeTextFile(path.join(workspace.path, "Daily", "archive", "2024-01-05.md"), "# Nested");
+    await writeTextFile(path.join(workspace.path, "Notes", "2022-01-01.md"), "# Outside Daily");
+
+    const notes = await scanDailyNotes([workspace], new Set());
+
+    expect(notes.map((note) => [note.path, note.title])).toEqual([
+      ["Daily/2026-W03.md", "Week 3, 2026"],
+      ["Daily/archive/2024-01-05.md", "January 5, 2024"],
+      ["Daily/2023-02-18.md", "February 18, 2023"],
+    ]);
+    expect(notes[0].searchText).toContain("2026-w03");
+    expect(notes[2].searchText).toContain("february 18, 2023");
+    expect(notes[2].folder).toEqual(expect.objectContaining({ name: "Daily", path: "Daily", workspace }));
+    expect(notes[2].pinned).toBe(false);
+  });
+
+  it("returns no notes when a workspace has no Daily directory", async () => {
+    tempDir = await createTempDir("octarine-daily-missing");
+
+    const workspace = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
+
+    await writeTextFile(path.join(workspace.path, "Regular.md"), "# Regular");
+
+    expect(await scanDailyNotes([workspace], new Set())).toEqual([]);
+  });
+
+  it("loads daily notes and reuses the daily notes cache", async () => {
+    tempDir = await createTempDir("octarine-daily-notes-cache");
+
+    const workspace = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
+
+    await writeTextFile(path.join(workspace.path, "Daily", "2026-03-26.md"), "# Note");
+
+    const first = await getDailyNotes([workspace], new Set());
+    expect(first.map((note) => note.path)).toEqual(["Daily/2026-03-26.md"]);
+
+    await writeTextFile(path.join(workspace.path, "Daily", "2026-03-27.md"), "# Another");
+
+    const cached = await getDailyNotes([workspace], new Set());
+    expect(cached.map((note) => note.path)).toEqual(["Daily/2026-03-26.md"]);
+
+    const refreshed = await getDailyNotes([workspace], new Set(), { refresh: true });
+    expect(refreshed.map((note) => note.path)).toEqual(["Daily/2026-03-27.md", "Daily/2026-03-26.md"]);
   });
 });

@@ -20,6 +20,7 @@ export function DateFormatsDetail() {
         "- Natural language dates: `today`, `yesterday`, `tomorrow`",
         "- Relative dates: `2 days ago`, `next monday`, `last friday`",
         "- Partial dates: `jan 15`, `december 25`, `nov 3`",
+        "- Full dates: `jan 15 2026`, `22 Dec, 2026`",
         "- Natural language weeks: `this week`, `last week`, `next week`",
         "- Relative weeks: `2 weeks ago`, `in 2 weeks`",
       ].join("\n")}
