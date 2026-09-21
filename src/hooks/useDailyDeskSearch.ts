@@ -106,15 +106,15 @@ export function useDailyDeskSearch({ requestedWorkspace, useLastWorkspaceEnabled
     enabled: false,
   });
   const grouped = selectedWorkspace === ALL_WORKSPACES;
-  const selected = grouped ? undefined : findWorkspaceByName(workspaces, selectedWorkspace);
-  const targetWorkspace = selected ?? (isLastWorkspaceLoading ? undefined : lastWorkspace);
+  const chosen = grouped ? undefined : findWorkspaceByName(workspaces, selectedWorkspace);
+  const targetWorkspace = chosen ?? (isLastWorkspaceLoading ? undefined : lastWorkspace);
   const suggestion: DailyDeskSuggestion | undefined =
     dateQuery && suggestedDate && !hasExactMatch
       ? {
           label: dateQuery.kind === "week" ? formatWeekLabel(suggestedDate) : formatDateLabel(suggestedDate),
           date: suggestedDate,
           target: targetWorkspace,
-          locked: Boolean(selected),
+          locked: chosen !== undefined,
           sectionPath: grouped ? targetWorkspace?.path : undefined,
         }
       : undefined;
@@ -124,7 +124,7 @@ export function useDailyDeskSearch({ requestedWorkspace, useLastWorkspaceEnabled
           a.name.localeCompare(b.name),
         )
       : sections;
-  const suggestionInSection = Boolean(suggestion?.sectionPath);
+  const suggestionInSection = suggestion?.sectionPath !== undefined;
 
   return {
     isLoading: isLoading || status.isLoading,
