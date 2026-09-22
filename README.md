@@ -73,11 +73,13 @@ Search and open your Octarine notes from anywhere on your computer. Instantly fi
 - Queries are fuzzy by default for broader matches. To scope results to a specific folder, append a trailing slash to the folder name (e.g. articles/).
 - Use the dropdown to filter by workspace.
 - Open Actions (`⌘ K`) and select **Show Pinned Notes Only** to show only [pinned notes](https://docs.octarine.app/note-management/pinned) across all workspaces or within the selected workspace. Select **Show All Notes** to remove the filter.
+- Open Actions and select **Search Note Contents** (`⌘ ⇧ F`) to include note content for the current search. Content-only matches show a contextual excerpt; select **Search Titles and Paths Only** to return to the default mode.
 
 **Preferences**
 
 - **Show workspace note count**. Displays a note counter for each workspace section.
 - **Show Pinned Notes First**. Sorts pinned notes to the top of each workspace list.
+- **Search Content**. Includes note content in searches by default. This can still be toggled for the current session from Actions.
 
 ## Search Attachments
 
