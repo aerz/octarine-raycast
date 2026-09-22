@@ -155,6 +155,7 @@ function AttachmentGridItem({ file, onRefresh }: { file: IndexedAttachment; onRe
           </ActionPanel.Section>
           <ActionPanel.Section title="File">
             <Action.ToggleQuickLook shortcut={{ modifiers: [], key: "space" }} />
+            <Action.ShowInFinder title="Reveal in Finder" path={file.path} />
             <Action.CopyToClipboard
               title="Copy File Path"
               content={file.path}
