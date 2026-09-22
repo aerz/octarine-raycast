@@ -46,7 +46,7 @@ function extensionNames(attachments: IndexedAttachment[]): string[] {
   return Array.from(extensions).sort((a, b) => a.localeCompare(b));
 }
 
-function buildAttachmentSections(
+function buildSections(
   attachments: IndexedAttachment[],
   input: BuildAttachmentSectionsInput,
 ): WorkspaceAttachmentsSection[] {
@@ -126,7 +126,7 @@ export function useAttachments({
   const { dropdown, sections } = useMemo(() => {
     return {
       dropdown: extensionNames(attachments),
-      sections: buildAttachmentSections(attachments, { selectedExtension, searchText }),
+      sections: buildSections(attachments, { selectedExtension, searchText }),
     };
   }, [attachments, searchText, selectedExtension]);
 
