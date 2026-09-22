@@ -15,7 +15,7 @@ export function WorkspaceList({ isLoading, workspaces, onRefresh, children }: Pr
     <List isLoading={isLoading} searchBarPlaceholder="Search workspaces">
       {workspaces.length === 0 && !isLoading ? (
         <WorkspaceListEmptyView>
-          <Action title="Refresh Workspaces" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+          <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
         </WorkspaceListEmptyView>
       ) : (
         workspaces.map((workspace) => (
@@ -27,7 +27,7 @@ export function WorkspaceList({ isLoading, workspaces, onRefresh, children }: Pr
               <ActionPanel>
                 {children(workspace)}
                 <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
-                <Action title="Refresh Workspaces" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+                <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
                 <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
               </ActionPanel>
             }

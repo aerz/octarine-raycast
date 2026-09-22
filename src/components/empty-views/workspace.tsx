@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Icon, openExtensionPreferences, List, Grid } from "@raycast/api";
+import { Action, ActionPanel, Icon, openExtensionPreferences, List } from "@raycast/api";
 import type { ReactNode } from "react";
 
 function props(children?: ReactNode) {
@@ -17,8 +17,4 @@ function props(children?: ReactNode) {
 
 export function WorkspaceListEmptyView({ children }: { children?: ReactNode }) {
   return <List.EmptyView {...props(children)} />;
-}
-
-export function WorkspaceGridEmptyView({ children }: { children?: ReactNode }) {
-  return <Grid.EmptyView {...props(children)} />;
 }

@@ -1,5 +1,6 @@
 import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import { useState, type ReactNode } from "react";
+import { AttachmentsEmptyView } from "@components/empty-views/attachments";
 import { SearchAttachmentsEmptyView } from "@components/empty-views/search";
 import { type WorkspaceAttachmentsSection, useAttachments } from "@hooks/useAttachments";
 import { useWorkspaces } from "@hooks/useWorkspaces";
@@ -7,8 +8,10 @@ import { openAttachment } from "@lib/octarine";
 import { searchAttachmentsPreferences } from "@lib/preferences";
 import type { IndexedAttachment } from "@type/attachments";
 
-type WorkspaceDropdownProps = {
-  sections: string[];
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
+
+type ExtensionDropdownProps = {
+  extensions: string[];
   value: string;
   onChange: (value: string) => void;
 };
@@ -45,7 +48,7 @@ export default function SearchAttachmentsCommand() {
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search attachments"
       searchBarAccessory={
-        <WorkspaceDropdown sections={dropdown} value={selectedExtension} onChange={setSelectedExtension} />
+        <ExtensionDropdown extensions={dropdown} value={selectedExtension} onChange={setSelectedExtension} />
       }
     >
       {dropdown.length === 0 ? (
@@ -69,25 +72,14 @@ function DefaultActionPanel({ children }: { children?: ReactNode }) {
   return <ActionPanel>{children}</ActionPanel>;
 }
 
-function WorkspaceDropdown({ sections, value, onChange }: WorkspaceDropdownProps) {
+function ExtensionDropdown({ extensions, value, onChange }: ExtensionDropdownProps) {
   return (
     <Grid.Dropdown tooltip="Filter by file extension" value={value} onChange={onChange}>
       <Grid.Dropdown.Item title="All Extensions" value="all" />
-      {sections.map((section) => (
-        <Grid.Dropdown.Item key={section} title={section.toUpperCase()} value={section} />
+      {extensions.map((extension) => (
+        <Grid.Dropdown.Item key={extension} title={extension.toUpperCase()} value={extension} />
       ))}
     </Grid.Dropdown>
-  );
-}
-
-function AttachmentsEmptyView({ actions }: { actions?: ReactNode }) {
-  return (
-    <Grid.EmptyView
-      icon={Icon.Paperclip}
-      title="No Attachments Found"
-      description="Attach a file to any note in Octarine to see it here."
-      actions={actions}
-    />
   );
 }
 
@@ -148,9 +140,7 @@ function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
 }
 
 function attachmentPreview(file: IndexedAttachment): Grid.Item.Props["content"] {
-  const extensions = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
-
-  if (extensions.has(file.extension)) {
+  if (IMAGE_EXTENSIONS.has(file.extension)) {
     return file.path;
   }
 
