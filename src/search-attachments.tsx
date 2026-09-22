@@ -20,24 +20,41 @@ type AttachmentsGridProps = {
   sections: WorkspaceAttachmentsSection[];
   grouped?: boolean;
   showWorkspaceAttachmentCount?: boolean;
+  onRefresh: () => void;
+};
+
+type AttachmentActionsProps = {
+  onRefresh: () => void;
+  children?: ReactNode;
 };
 
 export default function SearchAttachmentsCommand() {
   const preferences = searchAttachmentsPreferences();
   const [selectedExtension, setSelectedExtension] = useState("all");
   const [searchText, setSearchText] = useState("");
+  const [refresh, setRefresh] = useState(false);
   const {
     workspaces,
     status: { isLoading: isWorkspacesLoading },
-  } = useWorkspaces();
-  const { dropdown, sections, isLoading } = useAttachments({
+    revalidate: revalidateWorkspaces,
+  } = useWorkspaces({ refresh });
+  const { dropdown, sections, isLoading, revalidate } = useAttachments({
     workspaces,
     enabled: !isWorkspacesLoading,
     excludedExtensions: preferences.excludedExtensions,
     searchText,
     selectedExtension,
+    refresh,
   });
   const hasResults = sections.some((section) => section.attachments.length > 0);
+  const onRefresh = () => {
+    if (refresh) {
+      void revalidateWorkspaces();
+      revalidate();
+    } else {
+      setRefresh(true);
+    }
+  };
 
   return (
     <Grid
@@ -52,24 +69,21 @@ export default function SearchAttachmentsCommand() {
       }
     >
       {dropdown.length === 0 ? (
-        <AttachmentsEmptyView actions={<DefaultActionPanel />} />
+        <AttachmentsEmptyView actions={<AttachmentActions onRefresh={onRefresh} />} />
       ) : !hasResults ? (
-        <SearchAttachmentsEmptyView />
+        <SearchAttachmentsEmptyView actions={<AttachmentActions onRefresh={onRefresh} />} />
       ) : selectedExtension === "all" ? (
         <AttachmentsGrid
           grouped
           sections={sections}
           showWorkspaceAttachmentCount={preferences.showWorkspaceAttachmentCount}
+          onRefresh={onRefresh}
         />
       ) : (
-        <AttachmentsGrid sections={sections} />
+        <AttachmentsGrid sections={sections} onRefresh={onRefresh} />
       )}
     </Grid>
   );
-}
-
-function DefaultActionPanel({ children }: { children?: ReactNode }) {
-  return <ActionPanel>{children}</ActionPanel>;
 }
 
 function ExtensionDropdown({ extensions, value, onChange }: ExtensionDropdownProps) {
@@ -83,7 +97,21 @@ function ExtensionDropdown({ extensions, value, onChange }: ExtensionDropdownPro
   );
 }
 
-function AttachmentsGrid({ sections, grouped = false, showWorkspaceAttachmentCount = false }: AttachmentsGridProps) {
+function AttachmentActions({ onRefresh, children }: AttachmentActionsProps) {
+  return (
+    <ActionPanel>
+      {children}
+      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+    </ActionPanel>
+  );
+}
+
+function AttachmentsGrid({
+  sections,
+  grouped = false,
+  showWorkspaceAttachmentCount = false,
+  onRefresh,
+}: AttachmentsGridProps) {
   if (grouped) {
     return sections.map((section) => (
       <Grid.Section
@@ -95,18 +123,18 @@ function AttachmentsGrid({ sections, grouped = false, showWorkspaceAttachmentCou
         }
       >
         {section.attachments.map((file) => (
-          <AttachmentGridItem key={file.path} file={file} />
+          <AttachmentGridItem key={file.path} file={file} onRefresh={onRefresh} />
         ))}
       </Grid.Section>
     ));
   }
 
   return sections.flatMap((section) =>
-    section.attachments.map((file) => <AttachmentGridItem key={file.path} file={file} />),
+    section.attachments.map((file) => <AttachmentGridItem key={file.path} file={file} onRefresh={onRefresh} />),
   );
 }
 
-function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
+function AttachmentGridItem({ file, onRefresh }: { file: IndexedAttachment; onRefresh: () => void }) {
   return (
     <Grid.Item
       title={file.name}
@@ -115,7 +143,7 @@ function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
       quickLook={{ name: file.name, path: file.path }}
       keywords={[file.workspace.name, file.extension]}
       actions={
-        <ActionPanel>
+        <AttachmentActions onRefresh={onRefresh}>
           <Action.Open title="Open File" target={file.path} />
           <ActionPanel.Section title="Octarine">
             <Action
@@ -133,7 +161,7 @@ function AttachmentGridItem({ file }: { file: IndexedAttachment }) {
               shortcut={{ modifiers: ["cmd"], key: "." }}
             />
           </ActionPanel.Section>
-        </ActionPanel>
+        </AttachmentActions>
       }
     />
   );

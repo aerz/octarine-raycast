@@ -119,7 +119,7 @@ export function useAttachments({
   );
 
   useLoadingToast({
-    isLoading: enabled && isLoading,
+    isLoading: enabled && isLoading && !refresh,
     title: "Scanning attachments…",
   });
 
