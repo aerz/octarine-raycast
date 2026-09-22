@@ -1,26 +1,7 @@
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
-
-vi.mock("@lib/utils", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@lib/utils")>();
-
-  return {
-    ...actual,
-    normalizeExtensions(input?: string) {
-      return new Set(
-        actual
-          .splitList(input)
-          .map((value) => value.replace(/^\./, "").toLowerCase())
-          .filter(Boolean),
-      );
-    },
-    splitLowerList(input?: string) {
-      return new Set(actual.splitList(input).map((value) => value.toLowerCase()));
-    },
-  };
-});
 
 import {
   extensionPreferences,

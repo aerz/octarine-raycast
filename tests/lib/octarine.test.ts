@@ -1,6 +1,10 @@
 import { closeMainWindow, open, popToRoot } from "@raycast/api";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { openAttachment, openDailyDeskNote, openNote, openWorkspace } from "@lib/octarine";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function parseUri(uri: string) {
   const [schemeAndAction, query = ""] = uri.split("?");
@@ -54,6 +58,37 @@ describe("octarine", () => {
     });
 
     expect(events).toEqual(["open", "afterOpen", "popToRoot", "closeMainWindow"]);
+  });
+
+  it("still closes Raycast when returning to its root fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.mocked(popToRoot).mockRejectedValueOnce(new Error("Root unavailable"));
+
+    await expect(openNote("docs/plan.md", "Work")).resolves.toBeUndefined();
+
+    expect(closeMainWindow).toHaveBeenCalledWith({ clearRootSearch: true });
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a successful open successful when closing Raycast fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.mocked(closeMainWindow).mockRejectedValueOnce(new Error("Window unavailable"));
+
+    await expect(openNote("docs/plan.md", "Work")).resolves.toBeUndefined();
+
+    expect(popToRoot).toHaveBeenCalledWith({ clearSearchBar: true });
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
+  it("does not persist or close Raycast when Octarine fails to open", async () => {
+    const afterOpen = vi.fn();
+    vi.mocked(open).mockRejectedValueOnce(new Error("Open failed"));
+
+    await expect(openNote("docs/plan.md", "Work", afterOpen)).rejects.toThrow("Open failed");
+
+    expect(afterOpen).not.toHaveBeenCalled();
+    expect(popToRoot).not.toHaveBeenCalled();
+    expect(closeMainWindow).not.toHaveBeenCalled();
   });
 
   it("opens attachment search URIs", async () => {

@@ -11,8 +11,9 @@ export function useLoadingToast({ isLoading, title }: Options): void {
 
   const hideToast = useCallback(async () => {
     if (!toastRef.current) return;
-    await toastRef.current.hide();
+    const toast = toastRef.current;
     toastRef.current = undefined;
+    await toast.hide();
   }, []);
 
   useEffect(() => {

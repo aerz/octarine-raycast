@@ -30,12 +30,20 @@ describe("resolveDateArg", () => {
 });
 
 describe("resolveDateQuery validation", () => {
-  it.each(["", "2026/03/26", "monday", "next month", "3 months ago", "2026-W1", "2026-02-30", "2026-W54"])(
-    "rejects %s",
-    (value) => {
-      expect(resolveDateQuery(value)).toBeNull();
-    },
-  );
+  it.each([
+    "",
+    "2026/03/26",
+    "monday",
+    "next month",
+    "3 months ago",
+    "2026-W1",
+    "2026-02-30",
+    "2026-W54",
+    "banana",
+    "feb 30",
+  ])("rejects %s", (value) => {
+    expect(resolveDateQuery(value)).toBeNull();
+  });
 });
 
 describe("resolveDateQuery", () => {
@@ -80,13 +88,6 @@ describe("resolveDateQuery", () => {
     expect(resolveDateQuery("Dec 22, 2026", NOW)).toEqual({ kind: "date", iso: "2026-12-22" });
     expect(resolveDateQuery("january 15 2026", NOW)).toEqual({ kind: "date", iso: "2026-01-15" });
     expect(resolveDateQuery("15 january 2026", NOW)).toEqual({ kind: "date", iso: "2026-01-15" });
-  });
-
-  it("rejects invalid expressions", () => {
-    expect(resolveDateQuery("", NOW)).toBeNull();
-    expect(resolveDateQuery("banana", NOW)).toBeNull();
-    expect(resolveDateQuery("2026-02-30", NOW)).toBeNull();
-    expect(resolveDateQuery("feb 30", NOW)).toBeNull();
   });
 });
 

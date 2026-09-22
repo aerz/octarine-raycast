@@ -24,12 +24,20 @@ describe("note content search", () => {
   });
 
   it("requires every normalized token in note content", () => {
-    const query = buildContentSearchQuery("  Project   Meeting  ");
+    const db = createSearchDb();
+    const insert = db.prepare(
+      "INSERT INTO search_documents (workspace_id, path, body, frontmatter) VALUES (?, ?, ?, ?)",
+    );
+    insert.run("work", "match.md", "Project", "summary: Meeting");
+    insert.run("work", "partial.md", "Project", "");
+    insert.run("missing", "orphan.md", "Project Meeting", "");
 
-    expect(query).toContain("instr(bodyText || char(10) || frontmatterText, 'project') > 0");
-    expect(query).toContain("instr(bodyText || char(10) || frontmatterText, 'meeting') > 0");
-    expect(query).toContain("JOIN workspaces w ON w.id = d.workspace_id");
-    expect(query).toContain("substr(body");
+    const query = buildContentSearchQuery("  Project   Meeting  ");
+    const rows = db.prepare(query ?? "").all() as ContentMatchRow[];
+    db.close();
+
+    expect(rows.map((row) => row.path)).toEqual(["match.md"]);
+    expect(rows[0].excerpt).toContain("Project");
   });
 
   it("matches non-ASCII content without case sensitivity", () => {
@@ -67,38 +75,13 @@ describe("note content search", () => {
     expect(rows[0].excerpt).toContain("Hidden context");
   });
 
-  it("excludes notes when any query token is missing", () => {
-    const db = createSearchDb();
-    db.prepare("INSERT INTO search_documents (workspace_id, path, body, frontmatter) VALUES (?, ?, ?, ?)").run(
-      "work",
-      "partial.md",
-      "CAFÉ",
-      "",
-    );
-
-    const query = buildContentSearchQuery("missing café");
-    const rows = db.prepare(query ?? "").all() as ContentMatchRow[];
-    db.close();
-
-    expect(rows).toEqual([]);
-  });
-
-  it("escapes SQL text while treating wildcard characters literally", () => {
-    const query = buildContentSearchQuery("author's 100%_plan");
-
-    expect(query).toContain("'author''s'");
-    expect(query).toContain("'100%_plan'");
-    expect(query).not.toContain("LIKE");
-  });
-
   it("executes queries containing SQL and wildcard characters", () => {
     const db = createSearchDb();
-    db.prepare("INSERT INTO search_documents (workspace_id, path, body, frontmatter) VALUES (?, ?, ?, ?)").run(
-      "work",
-      "literal.md",
-      "author's 100%_plan",
-      "",
+    const insert = db.prepare(
+      "INSERT INTO search_documents (workspace_id, path, body, frontmatter) VALUES (?, ?, ?, ?)",
     );
+    insert.run("work", "literal.md", "author's 100%_plan", "");
+    insert.run("work", "wildcard.md", "author's 100AAplan", "");
 
     const query = buildContentSearchQuery("author's 100%_plan");
     const rows = db.prepare(query ?? "").all() as ContentMatchRow[];
