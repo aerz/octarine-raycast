@@ -21,7 +21,7 @@ vi.mock("react", () => ({
     return [initial, setter];
   },
 }));
-vi.mock("@hooks/useWorkspaces", () => ({ useWorkspaces }));
+vi.mock("@hooks/use-workspaces", () => ({ useWorkspaces }));
 vi.mock("@commands/search-notes/hooks/use-content-search", () => ({ useContentSearch }));
 vi.mock("@commands/search-notes/hooks/use-notes", () => ({ useNotes }));
 

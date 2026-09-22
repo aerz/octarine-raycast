@@ -1,7 +1,7 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNoteSections } from "@hooks/useNoteSections";
+import { useNoteSections } from "@hooks/use-note-sections";
 import { toDailyStem, type DateQuery } from "@lib/daily-desk";
 import { getDailyNotes } from "@lib/notes";
 import { extensionPreferences } from "@lib/preferences";

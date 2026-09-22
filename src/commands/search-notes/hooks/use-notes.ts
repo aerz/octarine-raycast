@@ -1,7 +1,7 @@
 import { Toast, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
-import { useNoteSections } from "@hooks/useNoteSections";
+import { useNoteSections } from "@hooks/use-note-sections";
 import { extensionPreferences } from "@lib/preferences";
 import { getNotes } from "@lib/notes";
 import { createSearchMatcher } from "@lib/search";

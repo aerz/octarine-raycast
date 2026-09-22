@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWorkspaces } from "@hooks/useWorkspaces";
+import { useWorkspaces } from "@hooks/use-workspaces";
 import { formatDateLabel, formatWeekLabel, type DateQuery } from "@lib/daily-desk";
 import { findWorkspaceByName } from "@lib/workspaces";
 import { ALL_WORKSPACES, type WorkspaceSection } from "@type/notes";

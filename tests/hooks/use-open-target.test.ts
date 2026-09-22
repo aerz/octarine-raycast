@@ -10,12 +10,12 @@ vi.mock("react", () => ({
   useRef: <T>(initialValue: T) => activeRuntime.useRef(initialValue),
 }));
 
-type UseOpenTarget = (typeof import("@hooks/useOpenTarget"))["useOpenTarget"];
+type UseOpenTarget = (typeof import("@hooks/use-open-target"))["useOpenTarget"];
 
 let useOpenTarget: UseOpenTarget;
 
 beforeAll(async () => {
-  ({ useOpenTarget } = await import("@hooks/useOpenTarget"));
+  ({ useOpenTarget } = await import("@hooks/use-open-target"));
 });
 
 beforeEach(() => {

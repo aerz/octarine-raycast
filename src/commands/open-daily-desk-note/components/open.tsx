@@ -1,6 +1,6 @@
 import { Action, Icon } from "@raycast/api";
 import { useState } from "react";
-import { useWorkspaces } from "@hooks/useWorkspaces";
+import { useWorkspaces } from "@hooks/use-workspaces";
 import { openDailyDeskNotePreferences } from "@lib/preferences";
 import { WorkspaceList } from "@components/workspace-list";
 import { useOpenDailyNote } from "../hooks/use-open-note";

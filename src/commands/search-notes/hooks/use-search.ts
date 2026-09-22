@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useWorkspaces } from "@hooks/useWorkspaces";
+import { useWorkspaces } from "@hooks/use-workspaces";
 import { ALL_WORKSPACES, type IndexedNote, type WorkspaceSection } from "@type/notes";
 import type { NoteMatch } from "../lib/note-search";
 import { useContentSearch } from "./use-content-search";

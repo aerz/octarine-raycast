@@ -11,7 +11,7 @@ const { getDailyNotes, setSelectedWorkspace, useCachedPromise, useNoteSections }
 
 vi.mock("@raycast/utils", () => ({ useCachedPromise }));
 vi.mock("@lib/notes", () => ({ getDailyNotes }));
-vi.mock("@hooks/useNoteSections", () => ({ useNoteSections }));
+vi.mock("@hooks/use-note-sections", () => ({ useNoteSections }));
 vi.mock("react", () => ({
   useEffect: (effect: () => void) => effect(),
   useMemo: (factory: () => unknown) => factory(),

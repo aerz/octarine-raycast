@@ -2,7 +2,7 @@ import { Toast, showToast } from "@raycast/api";
 import { useEffect, useRef } from "react";
 import type { Workspace } from "@type/octarine";
 import { findWorkspaceByName } from "@lib/workspaces";
-import type { LoadStatus } from "@hooks/useWorkspaces";
+import type { LoadStatus } from "@hooks/use-workspaces";
 
 type Options = {
   requestedWorkspace: string;

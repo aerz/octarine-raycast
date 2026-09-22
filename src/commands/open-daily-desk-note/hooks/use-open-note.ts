@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { Toast, showToast } from "@raycast/api";
-import { useOpenTarget } from "@hooks/useOpenTarget";
-import type { LoadStatus } from "@hooks/useWorkspaces";
+import { useOpenTarget } from "@hooks/use-open-target";
+import type { LoadStatus } from "@hooks/use-workspaces";
 import { openDailyDeskNote } from "@lib/octarine";
 import type { Workspace } from "@type/octarine";
 

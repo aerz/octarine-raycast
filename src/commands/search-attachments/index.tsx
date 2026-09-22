@@ -3,7 +3,7 @@ import { useState } from "react";
 import { AttachmentsEmptyView, SearchAttachmentsEmptyView } from "./components/empty-views";
 import { AttachmentActions, AttachmentsGrid, ExtensionDropdown } from "./components/grid";
 import { useAttachments } from "./hooks/use-attachments";
-import { useWorkspaces } from "@hooks/useWorkspaces";
+import { useWorkspaces } from "@hooks/use-workspaces";
 import { searchAttachmentsPreferences } from "@lib/preferences";
 
 export default function SearchAttachmentsCommand() {

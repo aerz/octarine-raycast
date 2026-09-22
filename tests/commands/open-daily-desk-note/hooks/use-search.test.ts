@@ -14,7 +14,7 @@ vi.mock("react", () => ({
   useMemo: (factory: () => unknown) => factory(),
   useState: () => ["", vi.fn()],
 }));
-vi.mock("@hooks/useWorkspaces", () => ({ useWorkspaces }));
+vi.mock("@hooks/use-workspaces", () => ({ useWorkspaces }));
 vi.mock("@commands/open-daily-desk-note/hooks/use-last-workspace", () => ({ useLastWorkspace }));
 vi.mock("@commands/open-daily-desk-note/hooks/use-notes", () => ({ useDailyNotes }));
 vi.mock("@commands/open-daily-desk-note/hooks/use-open-note", () => ({ useOpenDailyNote }));
