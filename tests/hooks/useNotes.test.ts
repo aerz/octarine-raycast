@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockPreferences } from "../__mocks__/@raycast/api";
 import { ALL_WORKSPACES, type IndexedNote } from "@type/notes";
+import { noteSearchKey, type ContentMatch } from "@lib/note-search";
 import type { Workspace } from "@type/octarine";
 
 const { getNotes, useCachedPromise } = vi.hoisted(() => ({
@@ -103,6 +104,47 @@ describe("useNotes", () => {
 
     expect(pinned.sections.flatMap((section) => section.notes.map((item) => item.title))).toEqual(["Alpha pinned"]);
     expect(matched.sections.map((section) => section.name)).toEqual(["Beta"]);
+  });
+
+  it("includes content matches and keeps metadata matches first", () => {
+    const contentNote = note(alpha, "Alpha content");
+    const titleNote = note(alpha, "Needle title");
+    const contentMatches = new Map<string, ContentMatch>([
+      [noteSearchKey(alpha.path, contentNote.path), { excerpt: "…needle in the content…" }],
+    ]);
+    const result = renderNotes([contentNote, titleNote], { searchText: "needle", contentMatches });
+
+    expect(result.sections[0].notes.map((item) => item.title)).toEqual(["Needle title", "Alpha content"]);
+  });
+
+  it("matches content by workspace path and note path", () => {
+    const alphaNote = note(alpha, "Shared");
+    const betaNote = note(beta, "Shared");
+    const contentMatches = new Map<string, ContentMatch>([
+      [noteSearchKey(alpha.path, alphaNote.path), { excerpt: "…workspace-specific match…" }],
+    ]);
+    const result = renderNotes([alphaNote, betaNote], { searchText: "needle", contentMatches });
+
+    expect(result.sections.map((section) => section.name)).toEqual(["Alpha"]);
+  });
+
+  it("applies workspace and pinned filters to content matches", () => {
+    const alphaPinned = note(alpha, "Alpha pinned", { pinned: true });
+    const alphaRegular = note(alpha, "Alpha regular");
+    const betaPinned = note(beta, "Beta pinned", { pinned: true });
+    const contentMatches = new Map<string, ContentMatch>();
+    for (const item of [alphaPinned, alphaRegular, betaPinned]) {
+      contentMatches.set(noteSearchKey(item.folder.workspace.path, item.path), { excerpt: "…needle…" });
+    }
+    const result = renderNotes([alphaPinned, alphaRegular, betaPinned], {
+      scope: "pinned",
+      searchText: "needle",
+      contentMatches,
+      selectedWorkspace: "Alpha",
+    });
+
+    expect(result.sections).toHaveLength(1);
+    expect(result.sections[0].notes.map((item) => item.title)).toEqual(["Alpha pinned"]);
   });
 
   it("sorts pinned notes first only when requested", () => {

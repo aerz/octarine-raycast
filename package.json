@@ -77,6 +77,15 @@
           "label": "Show pinned notes first",
           "default": false,
           "required": false
+        },
+        {
+          "name": "searchContent",
+          "type": "checkbox",
+          "title": "Search Note Content",
+          "description": "Search note text in addition to titles and paths",
+          "label": "Include note content by default",
+          "default": false,
+          "required": false
         }
       ]
     },

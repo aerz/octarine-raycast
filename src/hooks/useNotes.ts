@@ -3,16 +3,20 @@ import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
 import { extensionPreferences } from "@lib/preferences";
 import { getNotes } from "@lib/notes";
+import { noteSearchKey, type ContentMatch } from "@lib/note-search";
 import { createSearchMatcher } from "@lib/search";
 import type { Workspace } from "@type/octarine";
 import type { IndexedNote, NoteScope, WorkspaceSection } from "@type/notes";
 import { useNoteSections } from "@hooks/useNoteSections";
+
+const EMPTY_CONTENT_MATCHES = new Map<string, ContentMatch>();
 
 type Options = {
   scope?: NoteScope;
   workspaces: Workspace[];
   enabled?: boolean;
   searchText: string;
+  contentMatches?: ReadonlyMap<string, ContentMatch>;
   selectedWorkspace: string;
   showPinnedNotesFirst?: boolean;
   refresh?: boolean;
@@ -30,6 +34,7 @@ export function useNotes({
   workspaces,
   enabled = true,
   searchText,
+  contentMatches = EMPTY_CONTENT_MATCHES,
   selectedWorkspace,
   showPinnedNotesFirst = false,
   refresh = false,
@@ -70,8 +75,18 @@ export function useNotes({
     },
   );
 
-  const matches = useMemo(() => createSearchMatcher(searchText), [searchText]);
-  const { dropdown, sections } = useNoteSections(notes, {
+  const matchesMetadata = useMemo(() => createSearchMatcher(searchText), [searchText]);
+  const matches = useMemo(
+    () => (note: IndexedNote) =>
+      matchesMetadata(note) || contentMatches.has(noteSearchKey(note.folder.workspace.path, note.path)),
+    [contentMatches, matchesMetadata],
+  );
+  const orderedNotes = useMemo(() => {
+    if (contentMatches.size === 0) return notes;
+
+    return notes.toSorted((a, b) => Number(!matchesMetadata(a)) - Number(!matchesMetadata(b)));
+  }, [contentMatches, matchesMetadata, notes]);
+  const { dropdown, sections } = useNoteSections(orderedNotes, {
     scope,
     selectedWorkspace,
     matches,

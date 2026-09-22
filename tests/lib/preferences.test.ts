@@ -76,6 +76,7 @@ describe("preferences", () => {
       useLastWorkspace: false,
       showWorkspaceNoteCount: true,
       showPinnedNotesFirst: true,
+      searchContent: true,
     });
 
     expect(openDailyDeskNotePreferences()).toEqual({
@@ -87,6 +88,7 @@ describe("preferences", () => {
     expect(searchNotesPreferences()).toEqual({
       showWorkspaceNoteCount: true,
       showPinnedNotesFirst: true,
+      searchContent: true,
     });
   });
 

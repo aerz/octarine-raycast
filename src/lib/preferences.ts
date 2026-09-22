@@ -26,6 +26,7 @@ export function searchNotesPreferences() {
   return {
     showWorkspaceNoteCount: preferences.showWorkspaceNoteCount,
     showPinnedNotesFirst: preferences.showPinnedNotesFirst,
+    searchContent: preferences.searchContent,
   };
 }
 
