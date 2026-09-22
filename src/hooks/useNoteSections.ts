@@ -1,8 +1,7 @@
 import { useMemo } from "react";
-import { ALL_WORKSPACES, type IndexedNote, type NoteScope, type WorkspaceSection } from "@type/notes";
+import { ALL_WORKSPACES, type IndexedNote, type WorkspaceSection } from "@type/notes";
 
 type Options = {
-  scope?: NoteScope;
   selectedWorkspace: string;
   matches: (note: IndexedNote) => boolean;
   showPinnedNotesFirst?: boolean;
@@ -17,13 +16,13 @@ type BuildOptions = Required<Options>;
 
 export function useNoteSections(
   notes: IndexedNote[],
-  { scope = "all", selectedWorkspace, matches, showPinnedNotesFirst = false }: Options,
+  { selectedWorkspace, matches, showPinnedNotesFirst = false }: Options,
 ): Result {
   const grouped = useMemo(() => groupByWorkspace(notes), [notes]);
   const dropdown = useMemo(() => workspaceNames(grouped), [grouped]);
   const sections = useMemo(
-    () => buildSections(grouped, { scope, selectedWorkspace, matches, showPinnedNotesFirst }),
-    [grouped, scope, selectedWorkspace, matches, showPinnedNotesFirst],
+    () => buildSections(grouped, { selectedWorkspace, matches, showPinnedNotesFirst }),
+    [grouped, selectedWorkspace, matches, showPinnedNotesFirst],
   );
 
   return { dropdown, sections };
@@ -55,15 +54,12 @@ function workspaceNames(workspaces: WorkspaceSection[]): string[] {
 
 function buildSections(
   workspaces: WorkspaceSection[],
-  { scope, selectedWorkspace, matches, showPinnedNotesFirst }: BuildOptions,
+  { selectedWorkspace, matches, showPinnedNotesFirst }: BuildOptions,
 ): WorkspaceSection[] {
   return workspaces
     .filter((workspace) => selectedWorkspace === ALL_WORKSPACES || workspace.name === selectedWorkspace)
     .map((workspace) => {
-      const notes = workspace.notes.filter((note) => {
-        if (scope === "pinned" && !note.pinned) return false;
-        return matches(note);
-      });
+      const notes = workspace.notes.filter(matches);
 
       return {
         name: workspace.name,

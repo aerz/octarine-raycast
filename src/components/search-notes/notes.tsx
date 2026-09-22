@@ -44,7 +44,7 @@ export function NoteItem({ result, mode, actions }: NoteItemProps) {
 }
 
 export function SearchNotesActionPanel({ mode, actions, children }: ActionPanelProps) {
-  const pinnedOnly = mode.scope === "pinned";
+  const pinnedOnly = mode.pinnedOnly;
 
   return (
     <ActionPanel>
@@ -52,7 +52,7 @@ export function SearchNotesActionPanel({ mode, actions, children }: ActionPanelP
       <Action
         title={pinnedOnly ? "Show All Notes" : "Show Pinned Notes Only"}
         icon={pinnedOnly ? Icon.Document : Icon.Tack}
-        onAction={actions.toggleScope}
+        onAction={actions.togglePinned}
       />
       <Action
         title={mode.contentEnabled ? "Search Titles and Paths Only" : "Search Note Contents"}

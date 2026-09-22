@@ -3,17 +3,17 @@ import { useContentSearch } from "@hooks/useContentSearch";
 import { useNotes } from "@hooks/useNotes";
 import { useWorkspaces } from "@hooks/useWorkspaces";
 import type { NoteMatch } from "@lib/note-search";
-import { ALL_WORKSPACES, type IndexedNote, type NoteScope, type WorkspaceSection } from "@type/notes";
+import { ALL_WORKSPACES, type IndexedNote, type WorkspaceSection } from "@type/notes";
 
 export type SearchNotesMode = {
-  scope: NoteScope;
+  pinnedOnly: boolean;
   contentEnabled: boolean;
 };
 
 export type SearchNotesActions = {
   onSearchTextChange: (text: string) => void;
   onWorkspaceChange: (workspace: string) => void;
-  toggleScope: () => void;
+  togglePinned: () => void;
   toggleContent: () => void;
   refresh: () => void;
 };
@@ -35,10 +35,11 @@ type Result = {
 /** When content search fails or lacks permission, `mode.contentEnabled` turns off so results fall back to titles and paths. */
 export function useSearchNotes({ searchContent, showPinnedNotesFirst }: Options): Result {
   const [searchText, setSearchText] = useState("");
+  const [pinnedOnly, setPinnedOnly] = useState(false);
   const [contentEnabled, setContentEnabled] = useState(searchContent);
-  const [scope, setScope] = useState<NoteScope>("all");
   const [selectedWorkspace, setSelectedWorkspace] = useState(ALL_WORKSPACES);
   const [refresh, setRefresh] = useState(false);
+  const filter = useCallback((note: IndexedNote) => (pinnedOnly ? note.pinned : true), [pinnedOnly]);
   const {
     workspaces,
     status: { isLoading: isWorkspacesLoading },
@@ -60,11 +61,11 @@ export function useSearchNotes({ searchContent, showPinnedNotesFirst }: Options)
     revalidate: revalidateNotes,
     matchOf,
   } = useNotes({
-    scope,
     workspaces,
     enabled: !isWorkspacesLoading,
     searchText,
     contentMatches,
+    filter,
     selectedWorkspace,
     showPinnedNotesFirst,
     refresh,
@@ -73,7 +74,7 @@ export function useSearchNotes({ searchContent, showPinnedNotesFirst }: Options)
   return {
     isLoading: isLoading || isContentLoading,
     search: { text: searchText },
-    mode: { scope, contentEnabled },
+    mode: { pinnedOnly, contentEnabled },
     workspace: {
       dropdown,
       selected: selectedWorkspace,
@@ -83,7 +84,7 @@ export function useSearchNotes({ searchContent, showPinnedNotesFirst }: Options)
     actions: {
       onSearchTextChange: setSearchText,
       onWorkspaceChange: setSelectedWorkspace,
-      toggleScope: () => setScope((current) => (current === "pinned" ? "all" : "pinned")),
+      togglePinned: () => setPinnedOnly((current) => !current),
       toggleContent: () => setContentEnabled((current) => !current),
       refresh: () => {
         if (refresh) {

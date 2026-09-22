@@ -63,7 +63,7 @@ describe("useSearchNotes", () => {
 
     expect(useNotes).toHaveBeenCalledWith(
       expect.objectContaining({
-        scope: "all",
+        filter: expect.any(Function),
         searchText: "",
         selectedWorkspace: ALL_WORKSPACES,
         showPinnedNotesFirst: true,
@@ -90,7 +90,7 @@ describe("useSearchNotes", () => {
 
     onError();
 
-    expect(stateSetters[1]).toHaveBeenCalledWith(false);
+    expect(stateSetters[2]).toHaveBeenCalledWith(false);
   });
 
   it("revalidates content while refresh is unarmed", () => {

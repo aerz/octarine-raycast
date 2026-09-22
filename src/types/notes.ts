@@ -14,8 +14,6 @@ export type WorkspaceSection = {
   notes: IndexedNote[];
 };
 
-export type NoteScope = "all" | "pinned";
-
 export function isIndexedNote(value: unknown): value is IndexedNote {
   return (
     isNote(value) &&

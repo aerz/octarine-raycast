@@ -6,17 +6,18 @@ import { getNotes } from "@lib/notes";
 import { noteMatch, type ContentMatch, type NoteMatch } from "@lib/note-search";
 import { createSearchMatcher } from "@lib/search";
 import type { Workspace } from "@type/octarine";
-import type { IndexedNote, NoteScope, WorkspaceSection } from "@type/notes";
+import type { IndexedNote, WorkspaceSection } from "@type/notes";
 import { useNoteSections } from "@hooks/useNoteSections";
 
 const EMPTY_CONTENT_MATCHES = new Map<string, ContentMatch>();
+const NO_FILTER = () => true;
 
 type Options = {
-  scope?: NoteScope;
   workspaces: Workspace[];
   enabled?: boolean;
   searchText: string;
   contentMatches?: ReadonlyMap<string, ContentMatch>;
+  filter?: (note: IndexedNote) => boolean;
   selectedWorkspace: string;
   showPinnedNotesFirst?: boolean;
   refresh?: boolean;
@@ -31,11 +32,11 @@ type Result = {
 };
 
 export function useNotes({
-  scope = "all",
   workspaces,
   enabled = true,
   searchText,
   contentMatches = EMPTY_CONTENT_MATCHES,
+  filter = NO_FILTER,
   selectedWorkspace,
   showPinnedNotesFirst = false,
   refresh = false,
@@ -81,14 +82,13 @@ export function useNotes({
     () => (note: IndexedNote) => noteMatch(note, { matchesMetadata, contentMatches }),
     [contentMatches, matchesMetadata],
   );
-  const matches = useMemo(() => (note: IndexedNote) => matchOf(note) !== undefined, [matchOf]);
+  const matches = useMemo(() => (note: IndexedNote) => filter(note) && matchOf(note) !== undefined, [filter, matchOf]);
   const orderedNotes = useMemo(() => {
     if (contentMatches.size === 0) return notes;
 
     return notes.toSorted((a, b) => Number(!matchesMetadata(a)) - Number(!matchesMetadata(b)));
   }, [contentMatches, matchesMetadata, notes]);
   const { dropdown, sections } = useNoteSections(orderedNotes, {
-    scope,
     selectedWorkspace,
     matches,
     showPinnedNotesFirst,

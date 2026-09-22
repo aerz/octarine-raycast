@@ -33,7 +33,7 @@ export default function SearchNotesCommand() {
     >
       {workspace.dropdown.length === 0 ? (
         <NotesEmptyView actions={panel} />
-      ) : mode.scope === "pinned" && !search.text && !hasResults ? (
+      ) : mode.pinnedOnly && !search.text && !hasResults ? (
         <PinnedNotesEmptyView actions={panel} />
       ) : !hasResults ? (
         <SearchNotesEmptyView actions={panel} />

@@ -93,13 +93,13 @@ describe("useNotes", () => {
     expect(result.sections.map((section) => section.name)).toEqual(["Alpha", "Beta"]);
   });
 
-  it("applies the pinned scope and matcher", () => {
+  it("applies the note filter and matcher", () => {
     const notes = [
       note(alpha, "Alpha regular"),
       note(alpha, "Alpha pinned", { pinned: true }),
       note(beta, "Beta regular"),
     ];
-    const pinned = renderNotes(notes, { scope: "pinned" });
+    const pinned = renderNotes(notes, { filter: (item) => item.pinned });
     const matched = renderNotes(notes, { searchText: "beta" });
 
     expect(pinned.sections.flatMap((section) => section.notes.map((item) => item.title))).toEqual(["Alpha pinned"]);
@@ -137,7 +137,7 @@ describe("useNotes", () => {
       contentMatches.set(noteSearchKey(item.folder.workspace.path, item.path), { excerpt: "…needle…" });
     }
     const result = renderNotes([alphaPinned, alphaRegular, betaPinned], {
-      scope: "pinned",
+      filter: (item) => item.pinned,
       searchText: "needle",
       contentMatches,
       selectedWorkspace: "Alpha",
