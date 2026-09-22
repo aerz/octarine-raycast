@@ -29,6 +29,10 @@ export function findWorkspaceByName(workspaces: Workspace[], name: string): Work
  * roots and rewrites the cache.
  *
  * @param options.refresh Forces a new scan and cache write.
+ *
+ * @remarks
+ * The result includes invalid and ignored entries. Callers can use these flags to filter
+ * the workspace list.
  */
 export async function getWorkspaces(options?: { refresh?: boolean }): Promise<IndexedWorkspace[]> {
   const { workspaceRoots, excludedWorkspaces: excludedDirectories } = extensionPreferences();

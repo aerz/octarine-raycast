@@ -2,18 +2,18 @@ import os from "node:os";
 import path from "node:path";
 
 /**
- * Trims leading and trailing whitespace from a text value.
+ * Trims, collapses, and lowercases a text value.
  *
- * @param value Text value to normalize.
+ * @param value - Text value to normalize.
  */
 export function normalizeText(value?: string): string {
   return (value?.trim() ?? "").replace(/\s+/g, " ").toLowerCase();
 }
 
 /**
- * Normalizes search text to lowercase forward-slash form.
+ * Normalizes search text to lowercase form with single forward slashes.
  *
- * @param value Text value to normalize for search matching.
+ * @param value - Text value to normalize for search matching.
  */
 export function normalizeSearchText(value: string): string {
   return value.trim().toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/");

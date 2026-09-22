@@ -66,6 +66,11 @@ function notesCacheKey(prefix: string, workspaces: Workspace[], excludedDirector
   })}`;
 }
 
+/**
+ * Caches discovered workspaces for the current roots and exclusions.
+ *
+ * Cache entries expire after 15 minutes. Reads skip corrupt or invalid entries.
+ */
 export const WorkspacesCache = createCache<IndexedWorkspace[], [string[], Set<string>]>({
   key(roots, excludedDirectories) {
     const prefix = "octarine.workspaces.v2";
@@ -78,6 +83,11 @@ export const WorkspacesCache = createCache<IndexedWorkspace[], [string[], Set<st
   isValid: isIndexedWorkspaceArray,
 });
 
+/**
+ * Caches indexed notes for the current workspaces and excluded directories.
+ *
+ * Cache entries expire after 15 minutes. Reads skip corrupt or invalid entries.
+ */
 export const NotesCache = createCache<IndexedNote[], [Workspace[], Set<string>]>({
   key(workspaces, excludedDirectories) {
     return notesCacheKey("octarine.notes.v1", workspaces, excludedDirectories);
@@ -86,6 +96,11 @@ export const NotesCache = createCache<IndexedNote[], [Workspace[], Set<string>]>
   isValid: isIndexedNoteArray,
 });
 
+/**
+ * Caches indexed Daily Desk notes for the current workspaces and exclusions.
+ *
+ * Cache entries expire after 15 minutes. Reads skip corrupt or invalid entries.
+ */
 export const DailyNotesCache = createCache<IndexedNote[], [Workspace[], Set<string>]>({
   key(workspaces, excludedDirectories) {
     return notesCacheKey("octarine.daily-notes.v1", workspaces, excludedDirectories);
@@ -94,6 +109,11 @@ export const DailyNotesCache = createCache<IndexedNote[], [Workspace[], Set<stri
   isValid: isIndexedNoteArray,
 });
 
+/**
+ * Caches indexed attachments for the current workspaces, exclusions, and extensions.
+ *
+ * Cache entries expire after 15 minutes. Reads skip corrupt or invalid entries.
+ */
 export const AttachmentsCache = createCache<IndexedAttachment[], [Workspace[], Set<string>, Set<string>]>({
   key(workspaces, excludedDirectories, excludedExtensions) {
     const prefix = "octarine.attachments.v1";

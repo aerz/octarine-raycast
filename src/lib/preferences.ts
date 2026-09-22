@@ -1,12 +1,19 @@
 import { getPreferenceValues } from "@raycast/api";
 import { normalizeText, normalizeWorkspaceRoots, normalizeExtensions, splitLowerList } from "@lib/utils";
 
+/** Normalized values from the extension-level Raycast configuration. */
 export type ExtensionPreferences = {
   workspaceRoots: string[];
   excludedWorkspaces: Set<string>;
   excludedFoldersInWorkspaces: Set<string>;
 };
 
+/**
+ * Returns the normalized extension-level configuration.
+ *
+ * Workspace roots become absolute paths. Excluded workspace and directory names become
+ * lowercase sets.
+ */
 export function extensionPreferences(): ExtensionPreferences {
   const prefs = getPreferenceValues<Preferences>();
   const workspaceRoots = normalizeWorkspaceRoots(prefs.workspaceRoots);
@@ -20,6 +27,11 @@ export function extensionPreferences(): ExtensionPreferences {
   };
 }
 
+/**
+ * Returns the configuration used by the Search Notes command.
+ *
+ * The result includes the setting that enables content search.
+ */
 export function searchNotesPreferences() {
   const preferences = getPreferenceValues<Preferences.SearchNotes>();
 
@@ -30,6 +42,11 @@ export function searchNotesPreferences() {
   };
 }
 
+/**
+ * Returns the configuration used by the Search Attachments command.
+ *
+ * Excluded extensions are lowercase and do not include a leading dot.
+ */
 export function searchAttachmentsPreferences() {
   const { showWorkspaceAttachmentCount, flattenWorkspaceSections, excludeFileExtensions } =
     getPreferenceValues<Preferences.SearchAttachments>();
@@ -42,6 +59,12 @@ export function searchAttachmentsPreferences() {
   };
 }
 
+/**
+ * Returns the configuration used by the Open Daily Desk Note command.
+ *
+ * The default workspace is normalized. The last workspace setting is enabled unless the
+ * user sets it to false.
+ */
 export function openDailyDeskNotePreferences() {
   const preferences = getPreferenceValues<Preferences.OpenDailyDeskNote>();
 

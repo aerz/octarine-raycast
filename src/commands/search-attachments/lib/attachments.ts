@@ -39,6 +39,17 @@ async function scanWorkspaceAttachments(
     });
 }
 
+/**
+ * Returns indexed attachments from visible workspaces.
+ *
+ * Invalid and ignored workspaces are skipped. The function applies extension and directory
+ * exclusions, uses the cache unless refresh is true, and sorts results by name and path.
+ *
+ * @param workspaces - Workspaces to scan.
+ * @param excludedExtensions - Lowercase extensions without leading dots.
+ * @param excludedDirectoryNames - Lowercase directory names to skip.
+ * @param options - Set refresh to true to force a new scan.
+ */
 export async function getAttachments(
   workspaces: Workspace[],
   excludedExtensions: Set<string>,

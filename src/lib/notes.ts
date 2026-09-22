@@ -29,6 +29,16 @@ type NotesCacheStore = {
   write(notes: IndexedNote[], workspaces: Workspace[], excludedDirectories: Set<string>): void;
 };
 
+/**
+ * Returns indexed Markdown notes from the given workspaces.
+ *
+ * The function uses the notes cache unless refresh is true. The scan adds the default
+ * exclusions for Octarine data and template directories.
+ *
+ * @param workspaces - Workspaces to scan.
+ * @param excludedDirectories - Lowercase directory names to skip.
+ * @param options - Set refresh to true to force a new scan.
+ */
 export async function getNotes(
   workspaces: Workspace[],
   excludedDirectories: Set<string>,
@@ -37,6 +47,16 @@ export async function getNotes(
   return getCachedNotes(NotesCache, scanNotes, workspaces, excludedDirectories, options);
 }
 
+/**
+ * Returns indexed Daily Desk notes from the given workspaces.
+ *
+ * Only files with valid date or ISO week names inside the Daily directory are returned.
+ * The function uses a separate cache from regular notes.
+ *
+ * @param workspaces - Workspaces to scan.
+ * @param excludedDirectories - Lowercase directory names to skip.
+ * @param options - Set refresh to true to force a new scan.
+ */
 export async function getDailyNotes(
   workspaces: Workspace[],
   excludedDirectories: Set<string>,
@@ -66,6 +86,14 @@ async function getCachedNotes(
   return notes;
 }
 
+/**
+ * Scans and indexes regular Markdown notes.
+ *
+ * The result is sorted by workspace name and note path. Duplicate note ids are returned once.
+ *
+ * @param workspaces - Workspaces to scan.
+ * @param excludedDirectories - Lowercase directory names to skip.
+ */
 export async function scanNotes(workspaces: Workspace[], excludedDirectories: Set<string>): Promise<IndexedNote[]> {
   const notes = await scanAcrossWorkspaces(workspaces, excludedDirectories, scanWorkspaceNotes);
   return notes.toSorted(
@@ -91,6 +119,15 @@ async function scanWorkspaceNotes(workspace: Workspace, excludedDirectories: Set
   );
 }
 
+/**
+ * Scans and indexes date-based notes inside each Daily directory.
+ *
+ * The result is sorted from the newest date to the oldest date. Weekly notes use the
+ * Monday of their ISO week for sorting.
+ *
+ * @param workspaces - Workspaces to scan.
+ * @param excludedDirectories - Lowercase directory names to skip.
+ */
 export async function scanDailyNotes(
   workspaces: Workspace[],
   excludedDirectories: Set<string>,

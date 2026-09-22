@@ -16,23 +16,35 @@ const SYSTEM_GENERATED_FILE_NAMES = new Set([
   "ehthumbs_vista.db",
 ]);
 
+/** A Markdown file with absolute and POSIX relative paths. */
 export type MarkdownFile = {
   absolute: string;
   relative: string;
 };
 
+/** A path found during workspace discovery. */
 export type ScannedPath = {
   path: string;
   ignored: boolean;
   invalid: boolean;
 };
 
+/** A file found below an attachment directory. */
 export type ScannedAttachmentFile = {
   name: string;
   absolute: string;
   relative: string;
 };
 
+/**
+ * Finds Octarine workspaces below the configured root paths.
+ *
+ * A root can be a workspace or a parent of workspace directories. Missing or unreadable
+ * roots return invalid entries. Excluded workspace names return ignored entries.
+ *
+ * @param roots - Root paths to scan.
+ * @param excluded - Lowercase workspace names to mark as ignored.
+ */
 export async function scanPaths(roots: string[], excluded: Set<string>): Promise<ScannedPath[]> {
   const discovered = new Map<string, ScannedPath>();
 
@@ -88,6 +100,15 @@ export async function scanPaths(roots: string[], excluded: Set<string>): Promise
   return Array.from(discovered.values());
 }
 
+/**
+ * Recursively finds Markdown files below a root directory.
+ *
+ * The scan skips excluded directories and symbolic-link directories. Relative paths use
+ * forward slashes. The function throws when it cannot read a directory.
+ *
+ * @param root - Directory to scan.
+ * @param excluded - Lowercase directory names to skip.
+ */
 export async function scanMarkdownFiles(root: string, excluded: Set<string>): Promise<MarkdownFile[]> {
   const pending: string[] = [root];
   const files: MarkdownFile[] = [];
@@ -127,6 +148,15 @@ export async function scanMarkdownFiles(root: string, excluded: Set<string>): Pr
   return files;
 }
 
+/**
+ * Finds files below the workspace attachment directories.
+ *
+ * The scan checks both .attachments and .files. Missing directories return an empty list.
+ * It logs a warning and skips directories that it cannot read.
+ * System-generated files and symbolic-link directories are skipped.
+ *
+ * @param workspacePath - Absolute path to the workspace.
+ */
 export async function scanWorkspaceAttachmentFiles(workspacePath: string): Promise<ScannedAttachmentFile[]> {
   const byDirectory = await Promise.all(
     ATTACHMENT_DIRECTORIES.map((dir) => scanAttachmentDirectory(workspacePath, dir)),
@@ -135,6 +165,13 @@ export async function scanWorkspaceAttachmentFiles(workspacePath: string): Promi
   return byDirectory.flat();
 }
 
+/**
+ * Tests whether a path points to a directory.
+ *
+ * The function returns false when the path cannot be read or does not point to a directory.
+ *
+ * @param targetPath - Path to inspect.
+ */
 export async function isDirectoryPath(targetPath: string): Promise<boolean> {
   try {
     return (await fs.stat(targetPath)).isDirectory();
@@ -143,6 +180,16 @@ export async function isDirectoryPath(targetPath: string): Promise<boolean> {
   }
 }
 
+/**
+ * Reads the frontmatter block at the start of a Markdown file.
+ *
+ * Frontmatter is metadata at the start of a Markdown file. The function supports a UTF-8
+ * byte-order mark and closing lines marked with three dashes or three dots. It returns the
+ * raw block. It returns undefined when no complete block exists. It throws when the file
+ * cannot be read.
+ *
+ * @param filePath - Path to the Markdown file.
+ */
 export async function readMarkdownFrontmatter(filePath: string): Promise<string | undefined> {
   try {
     const fd = await fs.open(filePath, "r");
@@ -181,6 +228,7 @@ export async function readMarkdownFrontmatter(filePath: string): Promise<string 
   }
 }
 
+/** Tests for common system files and temporary Office lock files. */
 export function isSystemGeneratedFile(name: string): boolean {
   const normalizedName = name.toLowerCase();
   return normalizedName.startsWith("~$") || SYSTEM_GENERATED_FILE_NAMES.has(normalizedName);

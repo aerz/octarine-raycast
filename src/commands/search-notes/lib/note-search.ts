@@ -6,6 +6,7 @@ import type { IndexedNote } from "@type/notes";
 const EXCERPT_OFFSET = 80;
 const EXCERPT_LENGTH = 200;
 
+/** Absolute path to the Octarine SQLite database used for content search. */
 export const OCTARINE_DB_PATH = path.join(
   os.homedir(),
   "Library",
@@ -14,14 +15,19 @@ export const OCTARINE_DB_PATH = path.join(
   "octarine.sqlite",
 );
 
-// Private Search Notes content-query contract.
+/** Content-match data for one note. */
 export type ContentMatch = {
   excerpt: string;
 };
 
-/** Why a note appears in the results. Metadata matches take precedence, so an excerpt is only reported for content matches. */
+/**
+ * Describes why a note appears in the result list.
+ *
+ * Metadata matches take precedence. A content match includes an excerpt.
+ */
 export type NoteMatch = { kind: "metadata" } | { kind: "content"; excerpt: string };
 
+/** Inputs used to resolve metadata and content matches for one note. */
 export type NoteMatchOptions = {
   matchesMetadata: (note: IndexedNote) => boolean;
   contentMatches: ReadonlyMap<string, ContentMatch>;
@@ -115,10 +121,27 @@ export function toContentMatches(rows: ContentMatchRow[], currentKey: string): M
   return matches;
 }
 
+/**
+ * Builds the key that joins an indexed note to a content-search result.
+ *
+ * The key uses the workspace path and note path with a zero byte separator.
+ *
+ * @param workspacePath - Absolute workspace path.
+ * @param notePath - Note path inside the workspace.
+ */
 export function noteSearchKey(workspacePath: string, notePath: string): string {
   return `${workspacePath}\0${notePath}`;
 }
 
+/**
+ * Resolves the match shown for a note.
+ *
+ * Metadata matches take precedence. A content match is used when metadata does not match.
+ * The function returns undefined when neither source matches.
+ *
+ * @param note - Indexed note to resolve.
+ * @param options - Metadata matcher and content matches.
+ */
 export function noteMatch(
   note: IndexedNote,
   { matchesMetadata, contentMatches }: NoteMatchOptions,

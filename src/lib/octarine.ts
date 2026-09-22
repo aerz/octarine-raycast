@@ -27,10 +27,16 @@ type DailyScheme = {
 type Scheme = OpenScheme | SearchScheme | DailyScheme;
 type AfterOpen = () => void | Promise<void>;
 
+/** Opens the Daily Desk note for today in the named workspace. */
 export function openWorkspace(name: string): Promise<void> {
   return openUri(buildOpenWorkspaceUri(name));
 }
 
+/**
+ * Opens an Octarine search for an attachment name.
+ *
+ * An optional workspace limits the search.
+ */
 export function openAttachment(name: string, workspace?: string): Promise<void> {
   const uri = buildUri({
     action: Action.Search,
@@ -40,6 +46,15 @@ export function openAttachment(name: string, workspace?: string): Promise<void> 
   return openUri(uri);
 }
 
+/**
+ * Opens a note in Octarine.
+ *
+ * The optional callback runs after Octarine opens the URI and before Raycast closes.
+ *
+ * @param path - Note path inside the workspace.
+ * @param workspace - Workspace name that contains the note.
+ * @param afterOpen - Callback that runs after the URI opens.
+ */
 export function openNote(path: string, workspace?: string, afterOpen?: AfterOpen): Promise<void> {
   const uri = buildUri({
     action: Action.Open,
@@ -49,6 +64,15 @@ export function openNote(path: string, workspace?: string, afterOpen?: AfterOpen
   return openUri(uri, afterOpen);
 }
 
+/**
+ * Opens a Daily Desk note in Octarine.
+ *
+ * The optional callback runs after Octarine opens the URI and before Raycast closes.
+ *
+ * @param date - Daily Desk date or week.
+ * @param workspace - Workspace name that contains the note.
+ * @param afterOpen - Callback that runs after the URI opens.
+ */
 export function openDailyDeskNote(date: string, workspace: string, afterOpen?: AfterOpen): Promise<void> {
   return openUri(
     buildUri({

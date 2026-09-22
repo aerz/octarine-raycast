@@ -6,6 +6,9 @@ import type { IndexedNote, WorkspaceSection } from "@type/notes";
  * Builds the resolved query and matcher used by the Daily Desk search.
  *
  * @param searchText Raw search query typed by the user.
+ *
+ * @remarks
+ * A note matches when its date matches the query or its searchable text matches the query.
  */
 export function createDailySearch(searchText: string): {
   query: DateQuery | null;
@@ -27,6 +30,9 @@ export function createDailySearch(searchText: string): {
  *
  * @param sections Sections returned by the daily notes hook.
  * @param query Resolved date expression typed by the user.
+ *
+ * @remarks
+ * The function keeps workspace sections and moves exact date matches before related notes.
  */
 export function prioritizeExactDateMatches(
   sections: WorkspaceSection[],

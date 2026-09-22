@@ -1,11 +1,18 @@
 import path from "node:path";
 import { normalizeText } from "@lib/utils";
 
+/** Directory that contains Daily Desk notes in an Octarine workspace. */
 export const DAILY_DIRECTORY_NAME = "Daily";
 
+/**
+ * Normalized date input used to match Daily Desk file names.
+ *
+ * A query stores a full date, an ISO week, or a month and day without a year.
+ */
 export type DateQuery =
   { kind: "date"; iso: string } | { kind: "week"; week: string } | { kind: "month-day"; month: number; day: number };
 
+/** Date data parsed from a Daily Desk file name. */
 export type FilenameDate = { kind: "date"; iso: string } | { kind: "week"; week: string };
 
 const MONTH_NUMBERS: Record<string, number> = {
@@ -92,6 +99,10 @@ export function resolveDateArg(value?: string, now: Date = new Date()): string |
  *
  * @param value Date expression such as `2024-01-15`, `today`, `2 days ago` or `jan 15`.
  * @param now Reference date used to resolve relative expressions.
+ *
+ * @remarks
+ * The parser accepts ISO dates and weeks, relative dates and weeks, weekday expressions,
+ * and named dates in month-day or day-month order.
  */
 export function resolveDateQuery(value: string, now: Date = new Date()): DateQuery | null {
   const normalized = normalizeText(value);
@@ -136,6 +147,11 @@ export function parseFilenameDate(filename: string): FilenameDate | null {
  *
  * @param query Resolved date expression.
  * @param filename Note filename to compare against.
+ *
+ * @remarks
+ * A month-day query matches the same month and day in any year. A full date query also
+ * matches the ISO week file that contains that date. A week query matches its weekly file
+ * and daily files in that week.
  */
 export function matchesDateQuery(query: DateQuery, filename: string): boolean {
   const file = parseFilenameDate(filename);
