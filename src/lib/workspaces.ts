@@ -1,5 +1,4 @@
 import path from "node:path";
-import { LocalStorage } from "@raycast/api";
 import type { IndexedWorkspace } from "@type/workspaces";
 import type { Workspace } from "@type/octarine";
 import { WorkspacesCache } from "@lib/cache";
@@ -7,8 +6,6 @@ import type { ScannedPath } from "@lib/files";
 import { scanPaths } from "@lib/files";
 import { extensionPreferences } from "@lib/preferences";
 import { normalizeText } from "@lib/utils";
-
-const LAST_WORKSPACE_KEY = "octarine.last-workspace.v1";
 
 /**
  * Finds an indexed workspace by name, ignoring case and surrounding whitespace.
@@ -47,43 +44,6 @@ export async function getWorkspaces(options?: { refresh?: boolean }): Promise<In
   const workspaces = await scanWorkspaces(workspaceRoots, excludedDirectories);
   WorkspacesCache.write(workspaces, workspaceRoots, excludedDirectories);
   return workspaces;
-}
-
-/**
- * Reads the last workspace name persisted in Raycast LocalStorage.
- *
- * Only the name is stored; resolve it against indexed workspaces with `resolveLastWorkspace`.
- */
-export async function getLastWorkspace(): Promise<string | undefined> {
-  const value = await LocalStorage.getItem<string>(LAST_WORKSPACE_KEY);
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
-
-/**
- * Persists a workspace name as the last used one.
- *
- * @param workspaceName Workspace name to remember.
- */
-export async function saveLastWorkspace(workspaceName: string): Promise<void> {
-  await LocalStorage.setItem(LAST_WORKSPACE_KEY, workspaceName);
-}
-
-/**
- * Removes the persisted last workspace name.
- */
-export async function clearLastWorkspace(): Promise<void> {
-  await LocalStorage.removeItem(LAST_WORKSPACE_KEY);
-}
-
-/**
- * Resolves a persisted workspace name against indexed workspaces.
- *
- * @param workspaces Workspaces to search, as returned by `getWorkspaces`.
- * @param storedName Name read from Raycast LocalStorage, if any.
- */
-export function resolveLastWorkspace(workspaces: Workspace[], storedName: string | undefined): Workspace | undefined {
-  return storedName ? findWorkspaceByName(workspaces, storedName) : undefined;
 }
 
 async function scanWorkspaces(roots: string[], excludedDirectories: Set<string>): Promise<IndexedWorkspace[]> {

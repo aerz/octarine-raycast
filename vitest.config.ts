@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@raycast/api": path.resolve(__dirname, "tests/__mocks__/@raycast/api.ts"),
+      "@commands": path.resolve(src, "commands"),
       "@components": path.resolve(src, "components"),
       "@hooks": path.resolve(src, "hooks"),
       "@lib": path.resolve(src, "lib"),
