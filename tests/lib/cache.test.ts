@@ -1,10 +1,24 @@
 import { Cache } from "@raycast/api";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AttachmentsCache, NotesCache, WorkspacesCache } from "@lib/cache";
+import { AttachmentsCache, DailyNotesCache, NotesCache, WorkspacesCache } from "@lib/cache";
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
+});
+
+it("invalidates cached notes, Daily Desk notes, and attachments when a workspace name changes", () => {
+  const original = [{ name: "Old", path: "/workspaces/old" }];
+  const renamed = [{ name: "New", path: "/workspaces/old" }];
+  const excluded = new Set<string>();
+
+  NotesCache.write([], original, excluded);
+  DailyNotesCache.write([], original, excluded);
+  AttachmentsCache.write([], original, excluded, excluded);
+
+  expect(NotesCache.read(renamed, excluded)).toBeUndefined();
+  expect(DailyNotesCache.read(renamed, excluded)).toBeUndefined();
+  expect(AttachmentsCache.read(renamed, excluded, excluded)).toBeUndefined();
 });
 
 describe("workspace cache", () => {

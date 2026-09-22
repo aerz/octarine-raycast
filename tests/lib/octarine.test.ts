@@ -1,6 +1,6 @@
 import { closeMainWindow, open, popToRoot } from "@raycast/api";
 import { describe, expect, it, vi } from "vitest";
-import { openAttachment, openDailyDeskNote, openNote } from "@lib/octarine";
+import { openAttachment, openDailyDeskNote, openNote, openWorkspace } from "@lib/octarine";
 
 function parseUri(uri: string) {
   const [schemeAndAction, query = ""] = uri.split("?");
@@ -17,6 +17,15 @@ function getOpenedUri(): ReturnType<typeof parseUri> {
 }
 
 describe("octarine", () => {
+  it("opens workspaces using their Octarine name", async () => {
+    await openWorkspace("Codely Agentic Programming");
+    const parsed = getOpenedUri();
+
+    expect(parsed.action).toBe("daily");
+    expect(parsed.params.get("date")).toBe("today");
+    expect(parsed.params.get("workspace")).toBe("Codely Agentic Programming");
+  });
+
   it("opens note URIs and closes Raycast", async () => {
     await openNote("docs/plan.md", "Work");
     const parsed = getOpenedUri();

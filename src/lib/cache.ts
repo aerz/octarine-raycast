@@ -59,9 +59,15 @@ function isIndexedAttachmentArray(value: unknown): value is IndexedAttachment[] 
   return Array.isArray(value) && value.every(isIndexedAttachment);
 }
 
+function workspaceCacheIdentity(workspaces: Workspace[]) {
+  return workspaces
+    .map(({ path, name }) => ({ path, name }))
+    .sort((a, b) => a.path.localeCompare(b.path) || a.name.localeCompare(b.name));
+}
+
 function notesCacheKey(prefix: string, workspaces: Workspace[], excludedDirectories: Set<string>): string {
   return `${prefix}.${JSON.stringify({
-    workspaces: workspaces.map((workspace) => workspace.path).sort(),
+    workspaces: workspaceCacheIdentity(workspaces),
     excludedDirectories: [...excludedDirectories].sort(),
   })}`;
 }
@@ -118,7 +124,7 @@ export const AttachmentsCache = createCache<IndexedAttachment[], [Workspace[], S
   key(workspaces, excludedDirectories, excludedExtensions) {
     const prefix = "octarine.attachments.v1";
     return `${prefix}.${JSON.stringify({
-      workspaces: workspaces.map((workspace) => workspace.path).sort(),
+      workspaces: workspaceCacheIdentity(workspaces),
       excludedDirectories: [...excludedDirectories].sort(),
       excludedExtensions: [...excludedExtensions].sort(),
     })}`;
