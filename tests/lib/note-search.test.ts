@@ -4,11 +4,13 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import {
   buildContentSearchQuery,
+  noteMatch,
   noteSearchKey,
   OCTARINE_DB_PATH,
   toContentMatches,
   type ContentMatchRow,
 } from "@lib/note-search";
+import type { IndexedNote } from "@type/notes";
 
 describe("note content search", () => {
   it("resolves the Octarine database in Application Support", () => {
@@ -145,6 +147,42 @@ describe("note content search", () => {
     expect(matches.has(noteSearchKey("/notes/Work", "valid.md"))).toBe(true);
   });
 });
+
+describe("note match", () => {
+  const contentMatches = new Map([[noteSearchKey("/notes/Alpha", "alpha.md"), { excerpt: "…needle in content…" }]]);
+
+  it("prefers metadata matches over content matches", () => {
+    const match = noteMatch(indexedNote("Alpha"), { matchesMetadata: () => true, contentMatches });
+
+    expect(match).toEqual({ kind: "metadata" });
+  });
+
+  it("reports the content excerpt when only the content matches", () => {
+    const match = noteMatch(indexedNote("Alpha"), { matchesMetadata: () => false, contentMatches });
+
+    expect(match).toEqual({ kind: "content", excerpt: "…needle in content…" });
+  });
+
+  it("returns no match when neither metadata nor content matches", () => {
+    const match = noteMatch(indexedNote("Alpha"), { matchesMetadata: () => false, contentMatches: new Map() });
+
+    expect(match).toBeUndefined();
+  });
+});
+
+function indexedNote(title: string): IndexedNote {
+  const workspace = { name: "Alpha", path: "/notes/Alpha" };
+  const notePath = `${title.toLowerCase()}.md`;
+
+  return {
+    id: `${workspace.path}::${notePath}`,
+    title,
+    path: notePath,
+    folder: { name: "", path: "", workspace },
+    pinned: false,
+    searchText: `${title} alpha`.toLowerCase(),
+  };
+}
 
 function createSearchDb(): DatabaseSync {
   const db = new DatabaseSync(":memory:");

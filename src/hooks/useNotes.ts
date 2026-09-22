@@ -3,7 +3,7 @@ import { useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
 import { extensionPreferences } from "@lib/preferences";
 import { getNotes } from "@lib/notes";
-import { noteSearchKey, type ContentMatch } from "@lib/note-search";
+import { noteMatch, type ContentMatch, type NoteMatch } from "@lib/note-search";
 import { createSearchMatcher } from "@lib/search";
 import type { Workspace } from "@type/octarine";
 import type { IndexedNote, NoteScope, WorkspaceSection } from "@type/notes";
@@ -27,6 +27,7 @@ type Result = {
   sections: WorkspaceSection[];
   isLoading: boolean;
   revalidate: () => void;
+  matchOf: (note: IndexedNote) => NoteMatch | undefined;
 };
 
 export function useNotes({
@@ -76,11 +77,11 @@ export function useNotes({
   );
 
   const matchesMetadata = useMemo(() => createSearchMatcher(searchText), [searchText]);
-  const matches = useMemo(
-    () => (note: IndexedNote) =>
-      matchesMetadata(note) || contentMatches.has(noteSearchKey(note.folder.workspace.path, note.path)),
+  const matchOf = useMemo(
+    () => (note: IndexedNote) => noteMatch(note, { matchesMetadata, contentMatches }),
     [contentMatches, matchesMetadata],
   );
+  const matches = useMemo(() => (note: IndexedNote) => matchOf(note) !== undefined, [matchOf]);
   const orderedNotes = useMemo(() => {
     if (contentMatches.size === 0) return notes;
 
@@ -98,5 +99,6 @@ export function useNotes({
     sections,
     isLoading: !enabled || isLoading,
     revalidate,
+    matchOf,
   };
 }

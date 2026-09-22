@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import type { IndexedNote } from "@type/notes";
 import { normalizeText, tokenize } from "@lib/utils";
 
 const EXCERPT_OFFSET = 80;
@@ -15,6 +16,14 @@ export const OCTARINE_DB_PATH = path.join(
 
 export type ContentMatch = {
   excerpt: string;
+};
+
+/** Why a note appears in the results. Metadata matches take precedence, so an excerpt is only reported for content matches. */
+export type NoteMatch = { kind: "metadata" } | { kind: "content"; excerpt: string };
+
+export type NoteMatchOptions = {
+  matchesMetadata: (note: IndexedNote) => boolean;
+  contentMatches: ReadonlyMap<string, ContentMatch>;
 };
 
 /**
@@ -107,6 +116,16 @@ export function toContentMatches(rows: ContentMatchRow[], currentKey: string): M
 
 export function noteSearchKey(workspacePath: string, notePath: string): string {
   return `${workspacePath}\0${notePath}`;
+}
+
+export function noteMatch(
+  note: IndexedNote,
+  { matchesMetadata, contentMatches }: NoteMatchOptions,
+): NoteMatch | undefined {
+  if (matchesMetadata(note)) return { kind: "metadata" };
+
+  const match = contentMatches.get(noteSearchKey(note.folder.workspace.path, note.path));
+  return match ? { kind: "content", excerpt: match.excerpt } : undefined;
 }
 
 /** SQL expression for a single-line excerpt around the first match, or the column start. */
