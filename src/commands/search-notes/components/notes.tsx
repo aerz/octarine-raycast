@@ -83,7 +83,7 @@ export function SearchNotesActionPanel({ mode, actions, onRefresh, children }: A
       <Action
         title={pinnedOnly ? "Show All Notes" : "Show Pinned Notes Only"}
         icon={pinnedOnly ? Icon.Document : Icon.Tack}
-        shortcut={Keyboard.Shortcut.Common.Pin}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
         onAction={actions.togglePinned}
       />
       <Action
@@ -114,7 +114,7 @@ export function SearchNotesEmptyActionPanel({ mode, actions, onRefresh }: Omit<A
             key="pinned"
             title="Show Pinned Notes Only"
             icon={Icon.Tack}
-            shortcut={Keyboard.Shortcut.Common.Pin}
+            shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
             onAction={actions.togglePinned}
           />,
         ]
@@ -137,7 +137,7 @@ export function SearchNotesEmptyActionPanel({ mode, actions, onRefresh }: Omit<A
         key="show-all"
         title="Show All Notes"
         icon={Icon.Document}
-        shortcut={Keyboard.Shortcut.Common.Pin}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
         onAction={actions.togglePinned}
       />
     ) : enableContentSearch ? (
