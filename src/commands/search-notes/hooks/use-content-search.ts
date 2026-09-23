@@ -10,6 +10,7 @@ import {
   type ContentMatchRow,
 } from "../lib/note-search";
 
+// useSQL requires a query string even when execution is disabled.
 const EMPTY_QUERY = "SELECT '' AS queryKey, '' AS workspacePath, '' AS path, '' AS excerpt WHERE 0";
 const EMPTY_MATCHES = new Map<string, ContentMatch>();
 
