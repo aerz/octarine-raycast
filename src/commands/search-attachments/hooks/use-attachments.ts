@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { extensionPreferences } from "@lib/preferences";
 import { querySearchText } from "@lib/search";
 import type { Workspace } from "@type/octarine";
-import type { IndexedAttachment } from "@type/attachments";
+import { ALL_EXTENSIONS, type IndexedAttachment } from "@type/attachments";
 import { getAttachments } from "../lib/attachments";
 import { useLoadingToast } from "./use-loading-toast";
 
@@ -54,7 +54,7 @@ function buildSections(
   const grouped = new Map<string, WorkspaceAttachmentsSection>();
 
   for (const attachment of attachments) {
-    if (selectedExtension !== "all" && attachment.extension !== selectedExtension) {
+    if (selectedExtension !== ALL_EXTENSIONS && attachment.extension !== selectedExtension) {
       continue;
     }
 

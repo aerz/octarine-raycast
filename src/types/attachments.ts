@@ -1,5 +1,7 @@
 import { isAttachment, type Attachment } from "@type/octarine";
 
+export const ALL_EXTENSIONS = "all";
+
 export type IndexedAttachment = Attachment & {
   searchText: string;
 };

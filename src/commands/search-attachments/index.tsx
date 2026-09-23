@@ -5,10 +5,11 @@ import { AttachmentActions, AttachmentsGrid, ExtensionDropdown } from "./compone
 import { useAttachments } from "./hooks/use-attachments";
 import { useWorkspaces } from "@hooks/use-workspaces";
 import { searchAttachmentsPreferences } from "@lib/preferences";
+import { ALL_EXTENSIONS } from "@type/attachments";
 
 export default function SearchAttachmentsCommand() {
   const preferences = searchAttachmentsPreferences();
-  const [selectedExtension, setSelectedExtension] = useState("all");
+  const [selectedExtension, setSelectedExtension] = useState(ALL_EXTENSIONS);
   const [searchText, setSearchText] = useState("");
   const [refresh, setRefresh] = useState(false);
   const {
@@ -50,7 +51,7 @@ export default function SearchAttachmentsCommand() {
         <AttachmentsEmptyView actions={<AttachmentActions onRefresh={onRefresh} />} />
       ) : !hasResults ? (
         <SearchAttachmentsEmptyView actions={<AttachmentActions onRefresh={onRefresh} />} />
-      ) : selectedExtension === "all" ? (
+      ) : selectedExtension === ALL_EXTENSIONS ? (
         <AttachmentsGrid
           grouped
           sections={sections}

@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import type { ReactNode } from "react";
 import { openAttachment } from "@lib/octarine";
-import type { IndexedAttachment } from "@type/attachments";
+import { ALL_EXTENSIONS, type IndexedAttachment } from "@type/attachments";
 import type { WorkspaceAttachmentsSection } from "../hooks/use-attachments";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic"]);
@@ -27,7 +27,7 @@ type AttachmentActionsProps = {
 export function ExtensionDropdown({ extensions, value, onChange }: ExtensionDropdownProps) {
   return (
     <Grid.Dropdown tooltip="Filter by file extension" value={value} onChange={onChange}>
-      <Grid.Dropdown.Item title="All Extensions" value="all" />
+      <Grid.Dropdown.Item title="All Extensions" value={ALL_EXTENSIONS} />
       {extensions.map((extension) => (
         <Grid.Dropdown.Item key={extension} title={extension.toUpperCase()} value={extension} />
       ))}
