@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { Detail, Toast, showToast } from "@raycast/api";
+import { Action, ActionPanel, Detail, Icon, Toast, showToast } from "@raycast/api";
 
-export function DateFormatsDetail() {
+export function DateFormatsDetail({ onSearch }: { onSearch: () => void }) {
   useEffect(() => {
     showToast({
       style: Toast.Style.Failure,
@@ -24,6 +24,11 @@ export function DateFormatsDetail() {
         "- Natural language weeks: `this week`, `last week`, `next week`",
         "- Relative weeks: `2 weeks ago`, `in 2 weeks`",
       ].join("\n")}
+      actions={
+        <ActionPanel>
+          <Action title="Search Daily Desk Notes" icon={Icon.MagnifyingGlass} onAction={onSearch} />
+        </ActionPanel>
+      }
     />
   );
 }

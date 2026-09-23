@@ -6,7 +6,7 @@ import { WorkspaceList } from "@components/workspace-list";
 import { formatDateLabel } from "@lib/daily-desk";
 import { openDailyDeskNotePreferences } from "@lib/preferences";
 import { DailyNotesEmptyView } from "./empty-view";
-import { DailyNoteActions, DailyNoteItem, DailyNoteSuggestion } from "./notes";
+import { DailyNoteEmptyActionPanel, DailyNoteItem, DailyNoteSuggestion } from "./notes";
 import {
   type DailyDeskSearchActions,
   type DailyDeskSearchQuery,
@@ -112,7 +112,7 @@ function DailyDeskResults({ query, workspace, results, actions, showFilename }: 
       suggestion={results.suggestion}
       onOpen={actions.openDailyNote}
       onChooseWorkspace={actions.chooseWorkspace}
-      onOpenDate={actions.openDate}
+      onRefresh={actions.onRefresh}
       onClear={actions.clearLastWorkspace}
     />
   ) : null;
@@ -122,7 +122,9 @@ function DailyDeskResults({ query, workspace, results, actions, showFilename }: 
     ) : (
       suggestionItem
     );
-  const emptyActions = <DailyNoteActions onRefresh={actions.onRefresh} />;
+  const emptyActions = (
+    <DailyNoteEmptyActionPanel hasWorkspaces={workspace.dropdown.length > 0} onRefresh={actions.onRefresh} />
+  );
 
   return (
     <>

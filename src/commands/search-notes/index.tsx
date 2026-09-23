@@ -4,7 +4,7 @@ import { NotesList } from "@components/notes-list";
 import { WorkspaceDropdown } from "@components/workspace-dropdown";
 import { searchNotesPreferences } from "@lib/preferences";
 import { NotesEmptyView, PinnedNotesEmptyView } from "./components/empty-views";
-import { NoteItem, SearchNotesActionPanel } from "./components/notes";
+import { NoWorkspacesActionPanel, NoteItem, SearchNotesEmptyActionPanel } from "./components/notes";
 import { useNotePreview } from "./hooks/use-note-preview";
 import { useSearchNotes } from "./hooks/use-search";
 
@@ -21,7 +21,8 @@ export default function SearchNotesCommand() {
     refreshNotes: actions.refresh,
   });
   const hasResults = notes.length > 0;
-  const panel = <SearchNotesActionPanel mode={mode} actions={actions} onRefresh={preview.refresh} />;
+  const noWorkspacesPanel = <NoWorkspacesActionPanel onRefresh={preview.refresh} />;
+  const noResultsPanel = <SearchNotesEmptyActionPanel mode={mode} actions={actions} onRefresh={preview.refresh} />;
 
   return (
     <List
@@ -41,11 +42,11 @@ export default function SearchNotesCommand() {
       }
     >
       {workspace.dropdown.length === 0 ? (
-        <NotesEmptyView actions={panel} />
+        <NotesEmptyView actions={noWorkspacesPanel} />
       ) : mode.pinnedOnly && !search.text && !hasResults ? (
-        <PinnedNotesEmptyView actions={panel} />
+        <PinnedNotesEmptyView actions={noResultsPanel} />
       ) : !hasResults ? (
-        <SearchNotesEmptyView actions={panel} />
+        <SearchNotesEmptyView actions={noResultsPanel} />
       ) : (
         <NotesList
           sections={results.sections}

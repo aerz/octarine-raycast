@@ -1,4 +1,13 @@
-import { Action, ActionPanel, Icon, List, openExtensionPreferences, Toast, showToast } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  Icon,
+  List,
+  openCommandPreferences,
+  openExtensionPreferences,
+  Toast,
+  showToast,
+} from "@raycast/api";
 import type { ReactNode } from "react";
 import { dailyNoteStem } from "@lib/daily-desk";
 import { openNote } from "@lib/octarine";
@@ -18,7 +27,7 @@ type DailyNoteSuggestionProps = {
   suggestion: DailyDeskSuggestion;
   onOpen: (date: string, workspaceName: string) => Promise<void>;
   onChooseWorkspace: (date: string) => void;
-  onOpenDate?: () => void;
+  onRefresh: () => void;
   onClear: () => void | Promise<void>;
 };
 
@@ -57,7 +66,11 @@ export function DailyNoteItem({
       keywords={[note.path, note.title, note.folder.workspace.name]}
       actions={
         <DailyNoteActions onRefresh={onRefresh} onOpenDate={onOpenDate} openDateTitle={openDateTitle}>
-          <Action title="Open Note in Octarine" onAction={() => void openExistingNote()} />
+          <Action
+            title="Open Note in Octarine"
+            icon={Icon.AppWindow}
+            onAction={() => void openExistingNote()}
+          />
         </DailyNoteActions>
       }
     />
@@ -68,43 +81,35 @@ export function DailyNoteSuggestion({
   suggestion,
   onOpen,
   onChooseWorkspace,
-  onOpenDate,
+  onRefresh,
   onClear,
 }: DailyNoteSuggestionProps) {
   const { label, date, target, locked } = suggestion;
+  const workspaceActions = target
+    ? [
+        <Action
+          key="open"
+          title={`Open in ${target.name}`}
+          icon={Icon.AppWindow}
+          onAction={() => void onOpen(date, target.name)}
+        />,
+        ...(!locked
+          ? [
+              <Action key="choose" title="Choose Workspace…" icon={Icon.List} onAction={() => onChooseWorkspace(date)} />,
+              <Action key="clear" title="Clear Last Workspace" icon={Icon.XMarkCircle} onAction={onClear} />,
+            ]
+          : []),
+      ]
+    : <Action title={`Open ${label}`} icon={Icon.AppWindow} onAction={() => onChooseWorkspace(date)} />;
 
   return (
     <List.Item
       icon={Icon.PlusCircle}
       title={label}
       actions={
-        <ActionPanel>
-          {target ? (
-            <>
-              <Action
-                title={`Open in ${target.name}`}
-                icon={Icon.AppWindow}
-                onAction={() => void onOpen(date, target.name)}
-              />
-              {locked ? null : (
-                <>
-                  <Action title="Choose Workspace…" icon={Icon.List} onAction={() => onChooseWorkspace(date)} />
-                  <Action title="Clear Last Workspace" icon={Icon.XMarkCircle} onAction={onClear} />
-                </>
-              )}
-            </>
-          ) : (
-            <Action title={`Open ${label}`} icon={Icon.AppWindow} onAction={() => onChooseWorkspace(date)} />
-          )}
-          {onOpenDate ? (
-            <Action
-              title={`Force Open ${label}`}
-              icon={Icon.PlusCircle}
-              shortcut={{ modifiers: ["cmd"], key: "return" }}
-              onAction={onOpenDate}
-            />
-          ) : null}
-        </ActionPanel>
+        <DailyNoteActions onRefresh={onRefresh}>
+          {workspaceActions}
+        </DailyNoteActions>
       }
     />
   );
@@ -123,7 +128,24 @@ export function DailyNoteActions({ children, onRefresh, onOpenDate, openDateTitl
         />
       ) : null}
       <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
-      <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
+      <Action title="Open Daily Desk Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />
+    </ActionPanel>
+  );
+}
+
+export function DailyNoteEmptyActionPanel({
+  hasWorkspaces,
+  onRefresh,
+}: {
+  hasWorkspaces: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <ActionPanel>
+      {!hasWorkspaces ? (
+        <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
+      ) : null}
+      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
     </ActionPanel>
   );
 }

@@ -8,8 +8,8 @@ function props(children?: ReactNode) {
       "Check Workspace Root Paths in extension preferences. A valid workspace must contain a .octarine folder.",
     actions: (
       <ActionPanel>
-        {children}
         <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
+        {children}
       </ActionPanel>
     ),
   };

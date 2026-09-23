@@ -1,4 +1,12 @@
-import { Action, ActionPanel, Icon, List } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  Icon,
+  Keyboard,
+  List,
+  openCommandPreferences,
+  openExtensionPreferences,
+} from "@raycast/api";
 import type { ReactNode } from "react";
 import { openNote } from "@lib/octarine";
 import type { IndexedNote } from "@type/notes";
@@ -43,14 +51,23 @@ export function NoteItem({ result, mode, actions, preview }: NoteItemProps) {
       detail={preview.isVisible && selected ? <NoteSidebarPreview key={preview.refreshKey} note={note} /> : undefined}
       actions={
         <SearchNotesActionPanel mode={mode} actions={actions} onRefresh={preview.refresh}>
-          <Action title="Open Note in Octarine" onAction={() => void openNote(note.path, note.folder.workspace.name)} />
+          <Action
+            title="Open Note in Octarine"
+            icon={Icon.AppWindow}
+            onAction={() => void openNote(note.path, note.folder.workspace.name)}
+          />
           <Action
             title={preview.isVisible ? "Hide Preview" : "Show Preview"}
             icon={Icon.Eye}
             shortcut={{ modifiers: ["cmd"], key: "return" }}
             onAction={preview.toggle}
           />
-          <Action.Push title="Quick Look Note" icon={Icon.Eye} target={<NotePreview note={note} />} />
+          <Action.Push
+            title="Quick Look Note"
+            icon={Icon.Eye}
+            shortcut={Keyboard.Shortcut.Common.ToggleQuickLook}
+            target={<NotePreview note={note} />}
+          />
         </SearchNotesActionPanel>
       }
     />
@@ -66,6 +83,7 @@ export function SearchNotesActionPanel({ mode, actions, onRefresh, children }: A
       <Action
         title={pinnedOnly ? "Show All Notes" : "Show Pinned Notes Only"}
         icon={pinnedOnly ? Icon.Document : Icon.Tack}
+        shortcut={Keyboard.Shortcut.Common.Pin}
         onAction={actions.togglePinned}
       />
       <Action
@@ -74,6 +92,72 @@ export function SearchNotesActionPanel({ mode, actions, onRefresh, children }: A
         shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
         onAction={actions.toggleContent}
       />
+      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+      <Action title="Open Search Notes Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />
+    </ActionPanel>
+  );
+}
+
+export function SearchNotesEmptyActionPanel({ mode, actions, onRefresh }: Omit<ActionPanelProps, "children">) {
+  const showAllNotes = mode.pinnedOnly;
+  const enableContentSearch = !mode.contentEnabled;
+  const refreshIsPrimary = !showAllNotes && !enableContentSearch;
+  const searchActions = [
+    ...(!showAllNotes
+      ? [
+          <Action
+            key="pinned"
+            title="Show Pinned Notes Only"
+            icon={Icon.Tack}
+            shortcut={Keyboard.Shortcut.Common.Pin}
+            onAction={actions.togglePinned}
+          />,
+        ]
+      : []),
+    ...(showAllNotes || mode.contentEnabled
+      ? [
+          <Action
+            key="content"
+            title={mode.contentEnabled ? "Search Titles and Paths Only" : "Search Note Contents"}
+            icon={mode.contentEnabled ? Icon.MagnifyingGlass : Icon.Paragraph}
+            shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+            onAction={actions.toggleContent}
+          />,
+        ]
+      : []),
+  ];
+  const emptyActions = [
+    showAllNotes ? (
+      <Action
+        key="show-all"
+        title="Show All Notes"
+        icon={Icon.Document}
+        shortcut={Keyboard.Shortcut.Common.Pin}
+        onAction={actions.togglePinned}
+      />
+    ) : enableContentSearch ? (
+      <Action
+        key="content"
+        title="Search Note Contents"
+        icon={Icon.Paragraph}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+        onAction={actions.toggleContent}
+      />
+    ) : (
+      <Action key="refresh-primary" title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+    ),
+    ...searchActions,
+    ...(!refreshIsPrimary ? [<Action key="refresh" title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />] : []),
+    <Action key="preferences" title="Open Search Notes Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />,
+  ];
+
+  return <ActionPanel>{emptyActions}</ActionPanel>;
+}
+
+export function NoWorkspacesActionPanel({ onRefresh }: Pick<ActionPanelProps, "onRefresh">) {
+  return (
+    <ActionPanel>
+      <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
       <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
     </ActionPanel>
   );
