@@ -67,11 +67,7 @@ export function DailyNoteItem({
       keywords={[note.path, note.title, note.folder.workspace.name]}
       actions={
         <DailyNoteActions onRefresh={onRefresh} onOpenDate={onOpenDate} openDateTitle={openDateTitle}>
-          <Action
-            title="Open Note in Octarine"
-            icon={Icon.AppWindow}
-            onAction={() => void openExistingNote()}
-          />
+          <Action title="Open Note in Octarine" icon={Icon.AppWindow} onAction={() => void openExistingNote()} />
         </DailyNoteActions>
       }
     />
@@ -86,32 +82,30 @@ export function DailyNoteSuggestion({
   onClear,
 }: DailyNoteSuggestionProps) {
   const { label, date, target, locked } = suggestion;
-  const workspaceActions = target
-    ? [
-        <Action
-          key="open"
-          title={`Open in ${target.name}`}
-          icon={Icon.AppWindow}
-          onAction={() => void onOpen(date, target.name)}
-        />,
-        ...(!locked
-          ? [
-              <Action key="choose" title="Choose Workspace…" icon={Icon.List} onAction={() => onChooseWorkspace(date)} />,
-              <Action key="clear" title="Clear Last Workspace" icon={Icon.XMarkCircle} onAction={onClear} />,
-            ]
-          : []),
-      ]
-    : <Action title={`Open ${label}`} icon={Icon.AppWindow} onAction={() => onChooseWorkspace(date)} />;
+  const workspaceActions = target ? (
+    [
+      <Action
+        key="open"
+        title={`Open in ${target.name}`}
+        icon={Icon.AppWindow}
+        onAction={() => void onOpen(date, target.name)}
+      />,
+      ...(!locked
+        ? [
+            <Action key="choose" title="Choose Workspace…" icon={Icon.List} onAction={() => onChooseWorkspace(date)} />,
+            <Action key="clear" title="Clear Last Workspace" icon={Icon.XMarkCircle} onAction={onClear} />,
+          ]
+        : []),
+    ]
+  ) : (
+    <Action title={`Open ${label}`} icon={Icon.AppWindow} onAction={() => onChooseWorkspace(date)} />
+  );
 
   return (
     <List.Item
       icon={Icon.PlusCircle}
       title={label}
-      actions={
-        <DailyNoteActions onRefresh={onRefresh}>
-          {workspaceActions}
-        </DailyNoteActions>
-      }
+      actions={<DailyNoteActions onRefresh={onRefresh}>{workspaceActions}</DailyNoteActions>}
     />
   );
 }

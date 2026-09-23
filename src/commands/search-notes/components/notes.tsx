@@ -169,7 +169,12 @@ export function SearchNotesEmptyActionPanel({ mode, actions, onRefresh }: Omit<A
           />,
         ]
       : []),
-    <Action key="preferences" title="Open Search Notes Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />,
+    <Action
+      key="preferences"
+      title="Open Search Notes Preferences"
+      icon={Icon.Gear}
+      onAction={openCommandPreferences}
+    />,
   ];
 
   return <ActionPanel>{emptyActions}</ActionPanel>;
