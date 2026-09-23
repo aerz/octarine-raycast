@@ -52,9 +52,8 @@ export function AttachmentsGridView({
 
   return (
     <Grid
-      columns={8}
+      columns={5}
       fit={Grid.Fit.Fill}
-      inset={Grid.Inset.Large}
       filtering={false}
       isLoading={isLoading}
       searchText={searchText}
