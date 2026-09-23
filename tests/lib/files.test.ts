@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readMarkdownFrontmatter, scanMarkdownFiles, scanPaths } from "@lib/files";
+import { readMarkdownFrontmatter, scanMarkdownFiles, scanPaths, splitMarkdownFrontmatter } from "@lib/files";
 import { createTempDir, removeDir, writeTextFile } from "../helpers/fs";
 
 const workspaceMarker = ".octarine";
@@ -96,6 +96,38 @@ describe("files", () => {
     await writeTextFile(filePath, "---\npinned: true\n---\ncontent");
 
     await expect(readMarkdownFrontmatter(filePath)).resolves.toBe("---\npinned: true\n---");
+  });
+
+  it("splits a BOM frontmatter block using a dotted closing fence", () => {
+    const content = "\uFEFF---\r\ntitle: Note\r\n...\r\n\r\n# Body\r\n";
+
+    expect(splitMarkdownFrontmatter(content)).toEqual({
+      frontmatter: "---\r\ntitle: Note\r\n...",
+      body: "# Body\r\n",
+    });
+  });
+
+  it("does not treat an indented block-scalar line as the frontmatter closing fence", () => {
+    const content = "---\ndescription: |\n  ---\n  keep\npinned: true\n---\n\n# Body";
+
+    expect(splitMarkdownFrontmatter(content)).toEqual({
+      frontmatter: "---\ndescription: |\n  ---\n  keep\npinned: true\n---",
+      body: "# Body",
+    });
+  });
+
+  it("strips a structurally closed frontmatter block even when its YAML is invalid", () => {
+    expect(splitMarkdownFrontmatter("---\ntitle: [malformed\n---\n# Body")?.body).toBe("# Body");
+  });
+
+  it("does not split an incomplete or non-leading frontmatter block", () => {
+    expect(splitMarkdownFrontmatter("# Body")).toBeUndefined();
+    expect(splitMarkdownFrontmatter("---\ntitle: Note\n# Body")).toBeUndefined();
+    expect(splitMarkdownFrontmatter("# Note\n---\ntitle: Note\n---\n# Body")).toBeUndefined();
+    expect(splitMarkdownFrontmatter("  ---\ntitle: Note\n---\n# Body")).toBeUndefined();
+    expect(splitMarkdownFrontmatter("--- \t\ntitle: Note\n---\n# Body")).toEqual(
+      expect.objectContaining({ body: "# Body" }),
+    );
   });
 
   it("stops immediately when the file does not start with frontmatter", async () => {

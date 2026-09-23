@@ -58,6 +58,7 @@ describe("preferences", () => {
       showWorkspaceNoteCount: true,
       showPinnedNotesFirst: true,
       searchContent: true,
+      previewNotesByDefault: true,
     });
 
     expect(openDailyDeskNotePreferences()).toEqual({
@@ -70,7 +71,14 @@ describe("preferences", () => {
       showWorkspaceNoteCount: true,
       showPinnedNotesFirst: true,
       searchContent: true,
+      previewNotesByDefault: true,
     });
+  });
+
+  it("keeps the note preview panel off by default", () => {
+    setMockPreferences({});
+
+    expect(searchNotesPreferences().previewNotesByDefault).toBe(false);
   });
 
   it("enables the last workspace by default when the preference is unset", () => {

@@ -86,6 +86,15 @@
           "label": "Include note content by default",
           "default": false,
           "required": false
+        },
+        {
+          "name": "previewNotesByDefault",
+          "type": "checkbox",
+          "title": "Preview Notes by Default",
+          "description": "Show the selected note beside search results when opening Search Notes",
+          "label": "Show note preview side panel by default",
+          "default": false,
+          "required": false
         }
       ]
     },

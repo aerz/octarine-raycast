@@ -28,9 +28,9 @@ export function extensionPreferences(): ExtensionPreferences {
 }
 
 /**
- * Returns the configuration used by the Search Notes command.
+ * Returns preferences for note counts, pinned ordering, content search, and the preview panel.
  *
- * The result includes the setting that enables content search.
+ * An unset `previewNotesByDefault` preference is normalized to `false`.
  */
 export function searchNotesPreferences() {
   const preferences = getPreferenceValues<Preferences.SearchNotes>();
@@ -39,6 +39,7 @@ export function searchNotesPreferences() {
     showWorkspaceNoteCount: preferences.showWorkspaceNoteCount,
     showPinnedNotesFirst: preferences.showPinnedNotesFirst,
     searchContent: preferences.searchContent,
+    previewNotesByDefault: Boolean(preferences.previewNotesByDefault),
   };
 }
 

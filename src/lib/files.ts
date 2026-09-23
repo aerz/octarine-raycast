@@ -22,6 +22,11 @@ export type MarkdownFile = {
   relative: string;
 };
 
+export type SplitMarkdownFrontmatter = {
+  frontmatter: string;
+  body: string;
+};
+
 /** A path found during workspace discovery. */
 export type ScannedPath = {
   path: string;
@@ -228,6 +233,48 @@ export async function readMarkdownFrontmatter(filePath: string): Promise<string 
   }
 }
 
+/**
+ * Splits a Markdown document at a complete, leading frontmatter block without parsing its YAML.
+ *
+ * The opening `---` must be the first line, apart from an optional UTF-8 BOM and trailing
+ * spaces or tabs. The closing `---` or `...` must start in column zero, so a delimiter inside
+ * an indented YAML block scalar is kept as frontmatter content. The body omits blank lines
+ * immediately after the closing delimiter. A malformed YAML block is still split when its
+ * delimiters are complete.
+ *
+ * @param content - Complete Markdown source.
+ * @returns The frontmatter block and body, or undefined when no complete block starts the document.
+ */
+export function splitMarkdownFrontmatter(content: string): SplitMarkdownFrontmatter | undefined {
+  const normalized = normalizeStart(content);
+  const lines = normalized.match(/[^\n]*(?:\n|$)/g)?.filter((line) => line.length > 0) ?? [];
+  const firstLine = lines[0]?.replace(/\r?\n$/, "");
+
+  if (firstLine?.replace(/[ \t]+$/, "") !== "---") {
+    return undefined;
+  }
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const line = lines[index].replace(/\r?\n$/, "");
+    if (!/^(?:---|\.\.\.)[ \t]*$/.test(line)) {
+      continue;
+    }
+
+    return {
+      frontmatter: lines
+        .slice(0, index + 1)
+        .join("")
+        .replace(/\r?\n$/, ""),
+      body: lines
+        .slice(index + 1)
+        .join("")
+        .replace(/^(?:\r?\n)+/, ""),
+    };
+  }
+
+  return undefined;
+}
+
 /** Tests for common system files and temporary Office lock files. */
 export function isSystemGeneratedFile(name: string): boolean {
   const normalizedName = name.toLowerCase();
@@ -321,20 +368,7 @@ function toErrorMessage(error: unknown): string {
 }
 
 function extractFrontmatter(content: string): string | undefined {
-  const normalized = normalizeStart(content);
-  const lines = normalized.split(/\r?\n/);
-
-  if (lines[0]?.trim() !== "---") {
-    return undefined;
-  }
-
-  for (let index = 1; index < lines.length; index += 1) {
-    if (/^\s*(---|\.\.\.)\s*$/.test(lines[index])) {
-      return lines.slice(0, index + 1).join("\n");
-    }
-  }
-
-  return undefined;
+  return splitMarkdownFrontmatter(content)?.frontmatter;
 }
 
 function normalizeStart(content: string): string {

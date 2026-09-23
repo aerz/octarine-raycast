@@ -5,6 +5,7 @@ import { WorkspaceDropdown } from "@components/workspace-dropdown";
 import { searchNotesPreferences } from "@lib/preferences";
 import { NotesEmptyView, PinnedNotesEmptyView } from "./components/empty-views";
 import { NoteItem, SearchNotesActionPanel } from "./components/notes";
+import { useNotePreview } from "./hooks/use-note-preview";
 import { useSearchNotes } from "./hooks/use-search";
 
 export default function SearchNotesCommand() {
@@ -13,15 +14,23 @@ export default function SearchNotesCommand() {
     searchContent: preferences.searchContent,
     showPinnedNotesFirst: preferences.showPinnedNotesFirst,
   });
-  const hasResults = results.sections.some((section) => section.notes.length > 0);
-  const panel = <SearchNotesActionPanel mode={mode} actions={actions} />;
+  const notes = results.sections.flatMap((section) => section.notes);
+  const preview = useNotePreview({
+    notes,
+    previewByDefault: preferences.previewNotesByDefault,
+    refreshNotes: actions.refresh,
+  });
+  const hasResults = notes.length > 0;
+  const panel = <SearchNotesActionPanel mode={mode} actions={actions} onRefresh={preview.refresh} />;
 
   return (
     <List
       filtering={false}
       isLoading={isLoading}
+      isShowingDetail={preview.isVisible && hasResults}
       throttle={mode.contentEnabled}
       onSearchTextChange={actions.onSearchTextChange}
+      onSelectionChange={preview.onSelectionChange}
       searchBarPlaceholder={searchPlaceholder(mode.contentEnabled)}
       searchBarAccessory={
         <WorkspaceDropdown
@@ -43,7 +52,13 @@ export default function SearchNotesCommand() {
           grouped={workspace.grouped}
           counter={preferences.showWorkspaceNoteCount}
           renderNote={(note) => (
-            <NoteItem key={note.id} result={{ note, match: results.matchOf(note) }} mode={mode} actions={actions} />
+            <NoteItem
+              key={note.id}
+              result={{ note, match: results.matchOf(note) }}
+              mode={mode}
+              actions={actions}
+              preview={preview}
+            />
           )}
         />
       )}

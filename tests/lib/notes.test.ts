@@ -62,6 +62,23 @@ describe("notes", () => {
     ]);
   });
 
+  it("keeps an indented block-scalar delimiter inside frontmatter while detecting pinned", async () => {
+    tempDir = await createTempDir("octarine-notes-frontmatter-block-scalar");
+
+    const workspace = {
+      name: "Work",
+      path: path.join(tempDir, "Work"),
+    };
+    await writeTextFile(
+      path.join(workspace.path, "Note.md"),
+      "---\ndescription: |\n  ---\n  keep\npinned: true\n---\n# Body",
+    );
+
+    const [note] = await scanNotes([workspace], new Set());
+
+    expect(note.pinned).toBe(true);
+  });
+
   it("loads all notes and reuses the notes cache", async () => {
     tempDir = await createTempDir("octarine-notes-cache");
 
