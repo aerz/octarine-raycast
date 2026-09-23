@@ -16,25 +16,25 @@
       "name": "workspaceRoots",
       "type": "textfield",
       "required": true,
-      "title": "Workspace Root Paths",
-      "description": "Comma-separated root folders to scan for Octarine workspaces",
-      "placeholder": "~/Documents/Octarine, ~/Work/Notes"
+      "title": "Workspace paths",
+      "description": "Paths to Octarine workspaces or folders containing them, separated by commas.",
+      "placeholder": "~/path/to/workspace, ~/path/to/folder"
     },
     {
       "name": "excludedWorkspaces",
       "type": "textfield",
-      "placeholder": "folder1, folder2, ...",
-      "title": "Exclude Workspaces",
+      "placeholder": "Workspace A, Workspace B",
+      "title": "Workspaces to exclude",
       "required": false,
-      "description": "Comma-separated workspace names to skip during workspace discovery"
+      "description": "Workspace names Raycast should skip, separated by commas."
     },
     {
       "name": "excludedFoldersInWorkspaces",
       "type": "textfield",
-      "placeholder": "folder1, folder2, ...",
-      "title": "Exclude Folders in Workspaces",
+      "placeholder": "Folder A, Folder B",
+      "title": "Folders to exclude",
       "required": false,
-      "description": "Comma-separated folder names to exclude from search results inside included workspaces"
+      "description": "Folder names to exclude from note and attachment results across all workspaces, separated by commas."
     }
   ],
   "license": "MIT",
@@ -63,17 +63,17 @@
         {
           "name": "showWorkspaceNoteCount",
           "type": "checkbox",
-          "title": "Show Workspace Note Count",
-          "description": "Show or hide note counts in workspace section titles",
-          "label": "Show note count in workspace section titles",
+          "title": "Search results",
+          "description": "Adds a note count to each workspace section title.",
+          "label": "Show a note count in each workspace section",
           "default": false,
           "required": false
         },
         {
           "name": "showPinnedNotesFirst",
           "type": "checkbox",
-          "title": "Show Pinned Notes First",
-          "description": "Sort the pinned notes to the top of the list in each workspace.",
+          "title": "",
+          "description": "Moves pinned notes to the top of results in each workspace.",
           "label": "Show pinned notes first",
           "default": false,
           "required": false
@@ -81,8 +81,8 @@
         {
           "name": "searchContent",
           "type": "checkbox",
-          "title": "Search Note Content",
-          "description": "Search note text in addition to titles and paths",
+          "title": "",
+          "description": "Searches note content alongside note titles and file paths.",
           "label": "Include note content by default",
           "default": false,
           "required": false
@@ -90,9 +90,9 @@
         {
           "name": "previewNotesByDefault",
           "type": "checkbox",
-          "title": "Preview Notes by Default",
-          "description": "Show the selected note beside search results when opening Search Notes",
-          "label": "Show note preview side panel by default",
+          "title": "",
+          "description": "Shows the selected note beside the results list when Search Notes opens.",
+          "label": "Show a note preview by default",
           "default": false,
           "required": false
         }
@@ -101,34 +101,33 @@
     {
       "name": "search-attachments",
       "title": "Search Attachments",
-      "description": "Browse all files attached to notes across your Octarine workspaces",
+      "description": "Search attachments across Octarine workspaces",
       "mode": "view",
       "preferences": [
         {
           "name": "showWorkspaceAttachmentCount",
           "type": "checkbox",
-          "title": "Show Workspace Attachment",
-          "description": "Display the number of attachments per workspace in parentheses",
-          "label": "Show Workspace Attachment",
+          "title": "Attachment results",
+          "description": "Adds an attachment count to each workspace section title.",
+          "label": "Show an attachment count in each workspace section",
           "default": false,
           "required": false
         },
         {
           "name": "flattenWorkspaceSections",
           "type": "checkbox",
-          "title": "Flatten workspace sections",
-          "description": "Show attachments in one flat list without workspace grouping",
-          "label": "Flatten workspace sections",
+          "title": "",
+          "description": "Applies when All Extensions is selected.",
+          "label": "Show attachments in one list",
           "default": false,
           "required": false
         },
         {
           "name": "excludeFileExtensions",
           "type": "textfield",
-          "title": "Exclude File Extensions",
-          "description": "Comma-separated list of file extensions to omit from results.",
-          "label": "Exclude File Extensions",
-          "placeholder": "mp4, png, pdf",
+          "title": "File extensions to exclude",
+          "description": "Extensions to omit from results, separated by commas. A leading dot is optional.",
+          "placeholder": "png, mp4, pdf",
           "required": false
         }
       ]
@@ -136,7 +135,7 @@
     {
       "name": "open-daily-desk-note",
       "title": "Open Daily Desk Note",
-      "description": "Browse or open Daily Desk notes by date",
+      "description": "Find and open Daily Desk notes by date",
       "mode": "view",
       "arguments": [
         {
@@ -156,27 +155,28 @@
         {
           "name": "defaultWorkspace",
           "type": "textfield",
-          "title": "Default Workspace",
+          "title": "Default workspace",
           "required": false,
-          "description": "Set default workspace. If empty, a selector will be shown."
+          "description": "Enter a workspace name to select when the command opens. Leave blank to show notes from all workspaces.",
+          "placeholder": "Workspace name"
         },
         {
           "name": "showFilename",
           "type": "checkbox",
-          "title": "Show Filename",
-          "label": "Show filename (e.g. 2023-02-18) instead of natural dates",
+          "title": "Daily note titles",
+          "label": "Use the file name as the result title",
           "required": false,
           "default": false,
-          "description": "Display notes using their file name format instead of natural language dates"
+          "description": "Shows the file name without its extension, such as 2023-02-18. The formatted date or week label appears as the subtitle."
         },
         {
           "name": "useLastWorkspace",
           "type": "checkbox",
-          "title": "Use Last Workspace",
-          "label": "Open suggested notes in the last used workspace",
+          "title": "Date suggestions",
+          "label": "Use the last workspace for date suggestions",
           "required": false,
           "default": true,
-          "description": "Remember the last workspace used and open suggested dates there instead of asking every time"
+          "description": "When you search all workspaces, date suggestions use the workspace where you last opened a note."
         }
       ]
     }
