@@ -1,14 +1,21 @@
-import { Grid } from "@raycast/api";
+import type { ComponentType } from "react";
 import { useState } from "react";
-import { AttachmentsEmptyView, SearchAttachmentsEmptyView } from "./components/empty-views";
-import { AttachmentActions, AttachmentsGrid, EmptyAttachmentsActions, ExtensionDropdown } from "./components/grid";
 import { useAttachments } from "./hooks/use-attachments";
 import { useWorkspaces } from "@hooks/use-workspaces";
 import { searchAttachmentsPreferences } from "@lib/preferences";
 import { ALL_EXTENSIONS } from "@type/attachments";
+import { AttachmentsGridView } from "./components/grid";
+import { AttachmentsListView } from "./components/list";
+import type { AttachmentLayout, AttachmentViewProps } from "./components/view";
+
+const attachmentViews = {
+  grid: AttachmentsGridView,
+  list: AttachmentsListView,
+} satisfies Record<AttachmentLayout, ComponentType<AttachmentViewProps>>;
 
 export default function SearchAttachmentsCommand() {
   const preferences = searchAttachmentsPreferences();
+  const [layout, setLayout] = useState<AttachmentLayout>("grid");
   const [selectedExtension, setSelectedExtension] = useState(ALL_EXTENSIONS);
   const [searchText, setSearchText] = useState("");
   const [refresh, setRefresh] = useState(false);
@@ -17,7 +24,12 @@ export default function SearchAttachmentsCommand() {
     status: { isLoading: isWorkspacesLoading },
     revalidate: revalidateWorkspaces,
   } = useWorkspaces({ refresh });
-  const { dropdown, sections, isLoading, revalidate } = useAttachments({
+  const {
+    dropdown: extensions,
+    sections,
+    isLoading,
+    revalidate,
+  } = useAttachments({
     workspaces,
     enabled: !isWorkspacesLoading,
     excludedExtensions: preferences.excludedExtensions,
@@ -25,7 +37,8 @@ export default function SearchAttachmentsCommand() {
     selectedExtension,
     refresh,
   });
-  const hasResults = sections.some((section) => section.attachments.length > 0);
+  const View = attachmentViews[layout];
+  const grouped = selectedExtension === ALL_EXTENSIONS && !preferences.flattenWorkspaceSections;
   const onRefresh = () => {
     if (refresh) {
       void revalidateWorkspaces();
@@ -36,31 +49,18 @@ export default function SearchAttachmentsCommand() {
   };
 
   return (
-    <Grid
-      columns={5}
-      fit={Grid.Fit.Fill}
-      filtering={false}
+    <View
+      extensions={extensions}
+      selectedExtension={selectedExtension}
+      onExtensionChange={setSelectedExtension}
+      sections={sections}
+      grouped={grouped}
+      showWorkspaceAttachmentCount={preferences.showWorkspaceAttachmentCount}
       isLoading={isLoading}
+      searchText={searchText}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search attachments"
-      searchBarAccessory={
-        <ExtensionDropdown extensions={dropdown} value={selectedExtension} onChange={setSelectedExtension} />
-      }
-    >
-      {dropdown.length === 0 ? (
-        <AttachmentsEmptyView actions={<EmptyAttachmentsActions onRefresh={onRefresh} />} />
-      ) : !hasResults ? (
-        <SearchAttachmentsEmptyView actions={<AttachmentActions onRefresh={onRefresh} />} />
-      ) : selectedExtension === ALL_EXTENSIONS && !preferences.flattenWorkspaceSections ? (
-        <AttachmentsGrid
-          grouped
-          sections={sections}
-          showWorkspaceAttachmentCount={preferences.showWorkspaceAttachmentCount}
-          onRefresh={onRefresh}
-        />
-      ) : (
-        <AttachmentsGrid sections={sections} onRefresh={onRefresh} />
-      )}
-    </Grid>
+      onRefresh={onRefresh}
+      onViewChange={setLayout}
+    />
   );
 }

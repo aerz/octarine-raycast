@@ -1,10 +1,10 @@
-import { Grid, Icon } from "@raycast/api";
+import { Icon, List } from "@raycast/api";
 import type { IndexedAttachment } from "@type/attachments";
 import { ALL_EXTENSIONS } from "@type/attachments";
 import { AttachmentActions, EmptyAttachmentsActions, type AttachmentViewAction } from "./actions";
 import { attachmentPreview, type AttachmentViewProps } from "./view";
 
-export function AttachmentsGridView({
+export function AttachmentsListView({
   extensions,
   selectedExtension,
   onExtensionChange,
@@ -18,17 +18,17 @@ export function AttachmentsGridView({
   onViewChange,
 }: AttachmentViewProps) {
   const viewAction: AttachmentViewAction = {
-    title: "Use List View",
-    icon: Icon.AppWindowList,
-    onAction: () => onViewChange("list"),
+    title: "Use Grid View",
+    icon: Icon.AppWindowGrid2x2,
+    onAction: () => onViewChange("grid"),
   };
 
   const renderAttachment = (file: IndexedAttachment) => (
-    <Grid.Item
+    <List.Item
       key={file.path}
       title={file.name}
       subtitle={file.extension.toUpperCase()}
-      content={attachmentPreview(file)}
+      icon={attachmentPreview(file)}
       quickLook={{ name: file.name, path: file.path }}
       keywords={[file.workspace.name, file.extension]}
       actions={<AttachmentActions file={file} onRefresh={onRefresh} viewAction={viewAction} />}
@@ -37,7 +37,7 @@ export function AttachmentsGridView({
 
   const results = grouped
     ? sections.map((section) => (
-        <Grid.Section
+        <List.Section
           key={section.workspace.path}
           title={
             showWorkspaceAttachmentCount
@@ -46,38 +46,35 @@ export function AttachmentsGridView({
           }
         >
           {section.attachments.map(renderAttachment)}
-        </Grid.Section>
+        </List.Section>
       ))
     : sections.flatMap((section) => section.attachments.map(renderAttachment));
 
   return (
-    <Grid
-      columns={8}
-      fit={Grid.Fit.Fill}
-      inset={Grid.Inset.Large}
+    <List
       filtering={false}
       isLoading={isLoading}
       searchText={searchText}
       onSearchTextChange={onSearchTextChange}
       searchBarPlaceholder="Search attachments"
       searchBarAccessory={
-        <Grid.Dropdown tooltip="Filter by file extension" value={selectedExtension} onChange={onExtensionChange}>
-          <Grid.Dropdown.Item title="All Extensions" value={ALL_EXTENSIONS} />
+        <List.Dropdown tooltip="Filter by file extension" value={selectedExtension} onChange={onExtensionChange}>
+          <List.Dropdown.Item title="All Extensions" value={ALL_EXTENSIONS} />
           {extensions.map((extension) => (
-            <Grid.Dropdown.Item key={extension} title={extension.toUpperCase()} value={extension} />
+            <List.Dropdown.Item key={extension} title={extension.toUpperCase()} value={extension} />
           ))}
-        </Grid.Dropdown>
+        </List.Dropdown>
       }
     >
       {extensions.length === 0 ? (
-        <Grid.EmptyView
+        <List.EmptyView
           icon={Icon.Paperclip}
           title="No Attachments Found"
           description="Attach a file to any note in Octarine to see it here."
           actions={<EmptyAttachmentsActions onRefresh={onRefresh} viewAction={viewAction} />}
         />
       ) : sections.length === 0 ? (
-        <Grid.EmptyView
+        <List.EmptyView
           title="No attachments found"
           description="Try a different search or filter"
           actions={<AttachmentActions onRefresh={onRefresh} viewAction={viewAction} />}
@@ -85,6 +82,6 @@ export function AttachmentsGridView({
       ) : (
         results
       )}
-    </Grid>
+    </List>
   );
 }

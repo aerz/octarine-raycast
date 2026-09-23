@@ -124,7 +124,7 @@ Search notes by title, path, or workspace name. Enable content search to include
 
 ## Search Attachments
 
-Browse [files attached](https://docs.octarine.app/editor/attachments) to notes across your workspaces. Search by filename, extension, or workspace name, then preview or open a file from the grid.
+Browse [files attached](https://docs.octarine.app/editor/attachments) to notes across your workspaces. Search by filename, extension, or workspace name, then preview or open a file. Choose Grid for image previews or List for compact system file icons from the Action Panel.
 
 **Actions**
 
@@ -136,6 +136,7 @@ Browse [files attached](https://docs.octarine.app/editor/attachments) to notes a
 | `⌘ Y`     | Toggle Quick Look   |
 | `⌘ ⇧ ,`   | Copy File Path      |
 | —         | Reveal in Finder    |
+| —         | Switch Grid/List in the Action Panel |
 
 **Search & Filter**
 
