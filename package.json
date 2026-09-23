@@ -123,6 +123,15 @@
           "required": false
         },
         {
+          "name": "listViewByDefault",
+          "type": "checkbox",
+          "title": "",
+          "description": "Opens Search Attachments in List view instead of Grid.",
+          "label": "Show attachments in a list by default",
+          "default": false,
+          "required": false
+        },
+        {
           "name": "excludeFileExtensions",
           "type": "textfield",
           "title": "File extensions to exclude",

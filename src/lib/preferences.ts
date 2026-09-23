@@ -49,13 +49,14 @@ export function searchNotesPreferences() {
  * Excluded extensions are lowercase and do not include a leading dot.
  */
 export function searchAttachmentsPreferences() {
-  const { showWorkspaceAttachmentCount, flattenWorkspaceSections, excludeFileExtensions } =
+  const { showWorkspaceAttachmentCount, flattenWorkspaceSections, listViewByDefault, excludeFileExtensions } =
     getPreferenceValues<Preferences.SearchAttachments>();
   const excludedExtensions = normalizeExtensions(excludeFileExtensions);
 
   return {
     showWorkspaceAttachmentCount,
     flattenWorkspaceSections,
+    listViewByDefault: Boolean(listViewByDefault),
     excludedExtensions,
   };
 }

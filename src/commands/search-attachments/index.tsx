@@ -15,7 +15,7 @@ const attachmentViews = {
 
 export default function SearchAttachmentsCommand() {
   const preferences = searchAttachmentsPreferences();
-  const [layout, setLayout] = useState<AttachmentLayout>("grid");
+  const [layout, setLayout] = useState<AttachmentLayout>(preferences.listViewByDefault ? "list" : "grid");
   const [selectedExtension, setSelectedExtension] = useState(ALL_EXTENSIONS);
   const [searchText, setSearchText] = useState("");
   const [refresh, setRefresh] = useState(false);

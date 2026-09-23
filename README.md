@@ -146,4 +146,5 @@ Type to search by filename, extension, or workspace name. Use the dropdown to fi
 
 - **Show an attachment count in each workspace section**. Adds an attachment count to each workspace section title when results are grouped by workspace.
 - **Show attachments in one list**. Applies when **All Extensions** is selected.
+- **Show attachments in a list by default**. Opens Search Attachments in List view instead of Grid.
 - **File extensions to exclude**. Comma-separated extensions to omit from results. A leading dot is optional.
