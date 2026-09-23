@@ -4,9 +4,9 @@
 
 # Octarine for Raycast
 
-Control [Octarine](https://octarine.app) directly from Raycast with a curated set of commands designed to streamline your workflow.
+Use [Octarine](https://octarine.app) from Raycast to open today's Daily Desk note in a workspace, browse Daily Desk notes by date, and search notes and attachments.
 
-Install the extension from the Raycast Store, configure one or more workspace locations, and use the ready-to-use commands below to access your personal notes faster.
+Install the extension from the Raycast Store, then configure **Workspace paths** in extension preferences.
 
 ## Overview
 
@@ -15,36 +15,65 @@ Install the extension from the Raycast Store, configure one or more workspace lo
 - [Search Notes](#search-notes)
 - [Search Attachments](#search-attachments)
 
+**Extension Preferences**
+
+- **Workspace paths** *(required)*. Enter comma-separated paths to workspaces or parent folders. For a parent folder, Raycast checks its immediate subfolders. Each workspace must contain a `.octarine` folder.
+- **Workspaces to exclude**. Workspace names to skip, separated by commas.
+- **Folders to exclude**. Folder names to omit from note and attachment results across all workspaces, separated by commas.
+
+Press `⌘ K` in any command to open the Action Panel.
+
 ## Open Workspace
 
-Browse and open any of your [workspaces](https://docs.octarine.app/core-concepts/workspaces) with a single keystroke.
+Select a [workspace](https://docs.octarine.app/core-concepts/workspaces) to open its [Daily Desk](https://docs.octarine.app/daily-desk/) note for today.
 
 **Arguments**
 
-- **Workspace** *(optional)*. Type a workspace name to open it directly, skipping manual selection.
+- **Workspace** *(optional)*. Enter a workspace name to open today's note there directly.
+
+**Actions**
+
+| Shortcut  | Action                                      |
+|-----------|---------------------------------------------|
+| `Enter`   | Open Workspace in the selected workspace   |
+| `⌘ Enter` | Copy Path for the selected workspace        |
+| `⌘ R`     | Refresh the workspace list                 |
 
 ## Open Daily Desk Note
 
-Browse or open any [Daily Desk](https://docs.octarine.app/daily-desk/) note. Type a date in natural language to open it instantly, or run the command with no arguments to browse every note in the `Daily` folder of each workspace.
+Open a Daily Desk note by date, or browse daily and weekly notes in the `Daily` folder of each workspace.
 
 **Arguments**
 
-- **Date** *(optional)*. Use a smart date format to open a specific date (see formats below). The date is normalized, so `22 Dec, 2026` opens the `2026-12-22` note.
-- **Workspace** *(optional)*. The workspace name to open the daily desk note in.
+- **Date** *(optional)*. Enter a supported date or week format to open that note.
+- **Workspace** *(optional)*. With a date, opens the note in that workspace. Without a date, filters the list to that workspace.
 
-When no date is provided, the command lists all daily and weekly notes across workspaces, grouped into sections and ordered from newest to oldest. Use the dropdown to filter by workspace, or type a date to jump to a note. Typing a date makes fuzzy results available, so `feb 2` also shows notes from February 20-29, while exact date matches are listed before fuzzy ones.
+**Actions**
+
+| Shortcut  | Action                  |
+|-----------|-------------------------|
+| `Enter`   | Open Note in Octarine   |
+| `⌘ Enter` | Force Open [date or week] |
+| `Enter`   | Open [date or week]     |
+| `Enter`   | Open in [workspace]     |
+| `⌘ Enter` | Choose Workspace…       |
+| `Enter`   | Open Daily Desk Note    |
+| `⌘ Enter` | Copy Path               |
+| `⌘ R`     | Refresh                 |
+
+Without a date argument, the command lists daily and weekly notes from each workspace's `Daily` folder. Results are grouped by workspace and ordered from newest to oldest within each workspace. Use the dropdown to filter by workspace. Type a date to find matching notes; exact date matches move to the top of their workspace section. Other search terms match note titles, file paths, and workspace names.
 
 **Opening a Missing Date**
 
-While typing a supported date, an **Open [date]** item is placed as the first item of its workspace section (the last used workspace, or **No Workspace**), without duplicating the section. If that workspace has no other results, the item gets its own section. Pressing `Enter` validates the date and opens a workspace selector; picking a workspace creates or opens that note in Octarine.
+When a supported date has no matching note, the list shows a suggestion titled with the formatted date or week. With **All Workspaces** selected, the suggestion appears in the last used workspace section when one is available. Otherwise, it appears under **Choose a Workspace**. When a specific workspace is selected, the suggestion targets that workspace.
 
-When **Use Last Workspace** is enabled and a workspace was used before, the section shows that workspace name and `Enter` opens the note there directly. Use **Choose Workspace…** to pick another one, or **Clear Last Workspace** to forget it. If the workspace dropdown is filtering by a specific workspace, the suggestion always opens the note in that workspace.
+Press `Enter` to open the suggestion. If no workspace is selected or remembered, `Enter` opens the workspace selector. When a suggestion uses the last workspace, **Choose Workspace…** selects another one and **Clear Last Workspace** removes the saved workspace. With a supported date in the search field, press `⌘ Enter` from any visible note row to open that date, even when another row is selected.
 
 **Preferences**
 
-- **Default Workspace**. The workspace used when a date is provided without a workspace argument. If unset, a workspace selector will appear.
-- **Show Filename**. Shows file names such as `2023-02-18` instead of natural language dates like `February 18, 2023`.
-- **Use Last Workspace**. Remembers the last workspace used and opens suggested dates there instead of asking every time.
+- **Default workspace**. Selects the workspace for a date argument when no **Workspace** argument is provided. If unset, choose a workspace from the list.
+- **Use the file name as the result title**. Shows the file name without its extension, such as `2023-02-18`. The formatted date or week label appears as the subtitle.
+- **Use the last workspace for date suggestions**. When **All Workspaces** is selected, date suggestions use the workspace where you last opened a Daily Desk note.
 
 **Supported Date Formats**
 
@@ -52,7 +81,7 @@ When **Use Last Workspace** is enabled and a workspace was used before, the sect
 |------------------------|--------------------------------------------|
 | ISO date               | `2024-01-15`, `2024-12-25`                 |
 | ISO week               | `2024-W03`, `2026-W01`                     |
-| Natural language       | `today`, `yesterday`, `tomorrow`           |
+| Natural language dates | `today`, `yesterday`, `tomorrow`           |
 | Relative dates         | `2 days ago`, `next monday`, `last friday` |
 | Partial dates          | `jan 15`, `december 25`, `nov 3`           |
 | Full dates             | `jan 15 2026`, `22 Dec, 2026`              |
@@ -66,40 +95,54 @@ When **Use Last Workspace** is enabled and a workspace was used before, the sect
 
 ## Search Notes
 
-Search and open your Octarine notes from anywhere on your computer. Instantly filter across all configured workspaces by note name, folder, or workspace — without leaving your current context.
-
-**Search & Filter**
-
-- Queries are fuzzy by default for broader matches. To scope results to a specific folder, append a trailing slash to the folder name (e.g. articles/).
-- Use the dropdown to filter by workspace.
-- Open Actions (`⌘ K`) and select **Show Pinned Notes Only** to show only [pinned notes](https://docs.octarine.app/note-management/pinned) across all workspaces or within the selected workspace. Select **Show All Notes** to remove the filter.
-- Open Actions and select **Search Note Contents** (`⌘ ⇧ F`) to include note content for the current search. Content-only matches show a contextual excerpt; select **Search Titles and Paths Only** to return to the default mode.
-
-**Preferences**
-
-- **Show workspace note count**. Displays a note counter for each workspace section.
-- **Show Pinned Notes First**. Sorts pinned notes to the top of each workspace list.
-- **Search Content**. Includes note content in searches by default. This can still be toggled for the current session from Actions.
-
-## Search Attachments
-
-Browse all [files attached](https://docs.octarine.app/editor/attachments) to notes across your workspaces. Search, preview, and open attachments from a visual grid.
+Search notes by title, path, or workspace name. Enable content search to include note text.
 
 **Actions**
 
-| Shortcut  | Action                        |
-|-----------|-------------------------------|
-| `Enter`   | Search References in Octarine |
-| `⌘ Enter` | Open File                     |
-| `Space`   | Toggle Quick Look             |
-| `⌘ .`     | Copy File Path                |
+| Shortcut  | Action                                                  |
+|-----------|---------------------------------------------------------|
+| `Enter`   | Open Note in Octarine                                   |
+| `⌘ Enter` | Show or hide the note preview                           |
+| `⌘ Y`     | Quick Look Note                                         |
+| `⌘ ⇧ P`   | Show Pinned Notes Only or Show All Notes                |
+| `⌘ ⇧ F`   | Search Note Contents or Search Titles and Paths Only    |
+| `⌘ R`     | Refresh                                                 |
 
 **Search & Filter**
 
-Type to filter by filename or extension. Use the dropdown to narrow results by file type.
+- When content search is off, all query terms must match a note title, file path, or workspace name.
+- Use the dropdown to filter by workspace.
+- Select **Show Pinned Notes Only** to show only [pinned notes](https://docs.octarine.app/note-management/pinned) across all workspaces or within the selected workspace. Select **Show All Notes** to remove the filter.
+- Select **Search Note Contents** to include note content in the current search. Content-only matches show an excerpt. Select **Search Titles and Paths Only** to turn off content search. If content search is unavailable, results fall back to titles and paths.
 
 **Preferences**
 
-- **Show attachment count**. Display the number of attachments per workspace in parentheses.
-- **Flatten workspace sections**. Show all attachments in a single alphabetically sorted list.
-- **Exclude file extensions**. Comma-separated list of file extensions to omit from results.
+- **Show a note count in each workspace section**. Adds a note count to each workspace section title.
+- **Show pinned notes first**. Moves pinned notes to the top of results in each workspace.
+- **Include note content by default**. Searches note content alongside note titles and file paths.
+- **Show a note preview by default**. Shows the selected note beside the results list when Search Notes opens.
+
+## Search Attachments
+
+Browse [files attached](https://docs.octarine.app/editor/attachments) to notes across your workspaces. Search by filename, extension, or workspace name, then preview or open a file from the grid.
+
+**Actions**
+
+| Shortcut  | Action              |
+|-----------|---------------------|
+| `Enter`   | Open File           |
+| `⌘ Enter` | Search in Octarine  |
+| `⌘ R`     | Refresh             |
+| `⌘ Y`     | Toggle Quick Look   |
+| `⌘ ⇧ ,`   | Copy File Path      |
+| —         | Reveal in Finder    |
+
+**Search & Filter**
+
+Type to search by filename, extension, or workspace name. Use the dropdown to filter by file extension.
+
+**Preferences**
+
+- **Show an attachment count in each workspace section**. Adds an attachment count to each workspace section title when results are grouped by workspace.
+- **Show attachments in one list**. Applies when **All Extensions** is selected.
+- **File extensions to exclude**. Comma-separated extensions to omit from results. A leading dot is optional.
