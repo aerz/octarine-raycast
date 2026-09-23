@@ -2,6 +2,7 @@ import {
   Action,
   ActionPanel,
   Icon,
+  Keyboard,
   List,
   openCommandPreferences,
   openExtensionPreferences,
@@ -127,7 +128,12 @@ export function DailyNoteActions({ children, onRefresh, onOpenDate, openDateTitl
           onAction={onOpenDate}
         />
       ) : null}
-      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+      <Action
+        title="Refresh"
+        icon={Icon.ArrowClockwise}
+        shortcut={Keyboard.Shortcut.Common.Refresh}
+        onAction={onRefresh}
+      />
       <Action title="Open Daily Desk Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />
     </ActionPanel>
   );
@@ -145,7 +151,12 @@ export function DailyNoteEmptyActionPanel({
       {!hasWorkspaces ? (
         <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
       ) : null}
-      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+      <Action
+        title="Refresh"
+        icon={Icon.ArrowClockwise}
+        shortcut={Keyboard.Shortcut.Common.Refresh}
+        onAction={onRefresh}
+      />
     </ActionPanel>
   );
 }

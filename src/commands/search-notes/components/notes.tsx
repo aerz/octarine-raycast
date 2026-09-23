@@ -92,7 +92,12 @@ export function SearchNotesActionPanel({ mode, actions, onRefresh, children }: A
         shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
         onAction={actions.toggleContent}
       />
-      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+      <Action
+        title="Refresh"
+        icon={Icon.ArrowClockwise}
+        shortcut={Keyboard.Shortcut.Common.Refresh}
+        onAction={onRefresh}
+      />
       <Action title="Open Search Notes Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />
     </ActionPanel>
   );
@@ -144,10 +149,26 @@ export function SearchNotesEmptyActionPanel({ mode, actions, onRefresh }: Omit<A
         onAction={actions.toggleContent}
       />
     ) : (
-      <Action key="refresh-primary" title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+      <Action
+        key="refresh-primary"
+        title="Refresh"
+        icon={Icon.ArrowClockwise}
+        shortcut={Keyboard.Shortcut.Common.Refresh}
+        onAction={onRefresh}
+      />
     ),
     ...searchActions,
-    ...(!refreshIsPrimary ? [<Action key="refresh" title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />] : []),
+    ...(!refreshIsPrimary
+      ? [
+          <Action
+            key="refresh"
+            title="Refresh"
+            icon={Icon.ArrowClockwise}
+            shortcut={Keyboard.Shortcut.Common.Refresh}
+            onAction={onRefresh}
+          />,
+        ]
+      : []),
     <Action key="preferences" title="Open Search Notes Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />,
   ];
 
@@ -158,7 +179,12 @@ export function NoWorkspacesActionPanel({ onRefresh }: Pick<ActionPanelProps, "o
   return (
     <ActionPanel>
       <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+      <Action
+        title="Refresh"
+        icon={Icon.ArrowClockwise}
+        shortcut={Keyboard.Shortcut.Common.Refresh}
+        onAction={onRefresh}
+      />
     </ActionPanel>
   );
 }

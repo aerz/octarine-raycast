@@ -47,7 +47,12 @@ export function AttachmentActions({ onRefresh, children }: AttachmentActionsProp
   return (
     <ActionPanel>
       {children}
-      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+      <Action
+        title="Refresh"
+        icon={Icon.ArrowClockwise}
+        shortcut={Keyboard.Shortcut.Common.Refresh}
+        onAction={onRefresh}
+      />
       <Action title="Open Search Attachments Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />
     </ActionPanel>
   );
@@ -58,7 +63,12 @@ export function EmptyAttachmentsActions({ onRefresh }: Pick<AttachmentActionsPro
     <ActionPanel>
       <Action title="Open Search Attachments Preferences" icon={Icon.Gear} onAction={openCommandPreferences} />
       <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-      <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+      <Action
+        title="Refresh"
+        icon={Icon.ArrowClockwise}
+        shortcut={Keyboard.Shortcut.Common.Refresh}
+        onAction={onRefresh}
+      />
     </ActionPanel>
   );
 }
@@ -113,7 +123,7 @@ function AttachmentGridItem({ file, onRefresh }: { file: IndexedAttachment; onRe
           <Action.CopyToClipboard
             title="Copy File Path"
             content={file.path}
-            shortcut={{ modifiers: ["cmd"], key: "." }}
+            shortcut={Keyboard.Shortcut.Common.CopyPath}
           />
         </AttachmentActions>
       }

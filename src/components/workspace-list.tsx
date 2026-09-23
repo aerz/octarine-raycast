@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Clipboard, Icon, List, openExtensionPreferences } from "@raycast/api";
+import { Action, ActionPanel, Clipboard, Icon, Keyboard, List, openExtensionPreferences } from "@raycast/api";
 import type { ReactNode } from "react";
 import type { Workspace } from "@type/octarine";
 import { WorkspaceListEmptyView } from "@components/empty-views/workspace";
@@ -15,7 +15,12 @@ export function WorkspaceList({ isLoading, workspaces, onRefresh, children }: Pr
     <List isLoading={isLoading} searchBarPlaceholder="Search workspaces">
       {workspaces.length === 0 && !isLoading ? (
         <WorkspaceListEmptyView>
-          <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+          <Action
+            title="Refresh"
+            icon={Icon.ArrowClockwise}
+            shortcut={Keyboard.Shortcut.Common.Refresh}
+            onAction={onRefresh}
+          />
         </WorkspaceListEmptyView>
       ) : (
         workspaces.map((workspace) => (
@@ -27,7 +32,12 @@ export function WorkspaceList({ isLoading, workspaces, onRefresh, children }: Pr
               <ActionPanel>
                 {children(workspace)}
                 <Action title="Copy Path" icon={Icon.Clipboard} onAction={() => Clipboard.copy(workspace.path)} />
-                <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+                <Action
+                  title="Refresh"
+                  icon={Icon.ArrowClockwise}
+                  shortcut={Keyboard.Shortcut.Common.Refresh}
+                  onAction={onRefresh}
+                />
                 <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
               </ActionPanel>
             }
