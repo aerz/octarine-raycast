@@ -2,7 +2,7 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "octarine",
   "title": "Octarine",
-  "description": "Control Octarine from Raycast",
+  "description": "Search your Octarine workspaces from Raycast",
   "icon": "icon.png",
   "author": "aerz",
   "platforms": [
