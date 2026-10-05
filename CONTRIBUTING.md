@@ -27,8 +27,8 @@ Dependencies are unchanged; the prepared manifest omits `prepare:store` and
 
 The script creates a temporary worktree, prepares the files, and runs `npm ci --include=dev`,
 `npm test`, `npm run build`, and `npm run lint`. If all checks pass, it commits
-the delivery on `raycast-store` with the message `prepare extension for raycast store`
-and records the source commit in the body. An unchanged delivery creates no
+the delivery on `raycast-store` with the source commit's full message
+and adds `Source main: <SHA>` to the body. An unchanged delivery creates no
 new commit. A dry run only previews changes; it creates no worktree or commit.
 
 The temporary worktree is removed after success or failure, and your checkout

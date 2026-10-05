@@ -146,7 +146,8 @@ function prepare() {
     git(target, "diff", "--exit-code");
     git(target, "diff", "--cached", "--check");
     if (git(target, "diff", "--cached", "--name-only")) {
-      git(target, "commit", "-m", "prepare extension for raycast store", "-m", `Source main: ${sourceSha}`);
+      const message = git(source, "log", "-1", "--format=%B", sourceSha);
+      git(target, "commit", "-m", message, "-m", `Source main: ${sourceSha}`);
       console.log(`Store commit: ${git(target, "rev-parse", "HEAD")}`);
     } else {
       console.log("Store delivery is unchanged. No new commit created.");
