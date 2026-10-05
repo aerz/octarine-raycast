@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 
 const excluded = new Set(["AGENTS.md", "flake.nix", "flake.lock", ".envrc"]);
 const extension = "extensions/octarine";
-const usage = "Usage: npm run sync:store -- <store-checkout> <fork-checkout> [--dry-run]";
+const usage = "Usage: npm run sync:store -- <fork-checkout> [--dry-run]";
 
 function git(root, ...args) {
   return execFileSync("git", args, {
@@ -36,8 +36,8 @@ function checkRepository(root, label) {
   }
 }
 
-function readTree(root, prefix = "") {
-  const tree = git(root, "ls-tree", "-r", "-z", "HEAD", "--", ...(prefix ? [prefix] : []));
+function readTree(root, ref, prefix = "") {
+  const tree = git(root, "ls-tree", "-r", "-z", ref, "--", ...(prefix ? [prefix] : []));
   return new Map(
     tree
       .split("\0")
@@ -87,26 +87,21 @@ function readContent(root, name, entry) {
 function sync() {
   const args = process.argv.slice(2);
   if (args.length === 1 && args[0] === "--help") {
-    console.log(`${usage}\nCopies committed raycast-store to the local fork. Both checkouts must be clean.`);
+    console.log(`${usage}\nCopies committed raycast-store from main to a clean local fork.`);
     return;
   }
   const dryRun = args.includes("--dry-run");
   const targets = args.filter((arg) => arg !== "--dry-run");
-  if (args.length > 3 || targets.length !== 2 || targets.some((arg) => arg.startsWith("-"))) throw new Error(usage);
+  if (args.length > 2 || targets.length !== 1 || targets[0].startsWith("-")) throw new Error(usage);
 
   const project = realpathSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."));
-  const source = realpathSync(path.resolve(targets[0]));
-  const target = realpathSync(path.resolve(targets[1]));
-  checkRepository(source, "Store");
+  const target = realpathSync(path.resolve(targets[0]));
   checkRepository(target, "Destination");
-  if (git(source, "branch", "--show-current") !== "raycast-store") {
-    throw new Error("Store must be on branch raycast-store.");
-  }
+  if (git(project, "branch", "--show-current") !== "main") throw new Error("Source must be on branch main.");
+  const storeSha = git(project, "rev-parse", "--verify", "refs/heads/raycast-store");
   const projectGit = realpathSync(path.resolve(project, git(project, "rev-parse", "--git-common-dir")));
-  const sourceGit = realpathSync(path.resolve(source, git(source, "rev-parse", "--git-common-dir")));
-  if (projectGit !== sourceGit) throw new Error("Store must be a worktree of the source repository.");
   const targetGit = realpathSync(path.resolve(target, git(target, "rev-parse", "--git-common-dir")));
-  if (sourceGit === targetGit) throw new Error("Source and destination must be different repositories.");
+  if (projectGit === targetGit) throw new Error("Source and destination must be different repositories.");
 
   const remote = git(target, "remote", "get-url", "origin");
   const url = new URL(remote.replace(/^git@github\.com:/, "https://github.com/"));
@@ -117,7 +112,7 @@ function sync() {
     throw new Error("Destination must be on branch ext/octarine.");
   }
 
-  const sourceFiles = readTree(source);
+  const sourceFiles = readTree(project, storeSha);
   if (!sourceFiles.has("package.json") || !sourceFiles.has("package-lock.json")) {
     throw new Error("Store HEAD must include package.json and package-lock.json.");
   }
@@ -126,7 +121,7 @@ function sync() {
       throw new Error(`Store contains local tooling: ${name}. Run prepare:store first.`);
     }
   }
-  const manifest = JSON.parse(readContent(source, "package.json", sourceFiles.get("package.json")).toString("utf8"));
+  const manifest = JSON.parse(readContent(project, "package.json", sourceFiles.get("package.json")).toString("utf8"));
   if (
     manifest.name !== "octarine" ||
     manifest.scripts?.publish !== "ray publish" ||
@@ -135,7 +130,7 @@ function sync() {
   ) {
     throw new Error("Store manifest is not prepared for publication. Run prepare:store first.");
   }
-  const targetFiles = readTree(target, extension);
+  const targetFiles = readTree(target, "HEAD", extension);
   const changes = [];
 
   for (const name of targetFiles.keys()) {
@@ -146,7 +141,7 @@ function sync() {
     }
   }
   for (const [name, entry] of sourceFiles) {
-    const content = readContent(source, name, entry);
+    const content = readContent(project, name, entry);
     const filename = checkPath(target, `${extension}/${name}`);
     const previous = targetFiles.get(name);
     if (existsSync(filename)) {
@@ -158,7 +153,7 @@ function sync() {
     changes.push({ name, filename, content, mode: entry.mode, action: previous ? "MODIFY" : "ADD" });
   }
 
-  console.log(`Store HEAD: ${git(source, "rev-parse", "HEAD")}`);
+  console.log(`Store HEAD: ${storeSha}`);
   console.log(`Destination: ${path.join(target, extension)}`);
   for (const change of changes) {
     console.log(`${change.action} ${extension}/${change.name}`);

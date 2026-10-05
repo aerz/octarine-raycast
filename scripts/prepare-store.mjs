@@ -1,16 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import {
-  chmodSync,
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,7 +18,7 @@ const files = new Set([
 ]);
 const directories = new Set(["assets", "media", "metadata", "src", "tests"]);
 const excluded = new Set(["AGENTS.md", "flake.nix", "flake.lock", ".envrc"]);
-const usage = "Usage: npm run prepare:store -- <store-checkout> [--dry-run]";
+const usage = "Usage: npm run prepare:store -- [--dry-run]";
 
 function git(root, ...args) {
   return execFileSync("git", args, {
@@ -48,9 +38,9 @@ function checkRepository(root, label) {
   }
 }
 
-function readTree(root) {
+function readTree(root, ref) {
   return new Map(
-    git(root, "ls-tree", "-r", "-z", "HEAD")
+    git(root, "ls-tree", "-r", "-z", ref)
       .split("\0")
       .filter(Boolean)
       .map((entry) => {
@@ -65,122 +55,107 @@ function isPublished(name) {
   return !excluded.has(path.posix.basename(name)) && (files.has(name) || directories.has(name.split("/")[0]));
 }
 
-function checkPath(root, name) {
-  const parts = name.split("/");
-  let current = root;
-  for (const [index, part] of parts.entries()) {
-    if (!part || part === "." || part === "..") throw new Error(`Invalid path: ${name}`);
-    current = path.join(current, part);
-    // existsSync misses broken symlinks; inspect the entry itself instead.
-    let stat;
-    try {
-      stat = lstatSync(current);
-    } catch (error) {
-      if (error.code === "ENOENT") continue;
-      throw error;
-    }
-    if (stat.isSymbolicLink()) throw new Error(`Destination contains a symlink: ${name}`);
-    if (index < parts.length - 1 && !stat.isDirectory()) {
-      throw new Error(`Destination parent is not a directory: ${name}`);
-    }
-  }
-  return current;
-}
-
 function readContent(root, name, entry) {
   if (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode)) {
     throw new Error(`Only regular files can be exported: ${name}`);
   }
-  const content = execFileSync("git", ["cat-file", "blob", entry.hash], {
+  return execFileSync("git", ["cat-file", "blob", entry.hash], {
     cwd: root,
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
   });
-  if (name !== "package.json") return content;
-
-  const manifest = JSON.parse(content.toString("utf8"));
-  if (manifest.name !== "octarine") throw new Error("Source must be the Octarine extension.");
-  delete manifest.scripts["prepare:store"];
-  delete manifest.scripts["sync:store"];
-  manifest.scripts.publish = "ray publish";
-  return Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 function prepare() {
   const args = process.argv.slice(2);
   if (args.length === 1 && args[0] === "--help") {
-    console.log(`${usage}\nPrepares committed main in a clean raycast-store worktree, then runs npm checks.`);
+    console.log(`${usage}\nValidates committed main in a temporary worktree and commits the Store delivery.`);
     return;
   }
   const dryRun = args.includes("--dry-run");
-  const targets = args.filter((arg) => arg !== "--dry-run");
-  if (args.length > 2 || targets.length !== 1 || targets[0].startsWith("-")) throw new Error(usage);
+  if (args.length > 1 || args.some((arg) => arg !== "--dry-run")) throw new Error(usage);
 
   const source = realpathSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."));
-  const target = realpathSync(path.resolve(targets[0]));
   checkRepository(source, "Source");
-  checkRepository(target, "Store");
   if (git(source, "branch", "--show-current") !== "main") throw new Error("Source must be on branch main.");
-  if (git(target, "branch", "--show-current") !== "raycast-store") {
-    throw new Error("Store must be on branch raycast-store.");
-  }
-  const sourceGit = realpathSync(path.resolve(source, git(source, "rev-parse", "--git-common-dir")));
-  const targetGit = realpathSync(path.resolve(target, git(target, "rev-parse", "--git-common-dir")));
-  if (sourceGit !== targetGit) throw new Error("Store must be a worktree of the source repository.");
-
-  const sourceFiles = readTree(source);
+  const sourceSha = git(source, "rev-parse", "HEAD");
+  const storeSha = git(source, "rev-parse", "--verify", "refs/heads/raycast-store");
+  const sourceFiles = readTree(source, sourceSha);
   if (!sourceFiles.has("package.json")) throw new Error("Source HEAD has no package.json.");
-  const published = new Map([...sourceFiles].filter(([name]) => isPublished(name)));
-  const targetFiles = readTree(target);
+  const published = new Map();
+  for (const [name, entry] of sourceFiles) {
+    if (!isPublished(name)) continue;
+    let content = readContent(source, name, entry);
+    if (name === "package.json") {
+      const manifest = JSON.parse(content.toString("utf8"));
+      if (manifest.name !== "octarine") throw new Error("Source must be the Octarine extension.");
+      delete manifest.scripts["prepare:store"];
+      delete manifest.scripts["sync:store"];
+      manifest.scripts.publish = "ray publish";
+      content = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+    }
+    published.set(name, { ...entry, content });
+  }
+  const targetFiles = readTree(source, storeSha);
   const changes = [];
 
   for (const name of targetFiles.keys()) {
     if (!published.has(name)) {
-      const filename = checkPath(target, name);
-      if (!lstatSync(filename).isFile()) throw new Error(`Destination is not a regular file: ${name}`);
-      changes.push({ name, filename, action: "DELETE" });
+      changes.push({ name, action: "DELETE" });
     }
   }
   for (const [name, entry] of published) {
-    const content = readContent(source, name, entry);
-    const filename = checkPath(target, name);
     const previous = targetFiles.get(name);
-    if (existsSync(filename)) {
-      if (!previous) throw new Error(`Destination contains an untracked file: ${name}`);
-      if (!lstatSync(filename).isFile()) throw new Error(`Destination is not a regular file: ${name}`);
-      const executable = (lstatSync(filename).mode & 0o111) !== 0;
-      if (content.equals(readFileSync(filename)) && executable === (entry.mode === "100755")) continue;
-    }
-    changes.push({ name, filename, content, mode: entry.mode, action: previous ? "MODIFY" : "ADD" });
+    if (
+      previous?.mode === entry.mode &&
+      (name === "package.json"
+        ? entry.content.equals(readContent(source, name, previous))
+        : previous.hash === entry.hash)
+    )
+      continue;
+    changes.push({ name, action: previous ? "MODIFY" : "ADD" });
   }
 
-  console.log(`Source main: ${git(source, "rev-parse", "HEAD")}`);
-  console.log(`Store: ${target}`);
+  console.log(`Source main: ${sourceSha}`);
+  console.log("Store branch: raycast-store");
   for (const change of changes) {
     console.log(`${change.action} ${change.name}`);
-    if (dryRun) continue;
-    if (change.action === "DELETE") {
-      unlinkSync(change.filename);
-    } else {
-      mkdirSync(path.dirname(change.filename), { recursive: true });
-      const temporary = path.join(path.dirname(change.filename), `.prepare-store-${randomUUID()}`);
-      try {
-        writeFileSync(temporary, change.content, { flag: "wx" });
-        chmodSync(temporary, change.mode === "100755" ? 0o755 : 0o644);
-        renameSync(temporary, change.filename);
-      } finally {
-        if (existsSync(temporary)) unlinkSync(temporary);
-      }
-    }
   }
   if (dryRun) {
     console.log(`Dry run: ${changes.length} changes. No files written or npm checks run.`);
     return;
   }
-  for (const command of [["ci"], ["test"], ["run", "build"], ["run", "lint"]]) {
-    execFileSync("npm", command, { cwd: target, stdio: "inherit" });
+  const temporary = mkdtempSync(path.join(tmpdir(), "octarine-store-"));
+  const target = path.join(temporary, "store");
+  try {
+    git(source, "worktree", "add", "--quiet", target, "raycast-store");
+    if (git(target, "rev-parse", "HEAD") !== storeSha) {
+      throw new Error("Store branch changed during preparation. Run prepare:store again.");
+    }
+    git(target, "rm", "-r", "--", ".");
+    for (const [name, entry] of published) {
+      const filename = path.join(target, name);
+      mkdirSync(path.dirname(filename), { recursive: true });
+      writeFileSync(filename, entry.content);
+      chmodSync(filename, entry.mode === "100755" ? 0o755 : 0o644);
+    }
+    git(target, "add", "--", ...published.keys());
+    for (const command of [["ci", "--include=dev"], ["test"], ["run", "build"], ["run", "lint"]]) {
+      execFileSync("npm", command, { cwd: target, stdio: "inherit" });
+    }
+    git(target, "diff", "--exit-code");
+    git(target, "diff", "--cached", "--check");
+    if (git(target, "diff", "--cached", "--name-only")) {
+      git(target, "commit", "-m", "prepare extension for raycast store", "-m", `Source main: ${sourceSha}`);
+      console.log(`Store commit: ${git(target, "rev-parse", "HEAD")}`);
+    } else {
+      console.log("Store delivery is unchanged. No new commit created.");
+    }
+  } finally {
+    if (existsSync(path.join(target, ".git"))) git(source, "worktree", "remove", "--force", target);
+    rmSync(temporary, { recursive: true, force: true });
   }
-  console.log(`Prepared ${changes.length} changes. Review and commit the Store delivery before syncing.`);
+  console.log("Review with git show raycast-store. Push the Store branch separately when ready.");
 }
 
 try {

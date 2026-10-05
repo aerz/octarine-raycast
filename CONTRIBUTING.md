@@ -6,22 +6,17 @@ the committed delivery for the Store. Synchronize that delivery to
 
 ## Prepare the delivery
 
-Commit the reviewed changes in `main` first. Create a separate worktree once:
+Commit the reviewed changes in `main` first. Run the preparation from `main`:
 
 ```sh
-git worktree add -b raycast-store ../octarine-raycast-store main
+npm run prepare:store -- --dry-run
+npm run prepare:store
+git show raycast-store
 ```
 
-If the branch already exists, use
-`git worktree add ../octarine-raycast-store raycast-store` instead.
-
-Run the preparation script from `main`. Both worktrees must be clean, including
-untracked files; ignored dependencies and build output are allowed.
-
-```sh
-npm run prepare:store -- ../octarine-raycast-store --dry-run
-npm run prepare:store -- ../octarine-raycast-store
-```
+The source checkout must be clean, including untracked files; ignored
+dependencies and build output are allowed. The local `raycast-store` branch
+must exist and must not be checked out elsewhere.
 
 The script reads committed `main` and prepares `raycast-store` with `src`,
 extension tests, assets, screenshots, README media, and the manifest, lockfile,
@@ -30,31 +25,39 @@ configuration, README, changelog, and license. `AGENTS.md`, `flake.nix`,
 Dependencies are unchanged; the prepared manifest omits `prepare:store` and
 `sync:store` and retains `publish: ray publish`.
 
-After preparing the files, it runs `npm ci`, `npm test`, `npm run build`, and
-`npm run lint` in the Store worktree. A dry run only previews file changes.
-If a check fails, fix the source in `main` and commit or discard the pending
-delivery changes before preparing again.
+The script creates a temporary worktree, prepares the files, and runs `npm ci --include=dev`,
+`npm test`, `npm run build`, and `npm run lint`. If all checks pass, it commits
+the delivery on `raycast-store` with the message `prepare extension for raycast store`
+and records the source commit in the body. An unchanged delivery creates no
+new commit. A dry run only previews changes; it creates no worktree or commit.
 
-Review and commit the delivery before syncing. Record the printed source commit
-in the delivery commit message. Push `raycast-store` to `origin` separately when
-you want to update the remote delivery.
+The temporary worktree is removed after success or failure, and your checkout
+stays on `main`. If a check fails, the Store branch remains unchanged. Fix and
+commit the source in `main`, then prepare again.
+
+Review the delivery before syncing. Push it separately when ready:
+
+```sh
+git push origin raycast-store
+```
 
 ## Sync to the Store fork
 
-Run the synchronization script from `main`, passing both repository roots:
+Run the synchronization script from `main`, passing only the fork root:
 
 ```sh
-npm run sync:store -- ../octarine-raycast-store /path/to/raycast-extensions --dry-run
-npm run sync:store -- ../octarine-raycast-store /path/to/raycast-extensions
+npm run sync:store -- /path/to/raycast-extensions --dry-run
+npm run sync:store -- /path/to/raycast-extensions
 ```
 
-The Store and fork checkouts must be clean. The script reads only the committed
-Store delivery and copies it unchanged; it rejects local tooling or an
-unprepared manifest instead of filtering or transforming them.
+The fork must be clean and on `ext/octarine`. The script reads the local
+`raycast-store` commit directly and copies it unchanged; it needs no Store
+checkout and rejects local tooling or an unprepared manifest.
 
 Only `extensions/octarine` is synchronized. Obsolete tracked files there are
-removed; ignored build output is preserved. Both scripts reject source symlinks
-and destination paths containing symlinks. They do not stage, commit, or push.
+removed; ignored build output is preserved. Both scripts reject source symlinks;
+sync also rejects destination paths containing symlinks. Sync does not stage or
+commit. Neither script pushes.
 
 Review the fork's diff and check the distribution build in Raycast before
 submitting. Commit and push to the PR branch are separate manual steps after
