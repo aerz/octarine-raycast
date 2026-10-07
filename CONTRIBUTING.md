@@ -71,3 +71,47 @@ This follows Raycast's documented
 [manual fork-and-PR workflow](https://developers.raycast.com/basics/publish-an-extension#alternative-way).
 The source repository's `npm run publish` points here because running
 `ray publish` from `main` would copy development files into the fork.
+
+## GitHub releases
+
+Start from a clean `main` checkout at the release commit that you reviewed.
+A tag gives a commit a name. Use SemVer tags such as `v1.0.0`.
+For later releases, replace the version in these examples.
+
+Install the dependencies from `package-lock.json`. Run the tests. Run lint.
+Then build the ZIP:
+
+```sh
+npm ci --include=dev
+npm test
+npm run lint
+npx ray bundle --output dist/octarine-v1.0.0.zip
+zip -j dist/octarine-v1.0.0.zip LICENSE
+```
+
+The ZIP must contain `package.json`, all four compiled command files, `assets/`,
+and `LICENSE`. If the ZIP contains Finder metadata (`.DS_Store`) from `assets/`, remove those files:
+
+```sh
+zip -d dist/octarine-v1.0.0.zip '*/.DS_Store'
+```
+
+Before you publish, make sure that `unzip` reports no errors:
+
+```sh
+unzip -t dist/octarine-v1.0.0.zip
+```
+
+An annotated tag also includes a message.
+After you review the ZIP, create an annotated tag on the release commit:
+
+```sh
+git tag -a v1.0.0 -m "Octarine v1.0.0"
+```
+
+After a separate review, push `main` and the tag.
+Create a release in [GitHub Releases](https://github.com/aerz/octarine-raycast/releases) with that tag.
+Attach `dist/octarine-v1.0.0.zip` to the release.
+Include the changes and the source commit in the release notes.
+If this version is also in the Raycast Store, include the Store page in the release notes.
+GitHub automatically creates source archives from the tag.
