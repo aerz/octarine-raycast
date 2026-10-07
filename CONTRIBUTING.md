@@ -74,7 +74,24 @@ The source repository's `npm run publish` points here because running
 
 ## GitHub releases
 
-Start from a clean `main` checkout at the release commit that you reviewed.
+Download versioned copies of the extension from [GitHub Releases](https://github.com/aerz/octarine-raycast/releases) to install outside the Raycast Store.
+
+The compiled ZIP (`octarine-vX.Y.Z.zip`) contains the built extension.
+Extract the ZIP. Follow your application's extension import steps to load the folder that contains `package.json`.
+
+Each release also includes source archives, which contain the source code.
+Use these archives with applications that build extensions from source.
+
+To install from source in Raycast, extract a source archive.
+Import the extracted folder with Raycast's `Import Extension` command.
+With Node.js and npm installed, run these commands in that folder:
+
+```sh
+npm ci --include=dev
+npm run build
+```
+
+To prepare a release, start from a clean `main` checkout at the commit that you reviewed.
 A tag gives a commit a name. Use SemVer tags such as `v1.0.0`.
 For later releases, replace the version in these examples.
 
@@ -112,6 +129,6 @@ git tag -a v1.0.0 -m "Octarine v1.0.0"
 After a separate review, push `main` and the tag.
 Create a release in [GitHub Releases](https://github.com/aerz/octarine-raycast/releases) with that tag.
 Attach `dist/octarine-v1.0.0.zip` to the release.
-Include the changes and the source commit in the release notes.
-If this version is also in the Raycast Store, include the Store page in the release notes.
+Describe the commands and changes in the release notes.
+Link to the installation instructions in this section.
 GitHub automatically creates source archives from the tag.

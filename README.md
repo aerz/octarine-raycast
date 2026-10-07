@@ -8,25 +8,6 @@ Use [Octarine](https://octarine.app) from Raycast to open today's Daily Desk not
 
 Install the extension from the [Raycast Store](https://www.raycast.com/aerz/octarine). Then set `Workspace paths` in the extension preferences.
 
-## Standalone downloads
-
-Download versioned copies of the extension from [GitHub Releases](https://github.com/aerz/octarine-raycast/releases) to install outside the Raycast Store.
-
-The compiled ZIP (`octarine-vX.Y.Z.zip`) contains the built extension.
-Extract the ZIP. Follow your application's extension import steps to load the folder that contains `package.json`.
-
-Each release also includes source archives, which contain the source code.
-Use these archives with applications that build extensions from source.
-
-To install from source in Raycast, extract a source archive.
-Import the extracted folder with Raycast's `Import Extension` command.
-With Node.js and npm installed, run these commands in that folder:
-
-```sh
-npm ci --include=dev
-npm run build
-```
-
 ## Overview
 
 - [Open Workspace](#open-workspace)
